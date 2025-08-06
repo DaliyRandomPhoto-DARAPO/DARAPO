@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // iOS 시뮬레이터에서 localhost 접근을 위해 IP 주소 사용
 const API_BASE_URL = __DEV__ 
-  ? 'http://localhost:3000/api'  // 개발 환경
+  ? 'http://192.168.45.191:3000/api'  // 개발 환경 - 실제 IP 주소 사용
   : 'https://your-production-api.com/api';  // 프로덕션 환경
 
 // Axios 인스턴스 생성
