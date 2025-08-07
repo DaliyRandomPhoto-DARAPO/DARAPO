@@ -13,8 +13,6 @@ import { authAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { kakaoService } from '../services/kakaoService';
 
-type LoginScreenNavigationProp = any;
-
 const LoginScreen = () => {
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
