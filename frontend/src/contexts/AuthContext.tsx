@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kakaoService } from '../services/kakaoService';
 
 interface User {
   id: string;
@@ -22,6 +23,12 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// 상수 정의
+const STORAGE_KEYS = Object.freeze({
+  AUTH_TOKEN: 'auth_token',
+  USER_INFO: 'user_info',
+} as const);
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -31,10 +38,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loadStoredAuth();
   }, []);
 
-  const loadStoredAuth = async () => {
+  const loadStoredAuth = useCallback(async () => {
     try {
-      const storedToken = await AsyncStorage.getItem('auth_token');
-      const storedUser = await AsyncStorage.getItem('user_info');
+      // 병렬로 데이터 로드
+      const [storedToken, storedUser] = await Promise.all([
+        AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN),
+        AsyncStorage.getItem(STORAGE_KEYS.USER_INFO),
+      ]);
 
       if (storedToken && storedUser) {
         setToken(storedToken);
@@ -45,41 +55,69 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const login = async (newToken: string, newUser: User) => {
+  const login = useCallback(async (newToken: string, newUser: User) => {
     try {
-      await AsyncStorage.setItem('auth_token', newToken);
-      await AsyncStorage.setItem('user_info', JSON.stringify(newUser));
+      // 병렬로 저장 및 상태 업데이트
+      await Promise.all([
+        AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, newToken),
+        AsyncStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(newUser))
+      ]);
+      
       setToken(newToken);
       setUser(newUser);
     } catch (error) {
       console.error('로그인 정보 저장 실패:', error);
       throw error;
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
-      await AsyncStorage.removeItem('auth_token');
-      await AsyncStorage.removeItem('user_info');
+      console.log('🔄 로그아웃 프로세스 시작...');
+      
+      // 병렬로 카카오 로그아웃과 로컬 데이터 정리 수행
+      const [kakaoLogoutResult, , ] = await Promise.allSettled([
+        kakaoService.logout(),
+        AsyncStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN),
+        AsyncStorage.removeItem(STORAGE_KEYS.USER_INFO),
+      ]);
+      
+      if (kakaoLogoutResult.status === 'fulfilled') {
+        console.log('✅ 카카오 로그아웃 완료');
+      } else {
+        console.warn('⚠️ 카카오 로그아웃 실패:', kakaoLogoutResult.reason);
+      }
+      
+      // 상태 초기화
       setToken(null);
       setUser(null);
+      
+      // 카카오 서비스 캐시도 클리어
+      kakaoService.clearCache();
+      
+      console.log('✅ 앱 로그아웃 완료');
     } catch (error) {
-      console.error('로그아웃 실패:', error);
+      console.error('❌ 로그아웃 실패:', error);
+      // 로그아웃은 항상 성공해야 하므로 강제로 상태 초기화
+      setToken(null);
+      setUser(null);
     }
-  };
+  }, []);
 
-  const isAuthenticated = !!(user && token);
+  // 성능 최적화: isAuthenticated 메모이제이션
+  const isAuthenticated = useMemo(() => !!(user && token), [user, token]);
 
-  const value: AuthContextType = {
+  // 성능 최적화: value 객체 메모이제이션
+  const value = useMemo<AuthContextType>(() => ({
     user,
     token,
     isLoading,
     login,
     logout,
     isAuthenticated,
-  };
+  }), [user, token, isLoading, login, logout, isAuthenticated]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

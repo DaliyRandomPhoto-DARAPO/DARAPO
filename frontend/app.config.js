@@ -9,10 +9,6 @@ export default {
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
     newArchEnabled: true,
-    extra: {
-      apiUrl: process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000",
-      kakaoAppKey: process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY,
-    },
     splash: {
       image: "./assets/splash-icon.png",
       resizeMode: "contain",
@@ -23,7 +19,18 @@ export default {
       supportsTablet: true,
       infoPlist: {
         NSCameraUsageDescription: "This app uses the camera to take photos for daily missions.",
-        NSPhotoLibraryUsageDescription: "This app needs access to photo library to save and share photos."
+        NSPhotoLibraryUsageDescription: "This app needs access to photo library to save and share photos.",
+        CFBundleURLTypes: [
+          {
+            CFBundleURLName: "kakao",
+            CFBundleURLSchemes: [`kakao${process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY}`]
+          }
+        ],
+        LSApplicationQueriesSchemes: [
+          "kakaokompassauth",
+          "kakaolink",
+          `kakao${process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY}`
+        ]
       }
     },
     android: {
@@ -38,6 +45,15 @@ export default {
         "android.permission.RECORD_AUDIO",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
+      intentFilters: [
+        {
+          action: "VIEW",
+          category: ["DEFAULT", "BROWSABLE"],
+          data: {
+            scheme: `kakao${process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY}`
+          }
+        }
       ]
     },
     plugins: [
@@ -58,31 +74,21 @@ export default {
         "expo-build-properties",
         {
           android: {
-            manifestPlaceholders: {
-              KAKAO_APP_KEY: process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY
-            }
+            compileSdkVersion: 35,
+            targetSdkVersion: 34,
+            buildToolsVersion: "35.0.0"
           },
           ios: {
-            infoPlist: {
-              CFBundleURLTypes: [
-                {
-                  CFBundleURLName: "kakao",
-                  CFBundleURLSchemes: [`kakao${process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY}`]
-                }
-              ],
-              LSApplicationQueriesSchemes: [
-                "kakaokompassauth",
-                "kakaolink",
-                `kakao${process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY}`
-              ]
-            }
+            deploymentTarget: "15.1"
           }
         }
       ]
     ],
     extra: {
       // 런타임에서 접근할 수 있는 환경변수
+      apiUrl: process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000",
       kakaoAppKey: process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY,
+      kakaoJsAppKey: process.env.EXPO_PUBLIC_KAKAO_JS_APP_KEY,
     }
   }
 };
