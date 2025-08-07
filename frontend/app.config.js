@@ -9,6 +9,7 @@ export default {
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
     newArchEnabled: true,
+    scheme: "darapo", // OAuth 리다이렉트용 커스텀 스키마
     splash: {
       image: "./assets/splash-icon.png",
       resizeMode: "contain",
@@ -24,6 +25,10 @@ export default {
           {
             CFBundleURLName: "kakao",
             CFBundleURLSchemes: [`kakao${process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY}`]
+          },
+          {
+            CFBundleURLName: "oauth",
+            CFBundleURLSchemes: ["darapo"]
           }
         ],
         LSApplicationQueriesSchemes: [
@@ -52,6 +57,13 @@ export default {
           category: ["DEFAULT", "BROWSABLE"],
           data: {
             scheme: `kakao${process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY}`
+          }
+        },
+        {
+          action: "VIEW",
+          category: ["DEFAULT", "BROWSABLE"],
+          data: {
+            scheme: "darapo"
           }
         }
       ]
@@ -87,6 +99,8 @@ export default {
     extra: {
       // 런타임에서 접근할 수 있는 환경변수
       apiUrl: process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000",
+      kakaoRestApiKey: process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY,
+      // 기존 키들도 호환성을 위해 유지
       kakaoAppKey: process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY,
       kakaoJsAppKey: process.env.EXPO_PUBLIC_KAKAO_JS_APP_KEY,
     }

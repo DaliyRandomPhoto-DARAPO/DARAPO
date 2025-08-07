@@ -1,12 +1,10 @@
-import {
-  login,
-  loginWithKakaoAccount,
-  getProfile,
-  logout,
-  unlink,
-} from '@react-native-seoul/kakao-login';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
 import { Alert, Platform } from 'react-native';
 import Constants from 'expo-constants';
+
+// WebBrowser 설정
+WebBrowser.maybeCompleteAuthSession();
 
 // 상수 정의 - 메모리 효율성을 위한 freezing
 const ERROR_MESSAGES = Object.freeze({
@@ -17,7 +15,20 @@ const ERROR_MESSAGES = Object.freeze({
   DEFAULT: '카카오 로그인 중 오류가 발생했습니다.',
   PROFILE_FETCH: '프로필 정보를 가져오는데 실패했습니다.',
   UNLINK_FAILED: '회원탈퇴에 실패했습니다.',
-  JS_KEY_MISSING: 'JavaScript 앱 키가 설정되지 않았습니다. 웹뷰 로그인을 위해 EXPO_PUBLIC_KAKAO_JS_APP_KEY를 설정해주세요.',
+  NO_CLIENT_ID: '카카오 클라이언트 ID가 설정되지 않았습니다. EXPO_PUBLIC_KAKAO_REST_API_KEY를 설정해주세요.',
+  TOKEN_INVALID: '토큰이 유효하지 않습니다.',
+} as const);
+
+// 카카오 OAuth 설정
+const KAKAO_CONFIG = Object.freeze({
+  DISCOVERY: {
+    authorizationEndpoint: 'https://kauth.kakao.com/oauth/authorize',
+    tokenEndpoint: 'https://kauth.kakao.com/oauth/token',
+    userInfoEndpoint: 'https://kapi.kakao.com/v2/user/me',
+    logoutEndpoint: 'https://kapi.kakao.com/v1/user/logout',
+    unlinkEndpoint: 'https://kapi.kakao.com/v1/user/unlink',
+  },
+  SCOPES: ['profile_nickname', 'profile_image', 'account_email'],
 } as const);
 
 const ERROR_KEYWORDS = Object.freeze({
@@ -54,13 +65,14 @@ export interface KakaoTokens {
 
 class KakaoService {
   // 성능 최적화: 키 캐싱
-  private _nativeAppKey: string | undefined = undefined;
-  private _jsAppKey: string | undefined = undefined;
+  private _restApiKey: string | undefined = undefined;
+  private _redirectUri: string | undefined = undefined;
   private _isInitialized = false;
 
-  // 성능 최적화: 프로필 캐싱
+  // 성능 최적화: 프로필 및 토큰 캐싱
   private _cachedProfile: KakaoProfile | null = null;
   private _profileCacheTime = 0;
+  private _accessToken: string | null = null;
   private readonly PROFILE_CACHE_DURATION = 5 * 60 * 1000; // 5분
 
   /**
@@ -69,38 +81,65 @@ class KakaoService {
   private initializeKeys(): void {
     if (this._isInitialized) return;
 
-    this._nativeAppKey = process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY || Constants.expoConfig?.extra?.kakaoAppKey;
-    this._jsAppKey = process.env.EXPO_PUBLIC_KAKAO_JS_APP_KEY || Constants.expoConfig?.extra?.kakaoJsAppKey;
+    this._restApiKey = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY || Constants.expoConfig?.extra?.kakaoRestApiKey;
+    this._redirectUri = AuthSession.makeRedirectUri({
+      scheme: Array.isArray(Constants.expoConfig?.scheme) 
+        ? Constants.expoConfig.scheme[0] 
+        : Constants.expoConfig?.scheme || 'darapo',
+      path: 'kakao-auth',
+    });
     this._isInitialized = true;
   }
+
   /**
-   * 스마트한 카카오 로그인 - 카카오톡 앱이 있으면 앱으로, 없으면 웹으로 로그인
+   * 카카오 OAuth 로그인 (공식 API 사용)
    */
   async login(): Promise<{ tokens: KakaoTokens; profile: KakaoProfile }> {
     try {
-      console.log('🚀 카카오 스마트 로그인 시작...');
+      console.log('🚀 카카오 공식 OAuth 로그인 시작...');
       
-      let tokens;
+      this.initializeKeys();
       
-      try {
-        // 먼저 일반 login 시도 (SDK가 자동으로 최적의 방법 선택)
-        console.log('📱 카카오 로그인 시도...');
-        tokens = await login();
-        console.log('✅ 카카오 로그인 성공 (자동 선택)');
-      } catch (error: any) {
-        // 사용자 취소인 경우 즉시 에러 발생
-        if (this.isUserCancelledError(error)) {
-          console.log('⚠️ 사용자가 카카오 로그인을 취소했습니다.');
-          throw error;
-        }
-        
-        console.log('⚠️ 일반 로그인 실패, 카카오 계정으로 로그인 시도...');
-        
-        // 일반 로그인 실패 시 카카오 계정으로 로그인 시도
-        tokens = await this.performWebLogin();
+      if (!this._restApiKey) {
+        throw new Error(ERROR_MESSAGES.NO_CLIENT_ID);
       }
 
-      return await this.processLoginSuccess(tokens);
+      // OAuth 요청 생성
+      const request = new AuthSession.AuthRequest({
+        clientId: this._restApiKey,
+        scopes: [...KAKAO_CONFIG.SCOPES],
+        redirectUri: this._redirectUri!,
+        responseType: AuthSession.ResponseType.Code,
+        extraParams: {},
+      });
+
+      console.log('🔗 OAuth 요청 URL 생성 중...');
+      const result = await request.promptAsync({
+        authorizationEndpoint: KAKAO_CONFIG.DISCOVERY.authorizationEndpoint,
+      });
+
+      if (result.type === 'cancel') {
+        throw new Error(ERROR_MESSAGES.CANCELED);
+      }
+
+      if (result.type !== 'success' || !result.params.code) {
+        throw new Error(ERROR_MESSAGES.INVALID_REQUEST);
+      }
+
+      console.log('✅ 카카오 인증 코드 획득 성공');
+
+      // 인증 코드를 액세스 토큰으로 교환
+      const tokens = await this.exchangeCodeForTokens(result.params.code);
+      
+      // 프로필 정보 가져오기
+      const profile = await this.fetchProfileWithToken(tokens.accessToken);
+
+      console.log('✅ 카카오 로그인 완료');
+
+      return {
+        tokens,
+        profile,
+      };
     } catch (error: any) {
       console.error('❌ 카카오 로그인 실패:', error);
       throw this.handleKakaoError(error);
@@ -108,85 +147,94 @@ class KakaoService {
   }
 
   /**
-   * 카카오 계정으로 직접 로그인 (웹뷰 사용)
+   * 인증 코드를 액세스 토큰으로 교환
    */
-  async loginWithAccount(): Promise<{ tokens: KakaoTokens; profile: KakaoProfile }> {
+  private async exchangeCodeForTokens(code: string): Promise<KakaoTokens> {
     try {
-      console.log('🌐 카카오 계정 로그인 시작...');
+      console.log('🔄 액세스 토큰 교환 중...');
       
-      const tokens = await this.performWebLogin();
-      return await this.processLoginSuccess(tokens);
-    } catch (error: any) {
-      console.error('❌ 카카오 계정 로그인 실패:', error);
-      throw this.handleKakaoError(error);
+      const tokenRequest = await fetch(KAKAO_CONFIG.DISCOVERY.tokenEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          client_id: this._restApiKey!,
+          redirect_uri: this._redirectUri!,
+          code,
+        }).toString(),
+      });
+
+      const tokenData = await tokenRequest.json();
+
+      if (!tokenRequest.ok) {
+        throw new Error(tokenData.error_description || ERROR_MESSAGES.INVALID_REQUEST);
+      }
+
+      this._accessToken = tokenData.access_token;
+
+      return {
+        accessToken: tokenData.access_token,
+        refreshToken: tokenData.refresh_token,
+        accessTokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
+        refreshTokenExpiresAt: new Date(Date.now() + (tokenData.refresh_token_expires_in || 5184000) * 1000),
+        scopes: tokenData.scope?.split(' ') || KAKAO_CONFIG.SCOPES,
+      };
+    } catch (error) {
+      console.error('❌ 토큰 교환 실패:', error);
+      throw error;
     }
   }
 
   /**
-   * 웹 로그인 실행 (공통 로직)
+   * 액세스 토큰으로 프로필 조회
    */
-  private async performWebLogin(): Promise<any> {
-    // JavaScript 앱 키 확인
-    const jsAppKey = this.getJavaScriptAppKey();
-    if (!jsAppKey) {
-      throw new Error(ERROR_MESSAGES.JS_KEY_MISSING);
+  private async fetchProfileWithToken(accessToken: string): Promise<KakaoProfile> {
+    try {
+      console.log('👤 카카오 프로필 조회 중...');
+      
+      const profileRequest = await fetch(KAKAO_CONFIG.DISCOVERY.userInfoEndpoint, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      });
+
+      const profileData = await profileRequest.json();
+
+      if (!profileRequest.ok) {
+        throw new Error(profileData.msg || ERROR_MESSAGES.PROFILE_FETCH);
+      }
+
+      const profile: KakaoProfile = {
+        id: profileData.id.toString(),
+        nickname: profileData.kakao_account?.profile?.nickname || '사용자',
+        profileImageUrl: profileData.kakao_account?.profile?.profile_image_url,
+        email: profileData.kakao_account?.email,
+      };
+
+      // 프로필 캐싱
+      this._cachedProfile = profile;
+      this._profileCacheTime = Date.now();
+
+      console.log('✅ 카카오 프로필 조회 성공:', {
+        id: profile.id,
+        nickname: profile.nickname,
+        hasProfileImage: !!profile.profileImageUrl,
+        hasEmail: !!profile.email,
+      });
+
+      return profile;
+    } catch (error) {
+      console.error('❌ 프로필 조회 실패:', error);
+      throw new Error(ERROR_MESSAGES.PROFILE_FETCH);
     }
-    
-    const tokens = await loginWithKakaoAccount();
-    console.log('✅ 카카오 계정 로그인 성공');
-    return tokens;
   }
 
   /**
-   * 사용자 취소 에러인지 확인
-   */
-  private isUserCancelledError(error: any): boolean {
-    const errorMessage = error.message || '';
-    const errorCode = error.code || '';
-    const errorText = `${errorMessage} ${errorCode}`.toLowerCase();
-    
-    return ERROR_KEYWORDS.CANCEL.some(keyword => 
-      errorText.includes(keyword.toLowerCase())
-    );
-  }
-
-  /**
-   * JavaScript 앱 키 가져오기 (캐싱 적용)
-   */
-  private getJavaScriptAppKey(): string | undefined {
-    this.initializeKeys();
-    return this._jsAppKey;
-  }
-
-  /**
-   * Native 앱 키 가져오기 (캐싱 적용)
-   */
-  private getNativeAppKey(): string | undefined {
-    this.initializeKeys();
-    return this._nativeAppKey;
-  }
-
-  /**
-   * 로그인 성공 후 처리 (공통 로직)
-   */
-  private async processLoginSuccess(tokens: any): Promise<{ tokens: KakaoTokens; profile: KakaoProfile }> {
-    console.log('🎫 카카오 토큰 획득 성공:', {
-      hasAccessToken: !!tokens.accessToken,
-      hasRefreshToken: !!tokens.refreshToken,
-      expiresAt: tokens.accessTokenExpiresAt,
-    });
-
-    // 사용자 프로필 정보 가져오기
-    const profile = await this.fetchProfile();
-
-    return {
-      tokens: this.formatTokens(tokens),
-      profile,
-    };
-  }
-
-  /**
-   * 사용자 프로필 정보 조회 (캐싱 적용)
+   * 현재 로그인된 사용자 프로필 조회 (캐싱 적용)
    */
   async fetchProfile(): Promise<KakaoProfile> {
     try {
@@ -197,29 +245,11 @@ class KakaoService {
         return this._cachedProfile;
       }
 
-      console.log('👤 카카오 프로필 조회 시작...');
-      
-      const profile = await getProfile();
-      
-      const formattedProfile: KakaoProfile = {
-        id: profile.id.toString(),
-        nickname: profile.nickname || '사용자',
-        profileImageUrl: profile.profileImageUrl,
-        email: profile.email,
-      };
+      if (!this._accessToken) {
+        throw new Error(ERROR_MESSAGES.TOKEN_INVALID);
+      }
 
-      // 프로필 캐싱
-      this._cachedProfile = formattedProfile;
-      this._profileCacheTime = now;
-
-      console.log('✅ 카카오 프로필 조회 성공:', {
-        id: formattedProfile.id,
-        nickname: formattedProfile.nickname,
-        hasProfileImage: !!formattedProfile.profileImageUrl,
-        hasEmail: !!formattedProfile.email,
-      });
-
-      return formattedProfile;
+      return await this.fetchProfileWithToken(this._accessToken);
     } catch (error: any) {
       console.error('❌ 카카오 프로필 조회 실패:', error);
       throw new Error(ERROR_MESSAGES.PROFILE_FETCH);
@@ -232,11 +262,27 @@ class KakaoService {
   async logout(): Promise<void> {
     try {
       console.log('👋 카카오 로그아웃 시작...');
-      await logout();
+      
+      if (this._accessToken) {
+        await fetch(KAKAO_CONFIG.DISCOVERY.logoutEndpoint, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this._accessToken}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        });
+      }
+      
+      // 로컬 캐시 클리어
+      this.clearCache();
+      this._accessToken = null;
+      
       console.log('✅ 카카오 로그아웃 성공');
     } catch (error: any) {
       console.error('❌ 카카오 로그아웃 실패:', error);
-      // 로그아웃 실패는 치명적이지 않으므로 에러를 던지지 않음
+      // 로그아웃 실패는 치명적이지 않으므로 로컬 캐시만 클리어
+      this.clearCache();
+      this._accessToken = null;
     }
   }
 
@@ -246,7 +292,28 @@ class KakaoService {
   async unlink(): Promise<void> {
     try {
       console.log('🔓 카카오 연결 해제 시작...');
-      await unlink();
+      
+      if (!this._accessToken) {
+        throw new Error(ERROR_MESSAGES.TOKEN_INVALID);
+      }
+      
+      const unlinkRequest = await fetch(KAKAO_CONFIG.DISCOVERY.unlinkEndpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this._accessToken}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      });
+
+      if (!unlinkRequest.ok) {
+        const errorData = await unlinkRequest.json();
+        throw new Error(errorData.msg || ERROR_MESSAGES.UNLINK_FAILED);
+      }
+      
+      // 로컬 캐시 클리어
+      this.clearCache();
+      this._accessToken = null;
+      
       console.log('✅ 카카오 연결 해제 성공');
     } catch (error: any) {
       console.error('❌ 카카오 연결 해제 실패:', error);
@@ -324,11 +391,15 @@ class KakaoService {
    * 디버그 정보 출력
    */
   printDebugInfo(): void {
+    this.initializeKeys();
     console.log('🐛 카카오 서비스 디버그 정보:');
     console.log('- 플랫폼:', Platform.OS);
-    console.log('- Native App Key:', this.getNativeAppKey() ? '설정됨' : '❌ 미설정');
-    console.log('- JS App Key:', this.getJavaScriptAppKey() ? '설정됨' : '❌ 미설정');
+    console.log('- REST API Key:', this._restApiKey ? '설정됨' : '❌ 미설정');
+    console.log('- Redirect URI:', this._redirectUri || '미설정');
     console.log('- Bundle ID:', Constants.expoConfig?.ios?.bundleIdentifier || '미설정');
+    console.log('- 스키마:', Array.isArray(Constants.expoConfig?.scheme) 
+      ? Constants.expoConfig.scheme[0] 
+      : Constants.expoConfig?.scheme || 'darapo');
   }
 }
 
