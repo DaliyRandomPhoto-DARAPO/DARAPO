@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 export default {
   expo: {
     name: "DARAPO",
@@ -7,13 +9,17 @@ export default {
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
     newArchEnabled: true,
+    extra: {
+      apiUrl: process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000",
+      kakaoAppKey: process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY,
+    },
     splash: {
       image: "./assets/splash-icon.png",
       resizeMode: "contain",
       backgroundColor: "#ffffff"
     },
     ios: {
-      bundleIdentifier: "com.darapo.app",
+      bundleIdentifier: "com.darapo.drapoapp",
       supportsTablet: true,
       infoPlist: {
         NSCameraUsageDescription: "This app uses the camera to take photos for daily missions.",
@@ -21,7 +27,7 @@ export default {
       }
     },
     android: {
-      package: "com.darapo.app",
+      package: "com.darapo.drapoapp",
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#ffffff"

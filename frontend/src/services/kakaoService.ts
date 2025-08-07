@@ -3,6 +3,13 @@ import {
   getProfile,
   logout,
 } from '@react-native-seoul/kakao-login';
+import Constants from 'expo-constants';
+
+// 디버깅을 위한 설정 정보 출력
+console.log('🔧 카카오 SDK 설정 정보:');
+console.log('- 앱 키:', process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY);
+console.log('- Bundle ID:', Constants.expoConfig?.ios?.bundleIdentifier);
+console.log('- URL Scheme:', `kakao${process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY}`);
 
 export interface KakaoProfile {
   id: string;

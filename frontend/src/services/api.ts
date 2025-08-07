@@ -1,14 +1,17 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-// iOS 시뮬레이터에서 localhost 접근을 위해 IP 주소 사용
-const API_BASE_URL = __DEV__ 
-  ? 'http://192.168.45.191:3000/api'  // 개발 환경 - 실제 IP 주소 사용
-  : 'https://your-production-api.com/api';  // 프로덕션 환경
+// 환경변수에서 API URL 가져오기 (보안 개선)
+const API_BASE_URL = Constants.expoConfig?.extra?.apiUrl || 
+                     process.env.EXPO_PUBLIC_API_URL || 
+                     'http://localhost:3000';
+
+console.log('🔗 API Base URL:', API_BASE_URL);
 
 // Axios 인스턴스 생성
 const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: `${API_BASE_URL}/api`,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

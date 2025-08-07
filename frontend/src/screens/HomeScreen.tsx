@@ -12,13 +12,11 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { missionAPI } from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
 
-type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MainTabs'>;
 
 const HomeScreen = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
-  const { logout } = useAuth();
   const [todayMission, setTodayMission] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
@@ -40,27 +38,10 @@ const HomeScreen = () => {
     }
   };
 
-  const handleLogout = () => {
-    Alert.alert(
-      '로그아웃',
-      '정말 로그아웃하시겠습니까?',
-      [
-        { text: '취소', style: 'cancel' },
-        { text: '로그아웃', onPress: logout }
-      ]
-    );
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>오늘의 미션</Text>
-        <TouchableOpacity 
-          style={styles.logoutButton}
-          onPress={handleLogout}
-        >
-          <Text style={styles.logoutButtonText}>로그아웃</Text>
-        </TouchableOpacity>
       </View>
       
       <View style={styles.content}>
@@ -90,26 +71,15 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8f9fa',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 20,
-  },
-  logoutButton: {
-    backgroundColor: '#ff4444',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 15,
-  },
-  logoutButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
   },
   content: {
     flex: 1,
@@ -120,49 +90,60 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#2c3e50',
   },
   missionCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     padding: 30,
-    borderRadius: 15,
+    borderRadius: 20,
     marginBottom: 40,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    minWidth: 250,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    minWidth: 280,
     alignItems: 'center',
   },
   missionText: {
     fontSize: 20,
     textAlign: 'center',
-    color: '#555',
+    color: '#2c3e50',
     fontWeight: '600',
+    lineHeight: 28,
   },
   loadingText: {
     fontSize: 16,
     textAlign: 'center',
-    color: '#666',
+    color: '#7f8c8d',
     marginTop: 10,
   },
   cameraButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 40,
-    paddingVertical: 15,
-    borderRadius: 25,
+    backgroundColor: '#3498db',
+    paddingHorizontal: 50,
+    paddingVertical: 18,
+    borderRadius: 30,
+    shadowColor: '#3498db',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   disabledButton: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#bdc3c7',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   cameraButtonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
 });
 

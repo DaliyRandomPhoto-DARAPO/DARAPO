@@ -13,9 +13,9 @@ import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 
 // Screens
 import LoginScreen from './src/screens/LoginScreen';
-import HomeScreen from './src/screens/HomeScreen';
 import CameraScreen from './src/screens/CameraScreen';
 import PhotoUploadScreen from './src/screens/PhotoUploadScreen';
+import TabNavigator from './src/navigation/TabNavigator';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -33,7 +33,7 @@ function AppNavigator() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName={isAuthenticated ? "Home" : "Login"}>
+      <Stack.Navigator initialRouteName={isAuthenticated ? "MainTabs" : "Login"}>
         {!isAuthenticated ? (
           <Stack.Screen 
             name="Login" 
@@ -43,9 +43,9 @@ function AppNavigator() {
         ) : (
           <>
             <Stack.Screen 
-              name="Home" 
-              component={HomeScreen} 
-              options={{ title: '오늘의 미션' }}
+              name="MainTabs" 
+              component={TabNavigator} 
+              options={{ headerShown: false }}
             />
             <Stack.Screen 
               name="Camera" 

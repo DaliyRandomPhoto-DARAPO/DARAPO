@@ -39,7 +39,7 @@ const PhotoUploadScreen = () => {
       console.log('코멘트:', comment);
       
       Alert.alert('성공', '사진이 업로드되었습니다!', [
-        { text: '확인', onPress: () => navigation.navigate('Home') }
+        { text: '확인', onPress: () => navigation.navigate('MainTabs') }
       ]);
     } catch (error) {
       Alert.alert('오류', '업로드에 실패했습니다.');

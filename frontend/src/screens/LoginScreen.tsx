@@ -64,7 +64,11 @@ const LoginScreen = () => {
         {/* 로고 영역 */}
         <View style={styles.logoSection}>
           <View style={styles.logoContainer}>
-            <Text style={styles.logoText}>📸</Text>
+            <Image
+              source={require('../../assets/icon.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.appName}>DARAPO</Text>
           <Text style={styles.appSubtitle}>Daily Random Photo</Text>
@@ -105,12 +109,12 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8f9fa',
   },
   content: {
     flex: 1,
     justifyContent: 'space-between',
-    padding: 20,
+    padding: 24,
   },
   logoSection: {
     flex: 1,
@@ -118,90 +122,113 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 25,
-    backgroundColor: '#f0f0f0',
+    width: 120,
+    height: 120,
+    borderRadius: 30,
+    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 30,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  logoText: {
-    fontSize: 50,
+  logoImage: {
+    width: 80,
+    height: 80,
   },
   appName: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#2c3e50',
     marginBottom: 8,
+    letterSpacing: 1,
   },
   appSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 30,
+    fontSize: 18,
+    color: '#7f8c8d',
+    marginBottom: 40,
+    fontWeight: '500',
   },
   description: {
-    fontSize: 18,
-    color: '#555',
+    fontSize: 16,
+    color: '#34495e',
     textAlign: 'center',
-    lineHeight: 26,
+    lineHeight: 24,
+    paddingHorizontal: 20,
   },
   loginSection: {
-    paddingBottom: 20,
+    paddingBottom: 30,
   },
   kakaoButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FEE500',
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginBottom: 12,
+    paddingVertical: 18,
+    borderRadius: 16,
+    marginBottom: 16,
+    shadowColor: '#FEE500',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   disabledButton: {
     opacity: 0.6,
   },
   kakaoIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: '#3C1E1E',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: 12,
   },
   kakaoIconText: {
     color: '#FEE500',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
   },
   kakaoButtonText: {
     color: '#3C1E1E',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  guestButton: {
+    paddingVertical: 18,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#e0e6ed',
+    alignItems: 'center',
+    marginBottom: 24,
+    backgroundColor: '#ffffff',
+  },
+  guestButtonText: {
+    color: '#7f8c8d',
     fontSize: 16,
     fontWeight: '600',
   },
-  guestButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  guestButtonText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '500',
-  },
   termsText: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 13,
+    color: '#95a5a6',
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 20,
+    paddingHorizontal: 20,
   },
   linkText: {
-    color: '#007AFF',
+    color: '#3498db',
     textDecorationLine: 'underline',
+    fontWeight: '500',
   },
 });
 
