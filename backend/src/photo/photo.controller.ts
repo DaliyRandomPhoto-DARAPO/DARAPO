@@ -34,7 +34,7 @@ export class PhotoController {
       throw new BadRequestException('파일이 업로드되지 않았습니다.');
     }
 
-    // 임시로 로컬 파일 경로 저장 (추후 AWS S3로 변경)
+    // 로컬 파일 경로 저장
     const imageUrl = `/uploads/${file.filename}`;
 
     const photo = await this.photoService.createPhoto({

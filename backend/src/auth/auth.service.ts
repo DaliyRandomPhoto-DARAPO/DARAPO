@@ -56,16 +56,11 @@ export class AuthService {
   }
 
   /**
-   * 카카오 OAuth 콜백 처리 (인증 코드 -> 토큰 -> 사용자 정보)
+   * 카카오 OAuth 콜백 처리 (인증 코드 → 사용자 정보)
    */
   async handleKakaoCallback(code: string) {
     try {
-      console.log('카카오 OAuth 콜백 처리 시작');
-
-      // 1. 인증 코드로 액세스 토큰 획득
       const tokenResponse = await this.exchangeCodeForToken(code);
-      
-      // 2. 액세스 토큰으로 사용자 정보 조회
       const userInfo = await this.getKakaoUserInfo(tokenResponse.access_token);
 
       return {
@@ -75,7 +70,7 @@ export class AuthService {
         profileImage: userInfo.kakao_account?.profile?.profile_image_url,
       };
     } catch (error) {
-      console.error('카카오 OAuth 콜백 처리 실패:', error);
+      console.error('OAuth 콜백 처리 실패:', error);
       throw new UnauthorizedException('카카오 로그인 처리에 실패했습니다.');
     }
   }
@@ -83,27 +78,26 @@ export class AuthService {
   /**
    * 인증 코드를 액세스 토큰으로 교환
    */
-  private async exchangeCodeForToken(code: string): Promise<KakaoTokenResponse> {
+  private async exchangeCodeForToken(code: string): Promise<any> {
     try {
-      const response = await axios.post<KakaoTokenResponse>(
-        'https://kauth.kakao.com/oauth/token',
-        new URLSearchParams({
-          grant_type: 'authorization_code',
-          client_id: this.KAKAO_CLIENT_ID!,
-          client_secret: this.KAKAO_CLIENT_SECRET || '',
-          redirect_uri: this.KAKAO_REDIRECT_URI,
-          code,
-        }).toString(),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        }
-      );
+      const tokenUrl = 'https://kauth.kakao.com/oauth/token';
+
+      const params = new URLSearchParams();
+      params.append('grant_type', 'authorization_code');
+      params.append('client_id', this.KAKAO_CLIENT_ID!);
+      params.append('client_secret', this.KAKAO_CLIENT_SECRET!);
+      params.append('redirect_uri', this.KAKAO_REDIRECT_URI);
+      params.append('code', code);
+
+      const response = await axios.post(tokenUrl, params.toString(), {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      });
 
       return response.data;
     } catch (error) {
-      console.error('카카오 토큰 교환 실패:', error.response?.data || error.message);
+      console.error('액세스 토큰 교환 실패:', error.response?.data || error);
       throw new UnauthorizedException('카카오 토큰 교환에 실패했습니다.');
     }
   }
@@ -132,7 +126,6 @@ export class AuthService {
    */
   async validateKakaoToken(kakaoToken: string) {
     try {
-      console.log('카카오 토큰 검증 시작:', kakaoToken.substring(0, 20) + '...');
       
       // 카카오 API로 토큰 검증 및 사용자 정보 조회
       const response = await axios.get<KakaoUserInfo>('https://kapi.kakao.com/v2/user/me', {
@@ -143,11 +136,6 @@ export class AuthService {
       });
 
       const kakaoUserInfo = response.data;
-      console.log('카카오 API 응답 성공:', {
-        id: kakaoUserInfo.id,
-        nickname: kakaoUserInfo.kakao_account?.profile?.nickname,
-        hasEmail: !!kakaoUserInfo.kakao_account?.email,
-      });
 
       return {
         kakaoId: kakaoUserInfo.id.toString(),
@@ -165,19 +153,25 @@ export class AuthService {
     let user = await this.userService.findByKakaoId(kakaoUserInfo.kakaoId);
     
     if (!user) {
-      console.log('새 사용자 생성:', kakaoUserInfo.kakaoId);
       user = await this.userService.create(kakaoUserInfo);
-    } else {
-      console.log('기존 사용자 로그인:', kakaoUserInfo.kakaoId);
-      await this.userService.updateLastLogin((user as any)._id.toString());
     }
 
-    return user;
+    return this.generateJWT(user);
   }
 
   async generateJWT(user: any) {
+    console.log('JWT 생성 중, 사용자 객체:', user);
+    
+    // Mongoose 문서의 경우 _id 또는 id 속성 확인
+    const userId = user._id?.toString() || user.id?.toString();
+    
+    if (!userId) {
+      console.error('사용자 ID를 찾을 수 없습니다. 사용자 객체:', JSON.stringify(user, null, 2));
+      throw new Error('사용자 ID를 찾을 수 없습니다.');
+    }
+    
     const payload = { 
-      sub: user._id.toString(), 
+      sub: userId, 
       kakaoId: user.kakaoId,
       nickname: user.nickname,
     };
@@ -187,7 +181,7 @@ export class AuthService {
     return {
       accessToken,
       user: {
-        id: user._id.toString(),
+        id: userId,
         kakaoId: user.kakaoId,
         nickname: user.nickname,
         profileImage: user.profileImage,
@@ -212,12 +206,8 @@ export class AuthService {
    */
   async logout(userId: string): Promise<void> {
     try {
-      console.log('사용자 로그아웃 처리:', userId);
-      
       // 실제로는 Redis 등에 토큰을 블랙리스트로 관리
       // 여기서는 간단히 로그만 출력
-      console.log('✅ 로그아웃 완료');
-      
     } catch (error) {
       console.error('로그아웃 처리 실패:', error);
       throw error;
@@ -229,20 +219,12 @@ export class AuthService {
    */
   async deleteAccount(userId: string): Promise<void> {
     try {
-      console.log('계정 삭제 시작:', userId);
-      
-      // 1. 사용자 정보 조회
       const user = await this.findUserById(userId);
       
-      // 2. 카카오에서 연결 해제 (사용자의 액세스 토큰이 필요하지만 여기서는 생략)
+      // 카카오 연결 해제 (구현 필요)
       // await this.unlinkKakaoAccount(user.kakaoId);
-      console.log('카카오 연결 해제 (구현 필요):', user.kakaoId);
       
-      // 3. 사용자 데이터 삭제
       await this.userService.deleteUser(userId);
-      
-      console.log('✅ 계정 삭제 완료');
-      
     } catch (error) {
       console.error('계정 삭제 실패:', error);
       throw error;

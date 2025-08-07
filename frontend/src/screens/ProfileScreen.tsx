@@ -13,13 +13,23 @@ import { useAuth } from '../contexts/AuthContext';
 const ProfileScreen = () => {
   const { user, logout } = useAuth();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     Alert.alert(
       '로그아웃',
       '정말 로그아웃하시겠습니까?',
       [
         { text: '취소', style: 'cancel' },
-        { text: '로그아웃', onPress: logout }
+        { 
+          text: '로그아웃', 
+          onPress: async () => {
+            try {
+              await logout();
+            } catch (error) {
+              console.error('로그아웃 에러:', error);
+              Alert.alert('로그아웃 오류', '로그아웃 중 오류가 발생했습니다.');
+            }
+          }
+        }
       ]
     );
   };

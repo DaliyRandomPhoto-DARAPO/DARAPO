@@ -26,36 +26,32 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 function AppNavigator() {
   const { isAuthenticated, isLoading, login } = useAuth();
 
-    // 딥링크 처리
+  // 딥링크 처리 (백엔드 완전 처리 방식)
   useEffect(() => {
     const handleDeepLink = async (url: string) => {
-      console.log('📱 딥링크 수신:', url);
-      
       if (url.includes('auth/callback')) {
         try {
           const urlObj = new URL(url);
-          const code = urlObj.searchParams.get('code');
+          const success = urlObj.searchParams.get('success');
           const error = urlObj.searchParams.get('error');
+          const token = urlObj.searchParams.get('token');
+          const userString = urlObj.searchParams.get('user');
 
           if (error) {
-            console.error('❌ 카카오 인증 에러:', error);
-            // TODO: 에러 알림 표시
+            console.error('OAuth 처리 실패:', error);
             return;
           }
 
-          if (code) {
-            console.log('✅ 카카오 인증 코드 수신:', code.substring(0, 10) + '...');
-            
-            // 백엔드에 인증 코드 전송하여 JWT 토큰 받기
-            const response = await authAPI.kakaoCallback(code);
-            
-            // AuthContext를 통해 로그인 처리
-            await login(response.accessToken, response.user);
-            
-            console.log('🎉 로그인 완료, 홈 화면으로 이동');
+          if (success === 'true' && token && userString) {
+            try {
+              const user = JSON.parse(decodeURIComponent(userString));
+              await login(decodeURIComponent(token), user);
+            } catch (parseError) {
+              console.error('사용자 정보 파싱 실패:', parseError);
+            }
           }
         } catch (error: any) {
-          console.error('❌ 딥링크 처리 실패:', error);
+          console.error('딥링크 처리 실패:', error);
         }
       }
     };

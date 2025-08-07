@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { backendKakaoAuthService } from '../services/backendKakaoAuthService';
+import backendKakaoAuthService from '../services/backendKakaoAuthService';
 
 interface User {
   id: string;
@@ -40,7 +40,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const loadStoredAuth = useCallback(async () => {
     try {
-      // 병렬로 데이터 로드
       const [storedToken, storedUser] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN),
         AsyncStorage.getItem(STORAGE_KEYS.USER_INFO),
@@ -51,7 +50,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(JSON.parse(storedUser));
       }
     } catch (error) {
-      console.error('인증 정보 로드 실패:', error);
+      console.warn('인증 정보 로드 실패:', error);
     } finally {
       setIsLoading(false);
     }
@@ -59,7 +58,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = useCallback(async (newToken: string, newUser: User) => {
     try {
-      // 병렬로 저장 및 상태 업데이트
       await Promise.all([
         AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, newToken),
         AsyncStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(newUser))
@@ -67,39 +65,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       setToken(newToken);
       setUser(newUser);
-      
-      console.log('🎉 AuthContext 로그인 완료:', newUser.nickname);
     } catch (error) {
-      console.error('로그인 정보 저장 실패:', error);
+      console.warn('로그인 정보 저장 실패:', error);
       throw error;
     }
   }, []);
 
   const logout = useCallback(async () => {
     try {
-      console.log('🔄 로그아웃 프로세스 시작...');
-      
-      // 병렬로 카카오 로그아웃과 로컬 데이터 정리 수행
-      const [kakaoLogoutResult, , ] = await Promise.allSettled([
+      const [kakaoLogoutResult] = await Promise.allSettled([
         backendKakaoAuthService.logout(),
         AsyncStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN),
         AsyncStorage.removeItem(STORAGE_KEYS.USER_INFO),
       ]);
       
-      if (kakaoLogoutResult.status === 'fulfilled') {
-        console.log('✅ 카카오 로그아웃 완료');
-      } else {
-        console.warn('⚠️ 카카오 로그아웃 실패:', kakaoLogoutResult.reason);
+      if (kakaoLogoutResult.status === 'rejected') {
+        console.warn('로그아웃 중 일부 오류:', kakaoLogoutResult.reason);
       }
       
-      // 상태 초기화
       setToken(null);
       setUser(null);
       
-      console.log('✅ 앱 로그아웃 완료');
     } catch (error) {
-      console.error('❌ 로그아웃 실패:', error);
-      // 로그아웃은 항상 성공해야 하므로 강제로 상태 초기화
+      console.error('로그아웃 실패:', error);
       setToken(null);
       setUser(null);
     }
