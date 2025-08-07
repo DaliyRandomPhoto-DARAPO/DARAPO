@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { kakaoService } from '../services/kakaoService';
+import { backendKakaoAuthService } from '../services/backendKakaoAuthService';
 
 interface User {
   id: string;
@@ -67,6 +67,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       setToken(newToken);
       setUser(newUser);
+      
+      console.log('🎉 AuthContext 로그인 완료:', newUser.nickname);
     } catch (error) {
       console.error('로그인 정보 저장 실패:', error);
       throw error;
@@ -79,7 +81,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // 병렬로 카카오 로그아웃과 로컬 데이터 정리 수행
       const [kakaoLogoutResult, , ] = await Promise.allSettled([
-        kakaoService.logout(),
+        backendKakaoAuthService.logout(),
         AsyncStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN),
         AsyncStorage.removeItem(STORAGE_KEYS.USER_INFO),
       ]);
@@ -93,9 +95,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // 상태 초기화
       setToken(null);
       setUser(null);
-      
-      // 카카오 서비스 캐시도 클리어
-      kakaoService.clearCache();
       
       console.log('✅ 앱 로그아웃 완료');
     } catch (error) {

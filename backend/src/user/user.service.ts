@@ -31,4 +31,20 @@ export class UserService {
   async findAll(): Promise<User[]> {
     return this.userModel.find({ isActive: true }).exec();
   }
+
+  async deleteUser(userId: string): Promise<void> {
+    await this.userModel.findByIdAndDelete(userId).exec();
+  }
+
+  async updateProfile(userId: string, updateData: Partial<User>): Promise<User | null> {
+    return this.userModel
+      .findByIdAndUpdate(userId, updateData, { new: true })
+      .exec();
+  }
+
+  async deactivateUser(userId: string): Promise<User | null> {
+    return this.userModel
+      .findByIdAndUpdate(userId, { isActive: false }, { new: true })
+      .exec();
+  }
 }

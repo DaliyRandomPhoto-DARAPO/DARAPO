@@ -9,9 +9,8 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { authAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { kakaoService } from '../services/kakaoService';
+import backendKakaoAuthService from '../services/backendKakaoAuthService';
 
 // 성능 최적화를 위한 상수 정의
 const LOGIN_MESSAGES = Object.freeze({
@@ -44,35 +43,33 @@ const LoginScreen = React.memo(() => {
     try {
       setLoading(true);
       
-      console.log(LOGIN_MESSAGES.START);
+      console.log('🔄 백엔드 완전 처리 카카오 로그인 시작');
       
-      // 실제 카카오 SDK를 통한 로그인
-      const { tokens, profile } = await kakaoService.login();
+      // 백엔드에서 완전히 처리된 로그인 결과 받기
+      const result = await backendKakaoAuthService.login();
       
-      console.log(LOGIN_MESSAGES.SUCCESS_BACKEND);
-      
-      // 백엔드에 카카오 토큰 전송하여 JWT 토큰 받기
-      const response = await authAPI.kakaoLogin(tokens.accessToken);
-      
-      // AuthContext를 통해 로그인 처리
-      await login(response.accessToken, response.user);
-      
-      Alert.alert(
-        LOGIN_MESSAGES.LOGIN_SUCCESS_TITLE, 
-        `환영합니다, ${response.user.nickname}님!`
-      );
-      
+      if (result.success && result.accessToken && result.user) {
+        console.log('✅ 로그인 성공, 토큰 및 사용자 정보 수신');
+        
+        // AuthContext를 통해 로그인 상태 업데이트
+        await login(result.accessToken, result.user);
+        
+        Alert.alert(LOGIN_MESSAGES.LOGIN_SUCCESS_TITLE, `안녕하세요, ${result.user.nickname}님!`);
+      } else {
+        console.error('❌ 로그인 실패:', result.error);
+        Alert.alert(LOGIN_MESSAGES.LOGIN_FAILED_TITLE, result.error || '로그인에 실패했습니다.');
+      }
     } catch (error: any) {
-      console.error('로그인 실패:', error);
-      
+      console.error('❌ 카카오 로그인 오류:', error.message);
       const errorMessage = error.message || LOGIN_MESSAGES.DEFAULT_ERROR;
       
-      // 취소된 경우는 알림을 표시하지 않음 (사용자 의도)
       if (!errorMessage.includes(LOGIN_MESSAGES.CANCEL_KEYWORD)) {
         Alert.alert(LOGIN_MESSAGES.LOGIN_FAILED_TITLE, errorMessage);
       }
     } finally {
       setLoading(false);
+      // 딥링크 리스너 정리
+      backendKakaoAuthService.stopDeepLinkHandling();
     }
   }, [loading, login]);
 

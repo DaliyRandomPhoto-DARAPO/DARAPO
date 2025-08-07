@@ -11,7 +11,7 @@ console.log('🔗 API Base URL:', API_BASE_URL);
 
 // Axios 인스턴스 생성
 const apiClient = axios.create({
-  baseURL: `${API_BASE_URL}/api`,
+  baseURL: API_BASE_URL, // 환경변수에 이미 /api가 포함되어 있음
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -36,22 +36,85 @@ apiClient.interceptors.request.use(
   }
 );
 
-// 응답 인터셉터 - 토큰 만료 처리
+// 응답 인터셉터 - 토큰 만료 처리 및 자동 갱신
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
-      // 토큰 만료 또는 인증 실패
-      await AsyncStorage.removeItem('auth_token');
-      // TODO: 로그인 화면으로 리다이렉트
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        // 토큰 갱신 시도
+        const response = await apiClient.post('/auth/refresh');
+        const newToken = response.data.accessToken;
+        
+        // 새 토큰을 AsyncStorage에 저장
+        await AsyncStorage.setItem('auth_token', newToken);
+        
+        // 헤더 업데이트
+        apiClient.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+        originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+        
+        // 원래 요청 재시도
+        return apiClient(originalRequest);
+        
+      } catch (refreshError) {
+        // 토큰 갱신 실패 시 로그아웃 처리
+        await AsyncStorage.multiRemove(['auth_token', 'user_info']);
+        console.log('토큰 갱신 실패, 로그아웃 처리됨');
+        // TODO: 로그인 화면으로 리다이렉트
+      }
     }
+    
     return Promise.reject(error);
   }
 );
 
 // API 서비스 함수들
 export const authAPI = {
-  // 카카오 로그인
+  // 카카오 OAuth 인증 URL 획득
+  getKakaoAuthUrl: async () => {
+    console.log('🔗 요청 URL:', `${API_BASE_URL}/auth/kakao`);
+    const response = await apiClient.get('/auth/kakao');
+    return response.data;
+  },
+
+  // 카카오 OAuth 콜백 처리 (인증 코드 -> JWT 토큰)
+  kakaoCallback: async (code: string, state?: string) => {
+    const response = await apiClient.post('/auth/kakao/callback', {
+      code,
+      state,
+    });
+    return response.data;
+  },
+
+  // 로그아웃 (서버에서 토큰 무효화)
+  logout: async () => {
+    const response = await apiClient.post('/auth/logout');
+    return response.data;
+  },
+
+  // 토큰 갱신
+  refreshToken: async () => {
+    const response = await apiClient.post('/auth/refresh');
+    return response.data;
+  },
+
+  // 현재 사용자 정보 조회
+  getCurrentUser: async () => {
+    const response = await apiClient.get('/auth/me');
+    return response.data;
+  },
+
+  // 계정 삭제 (카카오 연결 해제 포함)
+  deleteAccount: async () => {
+    const response = await apiClient.delete('/auth/account');
+    return response.data;
+  },
+
+  // 레거시 카카오 로그인 (제거 예정)
   kakaoLogin: async (kakaoToken: string) => {
     const response = await apiClient.post('/auth/kakao-login', {
       kakaoToken,
