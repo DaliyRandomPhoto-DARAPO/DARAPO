@@ -75,31 +75,29 @@ const CameraScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
-        <View style={styles.overlay}>
-          <View style={styles.topBar}>
-            
-            <View style={styles.missionContainer}>
-              {loading ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.missionText}>{todayMission}</Text>
-              )}
-            </View>
-            
-          </View>
-          
-          <View style={styles.bottomBar}>
-            <View style={styles.spacer} />
-            
-            <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
-              <View style={styles.captureButtonInner} />
-            </TouchableOpacity>
-            
-            <View style={styles.spacer} />
+      <CameraView style={styles.camera} facing={facing} ref={cameraRef} />
+      
+      <View style={styles.overlay}>
+        <View style={styles.topBar}>
+          <View style={styles.missionContainer}>
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.missionText}>{todayMission}</Text>
+            )}
           </View>
         </View>
-      </CameraView>
+        
+        <View style={styles.bottomBar}>
+          <View style={styles.spacer} />
+          
+          <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
+            <View style={styles.captureButtonInner} />
+          </TouchableOpacity>
+          
+          <View style={styles.spacer} />
+        </View>
+      </View>
     </SafeAreaView>
   );
 };
@@ -113,8 +111,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   overlay: {
-    flex: 1,
-    backgroundColor: 'transparent',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'space-between',
   },
   topBar: {

@@ -13,6 +13,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
+      "bundleIdentifier": "com.darapo.app",
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "This app uses the camera to take photos for daily missions.",
@@ -20,6 +21,7 @@
       }
     },
     "android": {
+      "package": "com.darapo.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -31,9 +33,6 @@
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE"
       ]
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       [
@@ -47,6 +46,31 @@
         {
           "photosPermission": "Allow $(PRODUCT_NAME) to access your photos for sharing.",
           "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos to your gallery."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "manifestPlaceholders": {
+              "KAKAO_APP_KEY": "320c4ec9a8df9ec13f1146682d28ce46"
+            }
+          },
+          "ios": {
+            "infoPlist": {
+              "CFBundleURLTypes": [
+                {
+                  "CFBundleURLName": "kakao",
+                  "CFBundleURLSchemes": ["kakao320c4ec9a8df9ec13f1146682d28ce46"]
+                }
+              ],
+              "LSApplicationQueriesSchemes": [
+                "kakaokompassauth",
+                "kakaolink",
+                "kakao320c4ec9a8df9ec13f1146682d28ce46"
+              ]
+            }
+          }
         }
       ]
     ]

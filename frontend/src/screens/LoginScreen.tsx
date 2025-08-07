@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { authAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { kakaoService } from '../services/kakaoService';
 
 type LoginScreenNavigationProp = any;
 
@@ -22,20 +23,37 @@ const LoginScreen = () => {
     try {
       setLoading(true);
       
-      // 임시로 가짜 카카오 토큰으로 로그인 테스트
-      // 실제 구현에서는 카카오 SDK를 통해 토큰을 받아와야 함
-      const fakeKakaoToken = 'fake-kakao-token-' + Date.now();
+      console.log('카카오 로그인 프로세스 시작');
       
-      const response = await authAPI.kakaoLogin(fakeKakaoToken);
+      // 실제 카카오 SDK를 통한 로그인
+      const { tokens, profile } = await kakaoService.login();
+      
+      console.log('카카오 로그인 성공, 백엔드 API 호출 시작');
+      
+      // 백엔드에 카카오 토큰 전송하여 JWT 토큰 받기
+      const response = await authAPI.kakaoLogin(tokens.accessToken);
       
       // AuthContext를 통해 로그인 처리
       await login(response.accessToken, response.user);
       
       Alert.alert('로그인 성공', `환영합니다, ${response.user.nickname}님!`);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('로그인 실패:', error);
-      Alert.alert('로그인 실패', '로그인 중 오류가 발생했습니다.');
+      
+      let errorMessage = '로그인 중 오류가 발생했습니다.';
+      
+      if (error.message) {
+        if (error.message.includes('사용자가 취소')) {
+          errorMessage = '로그인이 취소되었습니다.';
+        } else if (error.message.includes('네트워크')) {
+          errorMessage = '네트워크 연결을 확인해주세요.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      Alert.alert('로그인 실패', errorMessage);
     } finally {
       setLoading(false);
     }
