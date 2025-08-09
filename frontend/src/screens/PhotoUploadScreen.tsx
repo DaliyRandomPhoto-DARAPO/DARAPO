@@ -13,6 +13,8 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
+import { photoAPI } from '../services/api';
+import { missionAPI } from '../services/api';
 
 type PhotoUploadScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PhotoUpload'>;
 type PhotoUploadScreenRouteProp = RouteProp<RootStackParamList, 'PhotoUpload'>;
@@ -22,6 +24,7 @@ const PhotoUploadScreen = () => {
   const route = useRoute<PhotoUploadScreenRouteProp>();
   const [comment, setComment] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [missionTitle, setMissionTitle] = useState<string>('오늘의 미션');
   
   const { photoUri } = route.params;
 
@@ -34,15 +37,20 @@ const PhotoUploadScreen = () => {
     setIsUploading(true);
     
     try {
-      // TODO: 실제 업로드 로직 구현
-      console.log('업로드할 사진:', photoUri);
-      console.log('코멘트:', comment);
-      
-      Alert.alert('성공', '사진이 업로드되었습니다!', [
-        { text: '확인', onPress: () => navigation.navigate('MainTabs') }
-      ]);
+      // 미션 정보 가져오기(missionId 필요 시 확장 가능)
+      const mission = await missionAPI.getTodayMission();
+
+      const form = new FormData();
+      // @ts-ignore: React Native FormData file
+      form.append('file', { uri: photoUri, name: 'upload.jpg', type: 'image/jpeg' });
+      form.append('comment', comment);
+      form.append('missionId', mission?._id || '');
+
+  await photoAPI.uploadPhoto(form);
+  navigation.navigate('UploadResult');
     } catch (error) {
-      Alert.alert('오류', '업로드에 실패했습니다.');
+      console.error('업로드 실패:', error);
+      Alert.alert('오류', '업로드에 실패했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setIsUploading(false);
     }
@@ -61,7 +69,7 @@ const PhotoUploadScreen = () => {
         
         <View style={styles.missionInfo}>
           <Text style={styles.missionLabel}>미션</Text>
-          <Text style={styles.missionText}>오늘의 노란색 찾기</Text>
+          <Text style={styles.missionText}>{missionTitle}</Text>
         </View>
 
         <TextInput

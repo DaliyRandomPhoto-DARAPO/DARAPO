@@ -1,9 +1,8 @@
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import * as Linking from 'expo-linking';
 import Toast from 'react-native-toast-message';
 
 // Types
@@ -20,56 +19,18 @@ import LoginScreen from './src/screens/LoginScreen';
 import CameraScreen from './src/screens/CameraScreen';
 import PhotoUploadScreen from './src/screens/PhotoUploadScreen';
 import TabNavigator from './src/navigation/TabNavigator';
+import TermsScreen from './src/screens/TermsScreen';
+import PrivacyScreen from './src/screens/PrivacyScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
+import MyPhotosScreen from './src/screens/MyPhotosScreen';
+import UploadResultScreen from './src/screens/UploadResultScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function AppNavigator() {
   const { isAuthenticated, isLoading, login } = useAuth();
 
-  // 딥링크 처리 (백엔드 완전 처리 방식)
-  useEffect(() => {
-    const handleDeepLink = async (url: string) => {
-      if (url.includes('auth/callback')) {
-        try {
-          const urlObj = new URL(url);
-          const success = urlObj.searchParams.get('success');
-          const error = urlObj.searchParams.get('error');
-          const token = urlObj.searchParams.get('token');
-          const userString = urlObj.searchParams.get('user');
-
-          if (error) {
-            console.error('OAuth 처리 실패:', error);
-            return;
-          }
-
-          if (success === 'true' && token && userString) {
-            try {
-              const user = JSON.parse(decodeURIComponent(userString));
-              await login(decodeURIComponent(token), user);
-            } catch (parseError) {
-              console.error('사용자 정보 파싱 실패:', parseError);
-            }
-          }
-        } catch (error: any) {
-          console.error('딥링크 처리 실패:', error);
-        }
-      }
-    };
-
-    // 앱이 시작될 때 URL 확인
-    Linking.getInitialURL().then((url) => {
-      if (url) {
-        handleDeepLink(url);
-      }
-    });
-
-    // 앱이 실행 중일 때 딥링크 처리
-    const subscription = Linking.addEventListener('url', (event) => {
-      handleDeepLink(event.url);
-    });
-
-    return () => subscription?.remove();
-  }, [login]);
+  // 딥링크 처리는 backendKakaoAuthService에서 중앙 집중 처리
 
   if (isLoading) {
     return (
@@ -105,6 +66,31 @@ function AppNavigator() {
               name="PhotoUpload" 
               component={PhotoUploadScreen} 
               options={{ title: '사진 업로드' }}
+            />
+            <Stack.Screen 
+              name="UploadResult" 
+              component={UploadResultScreen} 
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+              name="MyPhotos" 
+              component={MyPhotosScreen} 
+              options={{ title: '내 사진 관리' }}
+            />
+            <Stack.Screen 
+              name="Settings" 
+              component={SettingsScreen} 
+              options={{ title: '설정' }}
+            />
+            <Stack.Screen 
+              name="Terms" 
+              component={TermsScreen} 
+              options={{ title: '이용약관' }}
+            />
+            <Stack.Screen 
+              name="Privacy" 
+              component={PrivacyScreen} 
+              options={{ title: '개인정보처리방침' }}
             />
           </>
         )}

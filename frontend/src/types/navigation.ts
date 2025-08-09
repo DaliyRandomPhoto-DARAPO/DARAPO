@@ -5,6 +5,11 @@ export type RootStackParamList = {
   PhotoUpload: {
     photoUri: string;
   };
+  Terms: undefined;
+  Privacy: undefined;
+  Settings: undefined;
+    MyPhotos: undefined;
+    UploadResult: undefined;
 };
 
 export type TabParamList = {

@@ -10,7 +10,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
-import backendKakaoAuthService from '../services/backendKakaoAuthService';
+import backendKakaoAuthService from '../services/kakao_api';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../types/navigation';
 
 // 성능 최적화를 위한 상수 정의
 const LOGIN_MESSAGES = Object.freeze({
@@ -36,6 +39,7 @@ const STRINGS = Object.freeze({
 const LoginScreen = React.memo(() => {
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const handleKakaoLogin = useCallback(async () => {
     if (loading) return; // 중복 실행 방지
@@ -128,8 +132,14 @@ const LoginScreen = React.memo(() => {
           </TouchableOpacity>
 
           <Text style={styles.termsText}>
-            {STRINGS.TERMS_TEXT}<Text style={styles.linkText}>{STRINGS.PRIVACY_POLICY}</Text> 및{'\n'}
-            <Text style={styles.linkText}>{STRINGS.SERVICE_TERMS}</Text>{STRINGS.TERMS_AGREE}
+            {STRINGS.TERMS_TEXT}
+            <Text style={styles.linkText} onPress={() => navigation.navigate('Privacy')}>
+              {STRINGS.PRIVACY_POLICY}
+            </Text>{' '}및{`\n`}
+            <Text style={styles.linkText} onPress={() => navigation.navigate('Terms')}>
+              {STRINGS.SERVICE_TERMS}
+            </Text>
+            {STRINGS.TERMS_AGREE}
           </Text>
         </View>
       </View>

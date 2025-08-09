@@ -1,18 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  Image,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
+import Header from '../ui/Header';
+import EmptyState from '../ui/EmptyState';
+import { colors, typography, spacing } from '../ui/theme';
+import Button from '../ui/Button';
+import { useNavigation } from '@react-navigation/native';
 
 const FeedScreen = () => {
   const [loading, setLoading] = useState(true);
-  const [photos, setPhotos] = useState([]);
+  const [photos, setPhotos] = useState([] as any[]);
+  const navigation = useNavigation<any>();
 
   useEffect(() => {
     // TODO: API 호출로 피드 데이터 로드
@@ -24,8 +21,9 @@ const FeedScreen = () => {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
+        <Header title="피드" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3498db" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>피드를 불러오는 중...</Text>
         </View>
       </SafeAreaView>
@@ -34,18 +32,11 @@ const FeedScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>피드</Text>
-      </View>
-      
-      <ScrollView style={styles.content}>
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>📸</Text>
-          <Text style={styles.emptyTitle}>아직 올라온 사진이 없어요</Text>
-          <Text style={styles.emptySubtitle}>
-            첫 번째 미션을 완료하고{'\n'}사진을 공유해보세요!
-          </Text>
-        </View>
+      <Header title="피드" />
+
+      <ScrollView style={styles.content} contentContainerStyle={{ padding: spacing.lg }}>
+        <EmptyState title="아직 올라온 사진이 없어요" subtitle={'첫 번째 미션을 완료하고\n사진을 공유해보세요!'} />
+        <Button title="📸 지금 찍으러 가기" onPress={() => navigation.navigate('Camera')} style={{ marginTop: spacing.lg }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -54,20 +45,7 @@ const FeedScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 20,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2c3e50',
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
@@ -78,31 +56,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    fontSize: 16,
-    color: '#7f8c8d',
+    fontSize: typography.body,
+    color: colors.subText,
     marginTop: 10,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 100,
-  },
-  emptyText: {
-    fontSize: 80,
-    marginBottom: 20,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-    marginBottom: 10,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    color: '#7f8c8d',
-    textAlign: 'center',
-    lineHeight: 24,
   },
 });
 

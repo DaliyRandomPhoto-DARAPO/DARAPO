@@ -2,6 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { join } from 'path';
+import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -32,6 +34,9 @@ async function bootstrap() {
   
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
+
+  // 정적 파일 서빙: 업로드 이미지 제공
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   // 모든 네트워크 인터페이스에서 수신하도록 설정 (안드로이드 접근 허용)
   const port = process.env.PORT || 3000;

@@ -1,10 +1,17 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// SecureStore는 선택적 사용(설치 안 된 환경 대비)
+// 동적 require로 타입 에러 및 번들 이슈 회피
 import Constants from 'expo-constants';
 
-const API_BASE_URL = Constants.expoConfig?.extra?.apiUrl || 
-                     process.env.EXPO_PUBLIC_API_URL || 
-                     'http://localhost:3000';
+export const RAW_API_BASE_URL =
+  Constants.expoConfig?.extra?.apiUrl ||
+  process.env.EXPO_PUBLIC_API_URL ||
+  'http://localhost:3000';
+
+// Nest 전역 prefix('api')와 일치하도록 baseURL을 보정
+const API_BASE_URL = `${RAW_API_BASE_URL.replace(/\/+$/, '')}/api`;
+export const BASE_URL = RAW_API_BASE_URL.replace(/\/+$/, '');
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -48,7 +55,17 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const response = await apiClient.post('/auth/refresh');
+        // body로 refreshToken을 전달(쿠키 미사용 환경 대응)
+        let refreshToken: string | null = null;
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const SecureStore: any = require('expo-secure-store');
+          refreshToken = (await SecureStore.getItemAsync('refresh_token')) || null;
+        } catch {
+          // 폴백: AsyncStorage 사용
+          refreshToken = (await AsyncStorage.getItem('refresh_token')) || null;
+        }
+  const response = await apiClient.post('/auth/refresh', refreshToken ? { refreshToken } : undefined);
         const newToken = response.data.accessToken;
         
         await AsyncStorage.setItem('auth_token', newToken);
@@ -60,6 +77,13 @@ apiClient.interceptors.response.use(
         
       } catch (refreshError) {
         await AsyncStorage.multiRemove(['auth_token', 'user_info']);
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const SecureStore: any = require('expo-secure-store');
+          await SecureStore.deleteItemAsync('refresh_token');
+        } catch {
+          await AsyncStorage.removeItem('refresh_token');
+        }
         console.info('토큰 갱신 실패로 로그아웃');
       }
     }
@@ -75,13 +99,6 @@ export const authAPI = {
     return response.data;
   },
 
-  kakaoCallback: async (code: string, state?: string) => {
-    const response = await apiClient.post('/auth/kakao/callback', {
-      code,
-      state,
-    });
-    return response.data;
-  },
 
   logout: async () => {
     const response = await apiClient.post('/auth/logout');
@@ -98,10 +115,6 @@ export const authAPI = {
     return response.data;
   },
 
-  deleteAccount: async () => {
-    const response = await apiClient.delete('/auth/account');
-    return response.data;
-  },
 };
 
 export const missionAPI = {
@@ -123,6 +136,26 @@ export const photoAPI = {
 
   getMyPhotos: async () => {
     const response = await apiClient.get('/photo/mine');
+    return response.data;
+  },
+
+  deletePhoto: async (id: string) => {
+    const response = await apiClient.delete(`/photo/${id}`);
+    return response.data;
+  },
+
+  updatePhoto: async (id: string, data: any) => {
+    const response = await apiClient.put(`/photo/${id}`, data);
+    return response.data;
+  },
+
+  markAsShared: async (id: string) => {
+    const response = await apiClient.put(`/photo/${id}/share`);
+    return response.data;
+  },
+
+  getPublicPhotos: async (limit = 20, skip = 0) => {
+    const response = await apiClient.get(`/photo/public`, { params: { limit, skip } });
     return response.data;
   },
 };

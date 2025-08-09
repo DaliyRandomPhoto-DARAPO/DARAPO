@@ -1,14 +1,11 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  TouchableOpacity,
-  Alert,
-  ScrollView,
-} from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import Header from '../ui/Header';
+import { colors, spacing, typography } from '../ui/theme';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../types/navigation';
 
 const ProfileScreen = () => {
   const { user, logout } = useAuth();
@@ -34,11 +31,11 @@ const ProfileScreen = () => {
     );
   };
 
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>프로필</Text>
-      </View>
+      <Header title="프로필" />
       
       <ScrollView style={styles.content}>
         <View style={styles.profileSection}>
@@ -63,22 +60,19 @@ const ProfileScreen = () => {
         </View>
 
         <View style={styles.menuSection}>
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('MyPhotos')}>
             <Text style={styles.menuText}>내 사진 관리</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuText}>알림 설정</Text>
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Settings')}>
+            <Text style={styles.menuText}>설정</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuText}>도움말</Text>
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Terms')}>
+            <Text style={styles.menuText}>이용약관</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Privacy')}>
             <Text style={styles.menuText}>개인정보처리방침</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
@@ -93,40 +87,24 @@ const ProfileScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 20,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-  },
+  container: { flex: 1, backgroundColor: colors.background },
   content: {
     flex: 1,
   },
   profileSection: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.surface,
     alignItems: 'center',
-    paddingVertical: 40,
-    marginBottom: 20,
+    paddingVertical: spacing.xl,
+    marginBottom: spacing.md,
   },
   avatarContainer: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#3498db',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   avatarText: {
     fontSize: 36,
@@ -134,20 +112,20 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   nickname: {
-    fontSize: 24,
+    fontSize: typography.h1,
     fontWeight: 'bold',
-    color: '#2c3e50',
-    marginBottom: 8,
+    color: colors.text,
+    marginBottom: spacing.sm,
   },
   email: {
-    fontSize: 16,
-    color: '#7f8c8d',
+    fontSize: typography.body,
+    color: colors.subText,
   },
   statsSection: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.surface,
     flexDirection: 'row',
-    paddingVertical: 30,
-    marginBottom: 20,
+    paddingVertical: spacing.lg,
+    marginBottom: spacing.md,
   },
   statItem: {
     flex: 1,
@@ -155,50 +133,50 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     width: 1,
-    backgroundColor: '#e9ecef',
+    backgroundColor: colors.border,
   },
   statNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2c3e50',
+    color: colors.text,
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 14,
-    color: '#7f8c8d',
+    color: colors.subText,
   },
   menuSection: {
-    backgroundColor: '#ffffff',
-    marginBottom: 20,
+    backgroundColor: colors.surface,
+    marginBottom: spacing.md,
   },
   menuItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: '#f8f9fa',
   },
   menuText: {
-    fontSize: 16,
-    color: '#2c3e50',
+    fontSize: typography.body,
+    color: colors.text,
   },
   menuArrow: {
     fontSize: 20,
     color: '#bdc3c7',
   },
   logoutButton: {
-    backgroundColor: '#e74c3c',
-    marginHorizontal: 20,
-    paddingVertical: 16,
+    backgroundColor: colors.danger,
+    marginHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: spacing.xl,
   },
   logoutText: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: typography.body,
     fontWeight: 'bold',
   },
 });

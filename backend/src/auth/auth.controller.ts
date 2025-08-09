@@ -1,8 +1,9 @@
-import { Controller, Post, Body, BadRequestException, Get, Res, Delete, UseGuards, Request, Query } from '@nestjs/common';
+import { Controller, Post, Body, BadRequestException, Get, Res, Delete, UseGuards, Request, Query, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { NativeLoginDto, WebCallbackDto } from './dto/kakao.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -38,6 +39,7 @@ export class AuthController {
       const successUrl = `darapo://auth/callback?` +
         `success=true&` +
         `token=${encodeURIComponent(authResult.accessToken)}&` +
+        `refresh=${encodeURIComponent(authResult.refreshToken)}&` +
         `user=${encodeURIComponent(JSON.stringify(authResult.user))}`;
       
       return res.redirect(successUrl);
@@ -55,19 +57,32 @@ export class AuthController {
   @ApiResponse({ status: 400, description: '잘못된 요청' })
   @ApiResponse({ status: 401, description: '인증 실패' })
   async kakaoCallback(@Body() body: { code: string; state?: string }) {
-    if (!body.code) {
-      throw new BadRequestException('인증 코드가 필요합니다.');
-    }
+  throw new BadRequestException('deprecated endpoint');
+  }
 
-    try {
-      const kakaoUserInfo = await this.authService.handleKakaoCallback(body.code);
-      const result = await this.authService.loginOrCreateUser(kakaoUserInfo);
-      
-      return result;
-    } catch (error) {
-      console.error('OAuth 콜백 처리 실패:', error.message);
-      throw error;
+  /**
+   * 딥링크 동작을 빠르게 검증하기 위한 개발용 엔드포인트
+   * 사용 방법(디바이스/시뮬레이터 브라우저에서 호출):
+   *   GET /api/auth/debug/deeplink?token=<ACCESS>&user=<URLENCODED_JSON>
+   * 주의: ENABLE_DEBUG_ENDPOINTS=true 환경에서만 활성화됩니다(운영 비활성 권장).
+   */
+  @Get('debug/deeplink')
+  @ApiOperation({ summary: '딥링크 리다이렉트 디버그(DEV 전용)' })
+  async debugDeeplink(
+    @Query('token') token: string,
+    @Res() res: Response,
+    @Query('user') user?: string,
+  ) {
+    if (process.env.ENABLE_DEBUG_ENDPOINTS !== 'true') {
+      throw new ForbiddenException('Debug endpoint is disabled');
     }
+    if (!token) {
+      throw new BadRequestException('token is required');
+    }
+    const successUrl = `darapo://auth/callback?success=true&token=${encodeURIComponent(token)}${
+      user ? `&user=${encodeURIComponent(user)}` : ''
+    }`;
+    return res.redirect(successUrl);
   }
 
   @Post('logout')
@@ -86,20 +101,14 @@ export class AuthController {
   }
 
   @Post('refresh')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: '토큰 갱신' })
   @ApiResponse({ status: 200, description: '토큰 갱신 성공' })
-  async refreshToken(@Request() req) {
-    try {
-      const user = await this.authService.findUserById(req.user.sub);
-      const result = await this.authService.generateJWT(user);
-      
-      return result;
-    } catch (error) {
-      console.error('토큰 갱신 실패:', error.message);
-      throw error;
+  async refreshToken(@Request() req, @Body('refreshToken') rt?: string) {
+    const token = rt ?? req.cookies?.rt;
+    if (!token) {
+      throw new BadRequestException('refresh token required');
     }
+    return this.authService.refreshAccessToken(token);
   }
 
   @Get('me')

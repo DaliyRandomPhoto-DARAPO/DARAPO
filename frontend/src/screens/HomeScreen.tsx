@@ -1,17 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  SafeAreaView,
-  ActivityIndicator,
-  Alert
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { missionAPI } from '../services/api';
+import Header from '../ui/Header';
+import Card from '../ui/Card';
+import Button from '../ui/Button';
+import { colors, spacing, typography } from '../ui/theme';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MainTabs'>;
 
@@ -40,29 +36,26 @@ const HomeScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>오늘의 미션</Text>
-      </View>
+      <Header title="오늘의 미션" />
       
       <View style={styles.content}>
-        {loading ? (
-          <View style={styles.missionCard}>
-            <ActivityIndicator size="large" color="#007AFF" />
-            <Text style={styles.loadingText}>미션을 불러오는 중...</Text>
-          </View>
-        ) : (
-          <View style={styles.missionCard}>
+        <Card style={styles.cardWidth}>
+          {loading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingText}>미션을 불러오는 중...</Text>
+            </View>
+          ) : (
             <Text style={styles.missionText}>{todayMission}</Text>
-          </View>
-        )}
-        
-        <TouchableOpacity 
-          style={[styles.cameraButton, loading && styles.disabledButton]}
+          )}
+        </Card>
+
+        <Button
+          title="📸 사진 찍기"
           onPress={() => navigation.navigate('Camera')}
           disabled={loading}
-        >
-          <Text style={styles.cameraButtonText}>📸 사진 찍기</Text>
-        </TouchableOpacity>
+          style={{ marginTop: spacing.xl, paddingHorizontal: spacing.xl }}
+        />
       </View>
     </SafeAreaView>
   );
@@ -71,79 +64,28 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 20,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: spacing.lg,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-  },
-  missionCard: {
-    backgroundColor: '#ffffff',
-    padding: 30,
-    borderRadius: 20,
-    marginBottom: 40,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    minWidth: 280,
-    alignItems: 'center',
-  },
+  cardWidth: { minWidth: 280, alignItems: 'center' },
+  loadingBox: { alignItems: 'center' },
   missionText: {
-    fontSize: 20,
+    fontSize: typography.h2,
     textAlign: 'center',
-    color: '#2c3e50',
+    color: colors.text,
     fontWeight: '600',
     lineHeight: 28,
   },
   loadingText: {
-    fontSize: 16,
+    fontSize: typography.body,
     textAlign: 'center',
-    color: '#7f8c8d',
-    marginTop: 10,
-  },
-  cameraButton: {
-    backgroundColor: '#3498db',
-    paddingHorizontal: 50,
-    paddingVertical: 18,
-    borderRadius: 30,
-    shadowColor: '#3498db',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  disabledButton: {
-    backgroundColor: '#bdc3c7',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  cameraButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '700',
+    color: colors.subText,
+    marginTop: spacing.sm,
   },
 });
 

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import backendKakaoAuthService from '../services/backendKakaoAuthService';
+import backendKakaoAuthService from '../services/kakao_api';
 
 interface User {
   id: string;

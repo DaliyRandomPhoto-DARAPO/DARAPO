@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException, NotFoundException } from '@nestjs/co
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
 import axios from 'axios';
+import { KakaoClient } from './clients/kakao.client';
 
 interface KakaoUserInfo {
   id: number;
@@ -14,19 +15,14 @@ interface KakaoUserInfo {
   };
 }
 
-interface KakaoTokenResponse {
-  access_token: string;
-  token_type: string;
-  refresh_token?: string;
-  expires_in: number;
-  scope?: string;
-}
+// KakaoTokenResponse: 내부에서 구조를 직접 사용하지 않아 제거
 
 @Injectable()
 export class AuthService {
   private readonly KAKAO_CLIENT_ID = process.env.KAKAO_REST_API_KEY;
   private readonly KAKAO_CLIENT_SECRET = process.env.KAKAO_CLIENT_SECRET;
-  private readonly KAKAO_REDIRECT_URI = process.env.KAKAO_REDIRECT_URI || 'http://localhost:3000/auth/kakao/callback';
+  private readonly KAKAO_REDIRECT_URI =
+    process.env.KAKAO_REDIRECT_URI || 'http://localhost:3000/api/auth/kakao/callback';
 
   // 로그아웃된 토큰들을 메모리에 저장 (실제로는 Redis 등 사용)
   private blacklistedTokens = new Set<string>();
@@ -34,6 +30,7 @@ export class AuthService {
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
+    private readonly kakaoClient: KakaoClient,
   ) {}
 
   /**
@@ -61,7 +58,7 @@ export class AuthService {
   async handleKakaoCallback(code: string) {
     try {
       const tokenResponse = await this.exchangeCodeForToken(code);
-      const userInfo = await this.getKakaoUserInfo(tokenResponse.access_token);
+  const userInfo = await this.getKakaoUserInfo(tokenResponse.access_token);
 
       return {
         kakaoId: userInfo.id.toString(),
@@ -106,48 +103,10 @@ export class AuthService {
    * 액세스 토큰으로 카카오 사용자 정보 조회
    */
   private async getKakaoUserInfo(accessToken: string): Promise<KakaoUserInfo> {
-    try {
-      const response = await axios.get<KakaoUserInfo>('https://kapi.kakao.com/v2/user/me', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-type': 'application/x-www-form-urlencoded;charset=utf-8',
-        },
-      });
-
-      return response.data;
-    } catch (error) {
-      console.error('카카오 사용자 정보 조회 실패:', error.response?.data || error.message);
-      throw new UnauthorizedException('카카오 사용자 정보 조회에 실패했습니다.');
-    }
+    return this.kakaoClient.getUserMe(accessToken);
   }
 
-  /**
-   * 카카오 토큰 검증 및 사용자 정보 조회 (레거시 메서드)
-   */
-  async validateKakaoToken(kakaoToken: string) {
-    try {
-      
-      // 카카오 API로 토큰 검증 및 사용자 정보 조회
-      const response = await axios.get<KakaoUserInfo>('https://kapi.kakao.com/v2/user/me', {
-        headers: {
-          'Authorization': `Bearer ${kakaoToken}`,
-          'Content-type': 'application/x-www-form-urlencoded;charset=utf-8',
-        },
-      });
-
-      const kakaoUserInfo = response.data;
-
-      return {
-        kakaoId: kakaoUserInfo.id.toString(),
-        nickname: kakaoUserInfo.kakao_account?.profile?.nickname || '카카오 사용자',
-        email: kakaoUserInfo.kakao_account?.email,
-        profileImage: kakaoUserInfo.kakao_account?.profile?.profile_image_url,
-      };
-    } catch (error) {
-      console.error('카카오 토큰 검증 실패:', error.response?.data || error.message);
-      throw new UnauthorizedException('유효하지 않은 카카오 토큰입니다.');
-    }
-  }
+  // validateKakaoToken: 사용하지 않아 제거
 
   async loginOrCreateUser(kakaoUserInfo: any) {
     let user = await this.userService.findByKakaoId(kakaoUserInfo.kakaoId);
@@ -177,9 +136,11 @@ export class AuthService {
     };
     
     const accessToken = this.jwtService.sign(payload);
+    const refreshToken = this.jwtService.sign({ sub: userId, typ: 'refresh' }, { expiresIn: '14d' });
     
     return {
       accessToken,
+      refreshToken,
       user: {
         id: userId,
         kakaoId: user.kakaoId,
@@ -188,6 +149,27 @@ export class AuthService {
         email: user.email,
       },
     };
+  }
+
+  /**
+   * Refresh 토큰으로 새 Access 토큰 발급
+   */
+  async refreshAccessToken(refreshToken: string) {
+    try {
+      const payload: any = this.jwtService.verify(refreshToken);
+      if (payload.typ && payload.typ !== 'refresh') {
+        throw new UnauthorizedException('invalid refresh token');
+      }
+      const user = await this.findUserById(payload.sub);
+      const newAccess = this.jwtService.sign({
+        sub: (user as any)._id?.toString() || (user as any).id?.toString(),
+        kakaoId: (user as any).kakaoId,
+        nickname: (user as any).nickname,
+      });
+      return { accessToken: newAccess };
+    } catch (e) {
+      throw new UnauthorizedException('refresh failed');
+    }
   }
 
   /**
@@ -231,17 +213,5 @@ export class AuthService {
     }
   }
 
-  /**
-   * 토큰이 블랙리스트에 있는지 확인
-   */
-  isTokenBlacklisted(token: string): boolean {
-    return this.blacklistedTokens.has(token);
-  }
-
-  /**
-   * 토큰을 블랙리스트에 추가
-   */
-  addToBlacklist(token: string): void {
-    this.blacklistedTokens.add(token);
-  }
+  // 블랙리스트 관련 로직은 Redis 세션 전략 도입 시 재설계 예정
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from '../screens/HomeScreen';
 import FeedScreen from '../screens/FeedScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -28,25 +29,12 @@ const TabNavigator = () => {
           fontWeight: '600',
           marginTop: 4,
         },
-        tabBarIcon: ({ focused, color }) => {
-          let iconText;
-          
-          if (route.name === 'Home') {
-            iconText = '🏠';
-          } else if (route.name === 'Feed') {
-            iconText = '📋';
-          } else if (route.name === 'Profile') {
-            iconText = '👤';
-          }
-          
-          return (
-            <Text style={{ 
-              fontSize: 24, 
-              opacity: focused ? 1 : 0.6 
-            }}>
-              {iconText}
-            </Text>
-          );
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap = 'home-outline';
+          if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
+          if (route.name === 'Feed') iconName = focused ? 'images' : 'images-outline';
+          if (route.name === 'Profile') iconName = focused ? 'person' : 'person-outline';
+          return <Ionicons name={iconName} color={color} size={22} />;
         },
       })}
     >

@@ -77,7 +77,8 @@ class BackendKakaoAuthService {
       
       const success = params.get('success');
       const error = params.get('error');
-      const token = params.get('token');
+  const token = params.get('token');
+  const refresh = params.get('refresh');
       const userString = params.get('user');
       
       if (error) {
@@ -90,6 +91,21 @@ class BackendKakaoAuthService {
         try {
           const user = userString ? JSON.parse(decodeURIComponent(userString)) : null;
           
+          // refresh 토큰 저장(보안 저장소 선호, 폴백 제공)
+          if (refresh) {
+            (async () => {
+              try {
+                // eslint-disable-next-line @typescript-eslint/no-var-requires
+                const SecureStore: any = require('expo-secure-store');
+                await SecureStore.setItemAsync('refresh_token', decodeURIComponent(refresh));
+              } catch {
+                // 폴백: AsyncStorage
+                const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
+                await AsyncStorage.setItem('refresh_token', decodeURIComponent(refresh));
+              }
+            })();
+          }
+
           if (this.resolveLogin) {
             this.resolveLogin({ 
               success: true, 
@@ -163,17 +179,7 @@ class BackendKakaoAuthService {
     }
   }
 
-  /**
-   * 회원탈퇴 (백엔드에서 카카오 연결 해제 및 계정 삭제)
-   */
-  async deleteAccount(): Promise<void> {
-    try {
-      await authAPI.deleteAccount();
-    } catch (error: any) {
-      console.error('회원탈퇴 실패:', error);
-      throw this.formatError(error);
-    }
-  }
+  // 회원탈퇴 기능은 백엔드 엔드포인트 도입 시 구현 예정
 
   /**
    * 토큰 갱신 (백엔드에서 처리)
