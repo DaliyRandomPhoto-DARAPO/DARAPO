@@ -70,7 +70,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing.lg,
+  paddingHorizontal: spacing.lg,
+  paddingVertical: spacing.lg,
   },
   cardWidth: { minWidth: 280, alignItems: 'center' },
   loadingBox: { alignItems: 'center' },
@@ -85,7 +86,7 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     textAlign: 'center',
     color: colors.subText,
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
   },
 });
 

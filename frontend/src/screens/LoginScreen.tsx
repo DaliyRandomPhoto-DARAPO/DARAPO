@@ -14,6 +14,7 @@ import backendKakaoAuthService from '../services/kakao_api';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
+import { spacing } from '../ui/theme';
 
 // 성능 최적화를 위한 상수 정의
 const LOGIN_MESSAGES = Object.freeze({
@@ -231,14 +232,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   loginSection: {
-    paddingBottom: 30,
+    paddingBottom: spacing.xl,
   },
   kakaoButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.kakaoMain,
-    paddingVertical: 18,
+    paddingVertical: spacing.md,
     borderRadius: 16,
     marginBottom: 16,
     shadowColor: KAKAO_SHADOW_CONFIG.color,
@@ -270,7 +271,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   guestButton: {
-    paddingVertical: 18,
+    paddingVertical: spacing.md,
     borderRadius: 16,
     borderWidth: 1.5,
     borderColor: COLORS.border,

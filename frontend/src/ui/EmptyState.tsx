@@ -21,10 +21,12 @@ export const EmptyState: React.FC<Props> = ({ icon = '📸', title, subtitle }) 
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    paddingTop: 100,
+  paddingTop: spacing.xl,
+  paddingBottom: spacing.lg,
+  paddingHorizontal: spacing.lg,
   },
   icon: {
-    fontSize: 80,
+  fontSize: 72,
     marginBottom: spacing.md,
   },
   title: {

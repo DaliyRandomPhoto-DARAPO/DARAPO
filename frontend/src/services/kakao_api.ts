@@ -1,6 +1,7 @@
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { Platform, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from './api';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -94,15 +95,8 @@ class BackendKakaoAuthService {
           // refresh 토큰 저장(보안 저장소 선호, 폴백 제공)
           if (refresh) {
             (async () => {
-              try {
-                // eslint-disable-next-line @typescript-eslint/no-var-requires
-                const SecureStore: any = require('expo-secure-store');
-                await SecureStore.setItemAsync('refresh_token', decodeURIComponent(refresh));
-              } catch {
-                // 폴백: AsyncStorage
-                const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
-                await AsyncStorage.setItem('refresh_token', decodeURIComponent(refresh));
-              }
+              const value = decodeURIComponent(refresh);
+              await AsyncStorage.setItem('refresh_token', value);
             })();
           }
 

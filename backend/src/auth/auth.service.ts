@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
 import axios from 'axios';
 import { KakaoClient } from './clients/kakao.client';
+import { ConfigService } from '@nestjs/config';
 
 interface KakaoUserInfo {
   id: number;
@@ -19,10 +20,9 @@ interface KakaoUserInfo {
 
 @Injectable()
 export class AuthService {
-  private readonly KAKAO_CLIENT_ID = process.env.KAKAO_REST_API_KEY;
-  private readonly KAKAO_CLIENT_SECRET = process.env.KAKAO_CLIENT_SECRET;
-  private readonly KAKAO_REDIRECT_URI =
-    process.env.KAKAO_REDIRECT_URI || 'http://localhost:3000/api/auth/kakao/callback';
+  private readonly KAKAO_CLIENT_ID: string;
+  private readonly KAKAO_CLIENT_SECRET: string;
+  private readonly KAKAO_REDIRECT_URI: string;
 
   // 로그아웃된 토큰들을 메모리에 저장 (실제로는 Redis 등 사용)
   private blacklistedTokens = new Set<string>();
@@ -31,7 +31,13 @@ export class AuthService {
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly kakaoClient: KakaoClient,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.KAKAO_CLIENT_ID = this.configService.get<string>('KAKAO_REST_API_KEY')!;
+    this.KAKAO_CLIENT_SECRET = this.configService.get<string>('KAKAO_CLIENT_SECRET')!;
+    this.KAKAO_REDIRECT_URI =
+      this.configService.get<string>('KAKAO_REDIRECT_URI') || 'http://localhost:3000/api/auth/kakao/callback';
+  }
 
   /**
    * 카카오 OAuth 인증 URL 생성

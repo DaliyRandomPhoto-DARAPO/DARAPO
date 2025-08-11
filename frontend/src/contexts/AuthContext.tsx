@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import backendKakaoAuthService from '../services/kakao_api';
+import apiClient, { authAPI } from '../services/api';
 
 interface User {
   id: string;
@@ -27,6 +28,7 @@ interface AuthProviderProps {
 const STORAGE_KEYS = Object.freeze({
   AUTH_TOKEN: 'auth_token',
   USER_INFO: 'user_info',
+  REFRESH_TOKEN: 'refresh_token',
 } as const);
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
@@ -40,14 +42,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const loadStoredAuth = useCallback(async () => {
     try {
-      const [storedToken, storedUser] = await Promise.all([
+      const [storedToken, storedUser, storedRefresh] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN),
         AsyncStorage.getItem(STORAGE_KEYS.USER_INFO),
+        AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN),
       ]);
 
+      // 1) 토큰 + 유저 정보가 모두 있으면 즉시 복원
       if (storedToken && storedUser) {
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
+        return;
+      }
+
+      // 2) 토큰만 있거나 유저 정보가 없으면 /auth/me로 유저 조회 시도
+      if (storedToken && !storedUser) {
+        try {
+          const me = await authAPI.getCurrentUser();
+          setToken(storedToken);
+          setUser(me);
+          await AsyncStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(me));
+          return;
+        } catch (e) {
+          // accessToken 만료 가능성 → 아래 refresh 흐름으로 폴백
+        }
+      }
+
+      // 3) accessToken이 없고 refreshToken이 있으면 재발급 시도
+      if (!storedToken && storedRefresh) {
+        try {
+          const resp = await apiClient.post('/auth/refresh', { refreshToken: storedRefresh });
+          const newToken: string = resp.data.accessToken;
+
+          // 토큰 저장 및 유저 정보 조회
+          await AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, newToken);
+          setToken(newToken);
+
+          const me = await authAPI.getCurrentUser();
+          setUser(me);
+          await AsyncStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(me));
+          return;
+        } catch (e) {
+          // 재발급 실패 → 스토리지 정리
+          await AsyncStorage.multiRemove([
+            STORAGE_KEYS.AUTH_TOKEN,
+            STORAGE_KEYS.USER_INFO,
+          ]);
+        }
       }
     } catch (error) {
       console.warn('인증 정보 로드 실패:', error);
@@ -77,6 +118,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         backendKakaoAuthService.logout(),
         AsyncStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN),
         AsyncStorage.removeItem(STORAGE_KEYS.USER_INFO),
+        AsyncStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN),
       ]);
       
       if (kakaoLogoutResult.status === 'rejected') {

@@ -7,7 +7,7 @@ const TermsScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <Header title="이용약관" />
-      <ScrollView style={styles.content} contentContainerStyle={{ padding: spacing.lg }}>
+  <ScrollView style={styles.content} contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg }}>
         <Text style={styles.sectionTitle}>제1조 목적</Text>
         <Text style={styles.body}>
           본 약관은 DARAPO(이하 "서비스")의 이용과 관련하여 회사와 이용자 간의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.

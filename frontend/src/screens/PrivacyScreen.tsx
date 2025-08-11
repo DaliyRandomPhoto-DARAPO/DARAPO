@@ -7,7 +7,7 @@ const PrivacyScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <Header title="개인정보처리방침" />
-      <ScrollView style={styles.content} contentContainerStyle={{ padding: spacing.lg }}>
+  <ScrollView style={styles.content} contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg }}>
         <Text style={styles.sectionTitle}>1. 수집하는 개인정보 항목</Text>
         <Text style={styles.body}>서비스 제공을 위해 카카오 계정 식별자, 닉네임 등을 수집할 수 있습니다.</Text>
 

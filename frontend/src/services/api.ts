@@ -4,14 +4,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // 동적 require로 타입 에러 및 번들 이슈 회피
 import Constants from 'expo-constants';
 
-export const RAW_API_BASE_URL =
-  Constants.expoConfig?.extra?.apiUrl ||
-  process.env.EXPO_PUBLIC_API_URL ||
-  'http://localhost:3000';
+// 환경에서 받은 값의 트레일링 슬래시 제거
+export const RAW_API_BASE_URL = (
+  Constants.expoConfig?.extra?.apiUrl || 'http://localhost:3000'
+).replace(/\/+$/, '');
 
-// Nest 전역 prefix('api')와 일치하도록 baseURL을 보정
-const API_BASE_URL = `${RAW_API_BASE_URL.replace(/\/+$/, '')}/api`;
-export const BASE_URL = RAW_API_BASE_URL.replace(/\/+$/, '');
+// Nest 전역 prefix('api') 중복 방지: 이미 /api로 끝나면 그대로, 아니면 /api 추가
+const API_BASE_URL = /\/api$/.test(RAW_API_BASE_URL)
+  ? RAW_API_BASE_URL
+  : `${RAW_API_BASE_URL}/api`;
+
+// 호스트 베이스 URL (필요 시 사용) - 만약 /api가 붙어있다면 제거
+export const BASE_URL = RAW_API_BASE_URL.replace(/\/api$/, '');
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -31,7 +35,7 @@ const logError = (operation: string, error: any) => {
 
 // 요청 인터셉터 - JWT 토큰 자동 추가
 apiClient.interceptors.request.use(
-  async (config) => {
+  async (config: any) => {
     try {
       const token = await AsyncStorage.getItem('auth_token');
       if (token) {
@@ -42,31 +46,32 @@ apiClient.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error: any) => { throw error; }
 );
 
-// 응답 인터셉터 - 토큰 만료 처리
+// 응답 인터셉터 - 성공 래핑 언래핑 및 토큰 만료 처리
 apiClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+  (response: any) => {
+    // 백엔드 TransformInterceptor가 { success, data } 형태로 래핑함
+    if (response && response.data && typeof response.data === 'object' && 'success' in response.data) {
+      // 성공 시 payload 언래핑
+      if (response.data.success === true && 'data' in response.data) {
+        response.data = response.data.data;
+      }
+    }
+    return response;
+  },
+  async (error: any) => {
+    const originalRequest = error.config || {};
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
         // body로 refreshToken을 전달(쿠키 미사용 환경 대응)
-        let refreshToken: string | null = null;
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          const SecureStore: any = require('expo-secure-store');
-          refreshToken = (await SecureStore.getItemAsync('refresh_token')) || null;
-        } catch {
-          // 폴백: AsyncStorage 사용
-          refreshToken = (await AsyncStorage.getItem('refresh_token')) || null;
-        }
+        const refreshToken: string | null = (await AsyncStorage.getItem('refresh_token')) || null;
   const response = await apiClient.post('/auth/refresh', refreshToken ? { refreshToken } : undefined);
-        const newToken = response.data.accessToken;
+  const newToken = response.data.accessToken; // 위에서 언래핑되었으므로 그대로 접근 가능
         
         await AsyncStorage.setItem('auth_token', newToken);
         
@@ -77,18 +82,20 @@ apiClient.interceptors.response.use(
         
       } catch (refreshError) {
         await AsyncStorage.multiRemove(['auth_token', 'user_info']);
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          const SecureStore: any = require('expo-secure-store');
-          await SecureStore.deleteItemAsync('refresh_token');
-        } catch {
-          await AsyncStorage.removeItem('refresh_token');
-        }
+        await AsyncStorage.removeItem('refresh_token');
         console.info('토큰 갱신 실패로 로그아웃');
       }
     }
-    
-    return Promise.reject(error);
+    // 에러 메시지 포맷 표준화
+    try {
+      const data = error.response?.data;
+      if (data && typeof data === 'object') {
+        // 전역 HttpExceptionFilter 포맷: { success:false, statusCode, error }
+        const message = data.error?.message || data.message || error.message;
+        throw { ...error, message };
+      }
+    } catch {}
+    throw error;
   }
 );
 

@@ -4,6 +4,9 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { join } from 'path';
 import * as express from 'express';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -17,12 +20,17 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // 전역 Validation Pipe 설정
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true,
-  }));
+  // 전역 Validation Pipe/Filter/Interceptor 설정
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+    }),
+  );
+  app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalInterceptors(new LoggingInterceptor(), new TransformInterceptor());
 
   // Swagger 설정
   const config = new DocumentBuilder()
@@ -33,7 +41,7 @@ async function bootstrap() {
     .build();
   
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api/docs', app, document);
 
   // 정적 파일 서빙: 업로드 이미지 제공
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
@@ -42,9 +50,10 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');
   
+  const host = process.env.HOST ?? 'localhost';
   console.log(`🚀 서버가 실행되었습니다:`);
   console.log(`📱 로컬: http://localhost:${port}/api`);
-  console.log(`🌐 네트워크: http://192.168.45.191:${port}/api`);
-  console.log(`📚 API 문서: http://localhost:${port}/api`);
+  console.log(`🌐 네트워크: http://${host}:${port}/api`);
+  console.log(`📚 API 문서: http://localhost:${port}/api/docs`);
 }
 bootstrap();

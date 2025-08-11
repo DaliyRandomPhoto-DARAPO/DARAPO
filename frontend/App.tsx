@@ -45,11 +45,16 @@ function AppNavigator() {
     <NavigationContainer>
       <Stack.Navigator initialRouteName={isAuthenticated ? "MainTabs" : "Login"}>
         {!isAuthenticated ? (
-          <Stack.Screen 
-            name="Login" 
-            component={LoginScreen} 
-            options={{ headerShown: false }}
-          />
+          <>
+            <Stack.Screen 
+              name="Login" 
+              component={LoginScreen} 
+              options={{ headerShown: false }}
+            />
+            {/* 약관/개인정보는 로그인 전에도 접근 가능해야 함 */}
+            <Stack.Screen name="Terms" component={TermsScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Privacy" component={PrivacyScreen} options={{ headerShown: false }} />
+          </>
         ) : (
           <>
             <Stack.Screen 
@@ -65,7 +70,7 @@ function AppNavigator() {
             <Stack.Screen 
               name="PhotoUpload" 
               component={PhotoUploadScreen} 
-              options={{ title: '사진 업로드' }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen 
               name="UploadResult" 
@@ -75,23 +80,16 @@ function AppNavigator() {
             <Stack.Screen 
               name="MyPhotos" 
               component={MyPhotosScreen} 
-              options={{ title: '내 사진 관리' }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen 
               name="Settings" 
               component={SettingsScreen} 
-              options={{ title: '설정' }}
+              options={{ headerShown: false }}
             />
-            <Stack.Screen 
-              name="Terms" 
-              component={TermsScreen} 
-              options={{ title: '이용약관' }}
-            />
-            <Stack.Screen 
-              name="Privacy" 
-              component={PrivacyScreen} 
-              options={{ title: '개인정보처리방침' }}
-            />
+            {/* 로그인 후에도 접근 가능 */}
+            <Stack.Screen name="Terms" component={TermsScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Privacy" component={PrivacyScreen} options={{ headerShown: false }} />
           </>
         )}
       </Stack.Navigator>

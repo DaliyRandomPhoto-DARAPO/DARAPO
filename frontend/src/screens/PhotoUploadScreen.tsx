@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { 
   View, 
   Text, 
@@ -7,14 +7,16 @@ import {
   SafeAreaView,
   Image,
   TextInput,
-  Alert
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
-import { photoAPI } from '../services/api';
-import { missionAPI } from '../services/api';
+import { photoAPI, missionAPI } from '../services/api';
+import Header from '../ui/Header';
+import { colors, spacing, typography } from '../ui/theme';
 
 type PhotoUploadScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PhotoUpload'>;
 type PhotoUploadScreenRouteProp = RouteProp<RootStackParamList, 'PhotoUpload'>;
@@ -24,30 +26,64 @@ const PhotoUploadScreen = () => {
   const route = useRoute<PhotoUploadScreenRouteProp>();
   const [comment, setComment] = useState('');
   const [isUploading, setIsUploading] = useState(false);
-  const [missionTitle, setMissionTitle] = useState<string>('오늘의 미션');
+  const [mission, setMission] = useState<{ _id: string; title: string } | null>(null);
+  const [loadingMission, setLoadingMission] = useState(true);
   
   const { photoUri } = route.params;
+
+  useEffect(() => {
+    const loadMission = async () => {
+      try {
+        setLoadingMission(true);
+        const m = await missionAPI.getTodayMission();
+        if (m && m._id) {
+          setMission({ _id: m._id, title: m.title });
+        } else {
+          setMission(null);
+        }
+      } catch (e) {
+        console.warn('오늘의 미션 조회 실패:', e);
+        setMission(null);
+      } finally {
+        setLoadingMission(false);
+      }
+    };
+    loadMission();
+  }, []);
+
+  const previewHeight = useMemo(() => 300, []);
+
+  const getFileInfo = () => {
+    // 간단한 파일 확장자 기반 mime 추정
+    const name = 'upload.jpg';
+    let type = 'image/jpeg';
+    if (photoUri?.toLowerCase().endsWith('.png')) type = 'image/png';
+    if (photoUri?.toLowerCase().endsWith('.heic')) type = 'image/heic';
+    return { name, type };
+  };
 
   const handleUpload = async () => {
     if (!photoUri) {
       Alert.alert('오류', '사진이 선택되지 않았습니다.');
       return;
     }
+    if (!mission?._id) {
+      Alert.alert('오류', '오늘의 미션을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
 
     setIsUploading(true);
     
     try {
-      // 미션 정보 가져오기(missionId 필요 시 확장 가능)
-      const mission = await missionAPI.getTodayMission();
-
       const form = new FormData();
+      const { name, type } = getFileInfo();
       // @ts-ignore: React Native FormData file
-      form.append('file', { uri: photoUri, name: 'upload.jpg', type: 'image/jpeg' });
+      form.append('file', { uri: photoUri, name, type });
       form.append('comment', comment);
-      form.append('missionId', mission?._id || '');
+      form.append('missionId', mission._id);
 
-  await photoAPI.uploadPhoto(form);
-  navigation.navigate('UploadResult');
+      await photoAPI.uploadPhoto(form);
+      navigation.navigate('UploadResult');
     } catch (error) {
       console.error('업로드 실패:', error);
       Alert.alert('오류', '업로드에 실패했습니다. 잠시 후 다시 시도해주세요.');
@@ -62,14 +98,26 @@ const PhotoUploadScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <Header title="사진 업로드" />
       <View style={styles.content}>
-        {photoUri && (
-          <Image source={{ uri: photoUri }} style={styles.previewImage} />
+        {photoUri ? (
+          <Image source={{ uri: photoUri }} style={[styles.previewImage, { height: previewHeight }]} />
+        ) : (
+          <View style={[styles.previewImage, { height: previewHeight, alignItems: 'center', justifyContent: 'center' }]}>
+            <Text style={{ color: colors.subText }}>사진이 없습니다</Text>
+          </View>
         )}
-        
-        <View style={styles.missionInfo}>
+
+        <View style={styles.missionInfo}>        
           <Text style={styles.missionLabel}>미션</Text>
-          <Text style={styles.missionText}>{missionTitle}</Text>
+          {loadingMission ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <ActivityIndicator color={colors.primary} />
+              <Text style={styles.missionText}>불러오는 중…</Text>
+            </View>
+          ) : (
+            <Text style={styles.missionText}>{mission?.title || '미션 없음'}</Text>
+          )}
         </View>
 
         <TextInput
@@ -82,19 +130,18 @@ const PhotoUploadScreen = () => {
         />
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity 
-            style={[styles.button, styles.uploadButton]} 
+          <TouchableOpacity
+            style={[styles.button, styles.uploadButton, isUploading && { opacity: 0.7 }]}
             onPress={handleUpload}
-            disabled={isUploading}
+            disabled={isUploading || loadingMission}
           >
-            <Text style={styles.buttonText}>
-              {isUploading ? '업로드 중...' : '📤 업로드'}
-            </Text>
+            <Text style={styles.buttonText}>{isUploading ? '업로드 중…' : '📤 업로드'}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.button, styles.shareButton]} 
+          <TouchableOpacity
+            style={[styles.button, styles.shareButton]}
             onPress={handleShare}
+            disabled={isUploading}
           >
             <Text style={styles.buttonText}>📱 SNS 공유</Text>
           </TouchableOpacity>
@@ -107,59 +154,60 @@ const PhotoUploadScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
-    padding: 20,
+  paddingHorizontal: spacing.lg,
+  paddingVertical: spacing.lg,
   },
   previewImage: {
     width: '100%',
-    height: 300,
-    borderRadius: 10,
-    marginBottom: 20,
+    borderRadius: 12,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.surface,
   },
   missionInfo: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: 12,
+    marginBottom: spacing.lg,
   },
   missionLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 5,
+    fontSize: typography.small,
+    color: colors.subText,
+    marginBottom: spacing.xs,
   },
   missionText: {
-    fontSize: 18,
+    fontSize: typography.h2,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text,
   },
   commentInput: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: 12,
+    marginBottom: spacing.lg,
     minHeight: 80,
     textAlignVertical: 'top',
   },
   buttonContainer: {
-    gap: 15,
+    gap: spacing.md,
   },
   button: {
-    padding: 15,
-    borderRadius: 10,
+    padding: spacing.md,
+    borderRadius: 12,
     alignItems: 'center',
   },
   uploadButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
   },
   shareButton: {
     backgroundColor: '#34C759',
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: typography.body,
     fontWeight: 'bold',
   },
 });

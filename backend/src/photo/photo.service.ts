@@ -1,7 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Photo, PhotoDocument } from './schemas/photo.schema';
+
+type CreatePhotoInput = {
+  userId: string;
+  missionId: string;
+  imageUrl: string;
+  fileName: string;
+  comment?: string;
+  isPublic?: boolean;
+  fileSize?: number;
+  mimeType?: string;
+};
 
 @Injectable()
 export class PhotoService {
@@ -9,14 +20,21 @@ export class PhotoService {
     @InjectModel(Photo.name) private photoModel: Model<PhotoDocument>,
   ) {}
 
-  async createPhoto(photoData: Partial<Photo>) {
-    const photo = new this.photoModel(photoData);
+  async createPhoto(photoData: CreatePhotoInput) {
+    const normalized: any = { ...photoData };
+    if (photoData.userId && typeof photoData.userId === 'string') {
+      normalized.userId = new Types.ObjectId(photoData.userId);
+    }
+    if (photoData.missionId && typeof photoData.missionId === 'string') {
+      normalized.missionId = new Types.ObjectId(photoData.missionId);
+    }
+    const photo = new this.photoModel(normalized);
     return photo.save();
   }
 
   async findByUserId(userId: string) {
     return this.photoModel
-      .find({ userId })
+      .find({ userId: new Types.ObjectId(userId) })
       .populate('missionId', 'title description date')
       .sort({ createdAt: -1 })
       .exec();
@@ -24,7 +42,7 @@ export class PhotoService {
 
   async findByMissionId(missionId: string) {
     return this.photoModel
-      .find({ missionId, isPublic: true })
+      .find({ missionId: new Types.ObjectId(missionId), isPublic: true })
       .populate('userId', 'nickname profileImage')
       .sort({ createdAt: -1 })
       .exec();
@@ -32,20 +50,27 @@ export class PhotoService {
 
   async findById(photoId: string) {
     return this.photoModel
-      .findById(photoId)
+      .findById(new Types.ObjectId(photoId))
       .populate('userId', 'nickname profileImage')
       .populate('missionId', 'title description date')
       .exec();
   }
 
   async updatePhoto(photoId: string, updateData: Partial<Photo>) {
+    const normalized: any = { ...updateData };
+    if (updateData.userId && typeof (updateData as any).userId === 'string') {
+      normalized.userId = new Types.ObjectId((updateData as any).userId);
+    }
+    if (updateData.missionId && typeof (updateData as any).missionId === 'string') {
+      normalized.missionId = new Types.ObjectId((updateData as any).missionId);
+    }
     return this.photoModel
-      .findByIdAndUpdate(photoId, updateData, { new: true })
+      .findByIdAndUpdate(new Types.ObjectId(photoId), normalized, { new: true })
       .exec();
   }
 
   async deletePhoto(photoId: string) {
-    return this.photoModel.findByIdAndDelete(photoId).exec();
+    return this.photoModel.findByIdAndDelete(new Types.ObjectId(photoId)).exec();
   }
 
   async findPublicPhotos(limit: number = 20, skip: number = 0) {
@@ -61,7 +86,7 @@ export class PhotoService {
 
   async markAsShared(photoId: string) {
     return this.photoModel
-      .findByIdAndUpdate(photoId, { isShared: true }, { new: true })
+      .findByIdAndUpdate(new Types.ObjectId(photoId), { isShared: true }, { new: true })
       .exec();
   }
 }

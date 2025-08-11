@@ -1,4 +1,11 @@
-import { Platform } from 'react-native';
+import { Platform, Dimensions } from 'react-native';
+
+// 화면 크기 기반 반응형 여백 계산
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const clamp = (val: number, min: number, max?: number) => {
+  const v = Math.max(val, min);
+  return typeof max === 'number' ? Math.min(v, max) : v;
+};
 
 export const colors = {
   background: '#f8f9fa',
@@ -10,12 +17,14 @@ export const colors = {
   border: '#e9ecef',
 };
 
+// 퍼센트 기반 스케일에 최소 픽셀을 보장
 export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
+  // 약 1.2% ~ 10% of width (세로 여백이 타이트하지 않도록 소폭 상향)
+  xs: clamp(Math.round(SCREEN_WIDTH * 0.012), 4),
+  sm: clamp(Math.round(SCREEN_WIDTH * 0.03), 8),
+  md: clamp(Math.round(SCREEN_WIDTH * 0.05), 16),
+  lg: clamp(Math.round(SCREEN_WIDTH * 0.075), 24),
+  xl: clamp(Math.round(SCREEN_WIDTH * 0.1), 32),
 };
 
 export const radii = {

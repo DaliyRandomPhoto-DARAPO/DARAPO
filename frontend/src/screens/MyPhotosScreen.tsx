@@ -91,7 +91,7 @@ const MyPhotosScreen = () => {
         <FlatList
           data={photos}
           keyExtractor={(item) => item._id}
-          contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}
+          contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, gap: spacing.md }}
           renderItem={renderItem}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         />

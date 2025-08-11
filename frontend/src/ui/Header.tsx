@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, typography } from './theme';
 
 type Props = {
@@ -9,8 +10,13 @@ type Props = {
 };
 
 export const Header: React.FC<Props> = ({ title, right, style }) => {
+  const insets = useSafeAreaInsets();
+  // 상단 여백: 기기 상태바 높이(insets.top) + 소폭 기본 여백
+  const dynamicStyle = {
+    paddingTop: Math.max(spacing.md, insets.top + spacing.xs),
+  } as const;
   return (
-    <View style={[styles.header, style]}>
+    <View style={[styles.header, dynamicStyle, style]}>
       <Text style={styles.title}>{title}</Text>
       {right}
     </View>
@@ -20,14 +26,14 @@ export const Header: React.FC<Props> = ({ title, right, style }) => {
 const styles = StyleSheet.create({
   header: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.lg,
+  // paddingTop은 동적으로 적용
+  paddingBottom: spacing.md,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   title: {
-    fontSize: typography.title,
+  fontSize: typography.title,
     fontWeight: 'bold',
     color: colors.text,
   },
