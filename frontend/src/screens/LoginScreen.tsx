@@ -10,14 +10,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../services/api';
 // Local tokens (screen-scoped)
 const colors = { background: '#f8f9fa', surface: '#ffffff', text: '#2c3e50', subText: '#7f8c8d' } as const;
-const spacing = { xs: 6, sm: 8, md: 12, lg: 16, xl: 24 } as const;
+const spacing = { xs: 6, sm: 8, md: 12, lg: 16, xl: 24} as const;
 const radii = { lg: 20, pill: 999 } as const;
 const typography = { title: 28, h2: 20, body: 16, small: 14 } as const;
 import KakaoLoginButton from '../ui/KakaoLoginButton';
 
 // 화면 단위 여백 관리 (한 곳에서 조절)
 const LAYOUT = {
-  sectionGap: spacing.lg,      // 로고영역 ↔ 버튼/약관 섹션 간격(16)
+  sectionGap: spacing.lg,      // 로고영역 ↔ 버튼/약관 섹션 간격(120)
   logoBottom: spacing.sm,      // 로고 카드 하단 여백(8)
   subtitleTop: spacing.xs,     // 앱 서브타이틀 상단 여백(6)
   descTop: spacing.sm,         // 설명문 상단 여백(8)
@@ -34,12 +34,12 @@ const LoginScreen = React.memo(() => {
     if (loading) return; // 중복 실행 방지
     try {
       setLoading(true);
-      console.log('🔄 백엔드 완전 처리 카카오 로그인 시작');
+  if (__DEV__) console.log('🔄 백엔드 완전 처리 카카오 로그인 시작');
 
       const result = await backendKakaoAuthService.login();
 
       if (result.success && result.accessToken) {
-        console.log('✅ 로그인 성공, 토큰 수신');
+  if (__DEV__) console.log('✅ 로그인 성공, 토큰 수신');
         let resolvedUser = result.user;
         // 콜백에 user가 없을 수 있으므로 /auth/me로 보완
         if (!resolvedUser) {
@@ -100,6 +100,8 @@ const LoginScreen = React.memo(() => {
   <SafeAreaView style={[styles.container, containerInsetsStyle]} edges={['top', 'bottom']}>
       <View style={styles.content}>
         {/* 로고 & 헤드라인 */}
+  {/* 위쪽 스페이서: 로고 블록을 수직 중앙으로 밀기 위한 공간 */}
+  <View style={styles.flexSpacer} />
 
         <View style={styles.logoSection}>
           <View style={styles.logoContainer}>
@@ -113,6 +115,9 @@ const LoginScreen = React.memo(() => {
             {STRINGS.DESCRIPTION}
           </Text>
         </View>
+
+  {/* 남는 공간을 차지하여 아래 섹션을 자연스럽게 밀어줌 */}
+  <View style={styles.flexSpacer} />
 
         {/* 액션 영역 */}
         <View style={styles.loginSection}>
@@ -186,9 +191,12 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-  // 상하로 너무 벌어지지 않도록 가운데 정렬 후 섹션 간 간격은 LAYOUT으로 제어
-  justifyContent: 'center',
+  // 가운데 정렬 대신 상단부터 배치하고, 중간의 flexSpacer로 아래 섹션을 밀어냄
+  justifyContent: 'flex-start',
     alignItems: 'center',
+  },
+  flexSpacer: {
+    flexGrow: 1,
   },
   // 상단 로고/헤드라인
   logoSection: {
@@ -217,12 +225,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.text,
     letterSpacing: 0.3,
+  textAlign: 'center',
   },
   appSubtitle: {
   marginTop: LAYOUT.subtitleTop,
     fontSize: typography.h2,
     color: colors.subText,
     fontWeight: '600',
+  textAlign: 'center',
   },
   description: {
   marginTop: LAYOUT.descTop,

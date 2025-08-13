@@ -34,3 +34,5 @@ export class Photo {
 }
 
 export const PhotoSchema = SchemaFactory.createForClass(Photo);
+// 사용자+미션(=하루)당 한 장 고유 보장
+PhotoSchema.index({ userId: 1, missionId: 1 }, { unique: true });

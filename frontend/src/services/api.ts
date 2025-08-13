@@ -82,8 +82,8 @@ apiClient.interceptors.response.use(
         
       } catch (refreshError) {
         await AsyncStorage.multiRemove(['auth_token', 'user_info']);
-        await AsyncStorage.removeItem('refresh_token');
-        console.info('토큰 갱신 실패로 로그아웃');
+  await AsyncStorage.removeItem('refresh_token');
+  if (__DEV__) console.info('토큰 갱신 실패로 로그아웃');
       }
     }
     // 에러 메시지 포맷 표준화
@@ -101,11 +101,6 @@ apiClient.interceptors.response.use(
 
 // API 서비스 함수들
 export const authAPI = {
-  getKakaoAuthUrl: async () => {
-    const response = await apiClient.get('/auth/kakao');
-    return response.data;
-  },
-
   // returnUrl을 state로 전달하기 위한 변형 API (Expo Go/Dev Client 복귀 보장)
   getKakaoAuthUrlWithReturn: async (returnUrl: string) => {
     const response = await apiClient.get('/auth/kakao', { params: { returnUrl } });
@@ -152,6 +147,11 @@ export const photoAPI = {
     return response.data;
   },
 
+  getMyRecentPhotos: async (limit = 3) => {
+    const response = await apiClient.get('/photo/mine/recent', { params: { limit } });
+    return response.data;
+  },
+
   deletePhoto: async (id: string) => {
     const response = await apiClient.delete(`/photo/${id}`);
     return response.data;
@@ -170,6 +170,31 @@ export const photoAPI = {
   getPublicPhotos: async (limit = 20, skip = 0) => {
     const response = await apiClient.get(`/photo/public`, { params: { limit, skip } });
     return response.data;
+  },
+
+  getPhotosByMission: async (missionId: string) => {
+    const response = await apiClient.get(`/photo/mission/${missionId}`);
+    return response.data;
+  },
+};
+
+export const userAPI = {
+  updateMe: async (data: { nickname?: string; profileImage?: string; email?: string }) => {
+    const response = await apiClient.put('/user/me', data);
+    return response.data;
+  },
+  uploadAvatar: async (file: { uri: string; name: string; type: string }) => {
+    const form = new FormData();
+    // @ts-ignore - React Native FormData
+    form.append('file', file);
+    const response = await apiClient.post('/user/me/avatar', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data as { imageUrl: string; user: any };
+  },
+  resetAvatar: async () => {
+    const response = await apiClient.delete('/user/me/avatar');
+    return response.data as { imageUrl: string | null; user: any };
   },
 };
 

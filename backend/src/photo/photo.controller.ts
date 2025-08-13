@@ -45,7 +45,7 @@ export class PhotoController {
     // 로컬 파일 경로 저장
     const imageUrl = `/uploads/${file.filename}`;
 
-    const photo = await this.photoService.createPhoto({
+  const { photo, replaced } = await this.photoService.upsertUserMissionPhoto({
       ...photoData,
       userId: req.user.sub,
       imageUrl,
@@ -53,8 +53,7 @@ export class PhotoController {
       fileSize: file.size,
       mimeType: file.mimetype,
     });
-
-    return photo;
+  return { photo, replaced };
   }
 
   @Get('mine')
@@ -64,6 +63,15 @@ export class PhotoController {
   @ApiResponse({ status: 200, description: '사진 목록 반환' })
   async getMyPhotos(@Request() req: any) {
     return this.photoService.findByUserId(req.user.sub);
+  }
+
+  @Get('mine/recent')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '내 최근 사진 조회' })
+  @ApiResponse({ status: 200, description: '최근 사진 목록 반환' })
+  async getMyRecentPhotos(@Request() req: any, @Query('limit') limit: string = '3') {
+    return this.photoService.findRecentByUserId(req.user.sub, parseInt(limit));
   }
 
   @Get('public')

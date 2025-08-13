@@ -1,6 +1,6 @@
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
-import { Platform, Alert } from 'react-native';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from './api';
 
@@ -35,7 +35,7 @@ class BackendKakaoAuthService {
   }
 
   /**
-   * 딥링크 처리를 시작하고 로그인 완료를 대기 (App.tsx에서 호출)
+   * 딥링크 처리를 시작하고 로그인 완료를 대기 (login() 내부에서 선등록)
    */
   startDeepLinkHandling(): Promise<LoginResult> {
     return new Promise((resolve) => {

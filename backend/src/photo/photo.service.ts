@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Photo, PhotoDocument } from './schemas/photo.schema';
+import { promises as fs } from 'fs';
+import { join } from 'path';
 
 type CreatePhotoInput = {
   userId: string;
@@ -32,11 +34,53 @@ export class PhotoService {
     return photo.save();
   }
 
+  /**
+   * 동일 사용자+미션(=하루) 사진이 있으면 새 파일로 교체, 없으면 생성
+   * 반환: { photo, replaced }
+   */
+  async upsertUserMissionPhoto(photoData: CreatePhotoInput): Promise<{ photo: Photo; replaced: boolean }>{
+    const userId = new Types.ObjectId(photoData.userId);
+    const missionId = new Types.ObjectId(photoData.missionId);
+
+    const existing = await this.photoModel.findOne({ userId, missionId }).exec();
+    if (!existing) {
+      const created = await this.createPhoto(photoData);
+      return { photo: created, replaced: false };
+    }
+
+    // 기존 파일 삭제 시도(베스트 에포트)
+    const oldPath = existing.imageUrl?.startsWith('/uploads/')
+      ? join(process.cwd(), existing.imageUrl.replace(/^\//, ''))
+      : undefined;
+    if (oldPath) {
+      fs.unlink(oldPath).catch(() => {});
+    }
+
+    existing.imageUrl = photoData.imageUrl;
+    existing.fileName = photoData.fileName;
+    if (typeof photoData.comment !== 'undefined') existing.comment = photoData.comment;
+    if (typeof photoData.isPublic !== 'undefined') (existing as any).isPublic = photoData.isPublic;
+    if (typeof photoData.fileSize !== 'undefined') (existing as any).fileSize = photoData.fileSize;
+    if (typeof photoData.mimeType !== 'undefined') (existing as any).mimeType = photoData.mimeType;
+
+    const saved = await existing.save();
+    return { photo: saved, replaced: true };
+  }
+
   async findByUserId(userId: string) {
     return this.photoModel
       .find({ userId: new Types.ObjectId(userId) })
       .populate('missionId', 'title description date')
       .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  async findRecentByUserId(userId: string, limit: number = 3) {
+    return this.photoModel
+      .find({ userId: new Types.ObjectId(userId) })
+      .populate('missionId', 'title description date')
+      .sort({ createdAt: -1 })
+      .limit(limit)
       .exec();
   }
 

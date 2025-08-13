@@ -1,190 +1,323 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Dimensions,
-  RefreshControl,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { memo, useCallback, useEffect, useState } from 'react';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, Pressable, Image, ActivityIndicator, FlatList } from 'react-native';
 import Header from '../ui/Header';
-import EmptyState from '../ui/EmptyState';
+import Card from '../ui/Card';
+import { photoAPI, missionAPI, BASE_URL } from '../services/api';
+import { theme } from '../ui/theme';
 
-// Local tokens
-const colors = { background: '#f8f9fa', text: '#2c3e50', subText: '#7f8c8d', primary: '#3498db', surface: '#ffffff', danger: '#e74c3c' } as const;
-const typography = { body: 16 } as const;
-const spacing = { sm: 8, md: 12, lg: 16, xl: 24 } as const;
-import Button from '../ui/Button';
-import { useNavigation } from '@react-navigation/native';
-import { photoAPI, BASE_URL } from '../services/api';
+// 공용 theme + 브랜드 컬러 오버라이드
+const colors = {
+  ...theme.colors,
+  primary: '#7C3AED',
+  primaryAlt: '#EC4899',
+  grayIcon: '#6B7280',
+  red: '#EF4444',
+} as const;
+const { spacing, typography } = theme;
+const radii = { ...theme.radii, xl: 24, full: 999 } as const;
 
-type PhotoItem = {
-  _id: string;
-  imageUrl: string; // e.g. "/uploads/abc.jpg"
-  comment?: string;
-  isPublic?: boolean;
-  createdAt?: string;
+const tabs = ['오늘의 미션', '전체 미션'] as const;
+
+type Tab = typeof tabs[number];
+
+type FeedItem = {
+  id: string;
+  user: { name: string; avatar?: string | null };
+  date: string;
+  mission: string;
+  image: string;
+  likes: number;
+  mood?: string;
+  liked?: boolean;
 };
 
-const PAGE_SIZE = 20;
-const GAP = spacing.md;
-const NUM_COLUMNS = 2;
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const ITEM_SIZE = (SCREEN_WIDTH - spacing.lg * 2 - GAP) / NUM_COLUMNS; // 좌우 패딩 + 컬럼 간격 고려
+const PAGE_SIZE = 10;
 
-const FeedScreen = React.memo(() => {
+const FeedScreen = memo(() => {
+  const insets = useSafeAreaInsets();
+  const [active, setActive] = useState<Tab>('오늘의 미션');
+  const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [photos, setPhotos] = useState<PhotoItem[]>([]);
-  const [skip, setSkip] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const navigation = useNavigation<any>();
-
-  const loadPhotos = useCallback(
-    async (reset = false) => {
-      try {
-        if (reset) {
-          setRefreshing(true);
-        } else if (skip === 0) {
-          setLoading(true);
-        } else {
-          setLoadingMore(true);
-        }
-        setError(null);
-
-        const nextSkip = reset ? 0 : skip;
-        const data = await photoAPI.getPublicPhotos(PAGE_SIZE, nextSkip);
-
-        // 데이터 없거나 마지막 페이지 체크
-        const newList: PhotoItem[] = Array.isArray(data) ? data : [];
-        setHasMore(newList.length === PAGE_SIZE);
-
-        if (reset) {
-          setPhotos(newList);
-          setSkip(newList.length);
-        } else {
-          setPhotos((prev) => [...prev, ...newList]);
-          setSkip((prev) => prev + newList.length);
-        }
-      } catch (e: any) {
-        setError(e?.message || '피드를 불러오는 중 오류가 발생했어요.');
-      } finally {
-        setLoading(false);
-        setLoadingMore(false);
-        setRefreshing(false);
-      }
-    },
-    [skip]
-  );
 
   useEffect(() => {
-    loadPhotos(true);
+    loadInitial();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
+
+  const toMMDD = (d: Date) => `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+
+  const mapPhotoToItem = (p: any): FeedItem => {
+    const ds = p?.missionId?.date || p?.createdAt;
+    const d = ds ? new Date(ds) : new Date();
+    const rawImage: string = p?.imageUrl || '';
+    const image = rawImage.startsWith('http') ? rawImage : `${BASE_URL}${rawImage}`;
+    const userName: string = p?.userId?.nickname || '익명';
+    const rawAvatar: string | null = p?.userId?.profileImage || null;
+    const avatar = rawAvatar ? (rawAvatar.startsWith('http') ? rawAvatar : `${BASE_URL}${rawAvatar}`) : null;
+    const missionTitle: string = p?.missionId?.title || '오늘의 미션';
+    const mood: string | undefined = p?.comment || undefined;
+    return {
+      id: String(p?._id || ''),
+      user: { name: userName, avatar },
+      date: toMMDD(d),
+      mission: missionTitle,
+      image,
+      likes: 0,
+      mood,
+      liked: false,
+    };
+  };
+
+  const loadInitial = async () => {
+    try {
+      setLoading(true);
+      if (active === '오늘의 미션') {
+        const mission = await missionAPI.getTodayMission();
+        const photos = mission?._id ? await photoAPI.getPhotosByMission?.(mission._id) : [];
+        const mapped = (photos || []).map(mapPhotoToItem);
+        setItems(mapped);
+        setPage(0);
+        setHasMore(false);
+      } else {
+        const photos = await photoAPI.getPublicPhotos(PAGE_SIZE, 0);
+        const mapped = (photos || []).map(mapPhotoToItem);
+        setItems(mapped);
+        setPage(1);
+        setHasMore((photos || []).length === PAGE_SIZE);
+      }
+    } catch (e) {
+      console.error('피드 로드 실패:', e);
+      setItems([]);
+      setHasMore(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    try {
+      setRefreshing(true);
+      if (active === '오늘의 미션') {
+        const mission = await missionAPI.getTodayMission();
+        const photos = mission?._id ? await photoAPI.getPhotosByMission?.(mission._id) : [];
+        const mapped = (photos || []).map(mapPhotoToItem);
+        setItems(mapped);
+        setPage(0);
+        setHasMore(false);
+      } else {
+        const photos = await photoAPI.getPublicPhotos(PAGE_SIZE, 0);
+        const mapped = (photos || []).map(mapPhotoToItem);
+        setItems(mapped);
+        setPage(1);
+        setHasMore((photos || []).length === PAGE_SIZE);
+      }
+    } catch (e) {
+      console.error('피드 갱신 실패:', e);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const loadMore = async () => {
+    if (active === '오늘의 미션') return;
+    if (!hasMore || loading || refreshing || loadingMore) return;
+    try {
+      setLoadingMore(true);
+      const skip = page * PAGE_SIZE;
+      const photos = await photoAPI.getPublicPhotos(PAGE_SIZE, skip);
+      const mapped = (photos || []).map(mapPhotoToItem);
+      setItems(prev => [...prev, ...mapped]);
+      setPage(prev => prev + 1);
+      setHasMore((photos || []).length === PAGE_SIZE);
+    } catch (e) {
+      console.error('추가 로드 실패:', e);
+      setHasMore(false);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const handleToggleLike = useCallback((id: string) => {
+    setItems(prev => prev.map(it => {
+      if (it.id !== id) return it;
+      const liked = !it.liked;
+      const likes = Math.max(0, (it.likes || 0) + (liked ? 1 : -1));
+      return { ...it, liked, likes };
+    }));
   }, []);
 
-  const onRefresh = () => loadPhotos(true);
-  const loadMore = () => {
-    if (loading || loadingMore || refreshing || !hasMore) return;
-    loadPhotos(false);
-  };
-
-  const renderItem = ({ item }: { item: PhotoItem }) => {
-    const uri = `${BASE_URL}${item.imageUrl}`;
+  const renderItem = useCallback(({ item }: { item: FeedItem }) => {
+    const p = item;
     return (
-        <View style={styles.gridItem}>
-          <Image source={{ uri }} style={styles.image} resizeMode="cover" />
+      <Card style={styles.postCard}>
+        {/* 상단 유저/날짜 */}
+        <View style={styles.postHeader}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {p.user.avatar ? (
+              <View style={styles.avatarWrap}>
+                <Image source={{ uri: p.user.avatar }} style={styles.avatar} />
+              </View>
+            ) : (
+              <View style={[styles.avatarWrap, { backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' }]}>
+                <Text style={{ color: '#6B7280', fontWeight: '700' }}>{p.user.name.charAt(0)}</Text>
+              </View>
+            )}
+            <View>
+              <Text style={styles.userName}>{p.user.name}</Text>
+              <Text style={styles.date}>{p.date}</Text>
+            </View>
+          </View>
+          <Pressable style={styles.moreBtn} accessibilityLabel="더보기"><Text style={{ color: '#9CA3AF' }}>⋯</Text></Pressable>
         </View>
-    );
-  };
 
-  const ListEmpty = () => (
-    <View style={{ padding: spacing.lg }}>
-      <EmptyState title="아직 올라온 사진이 없어요" subtitle={'첫 번째 미션을 완료하고\n사진을 공유해보세요!'} />
-      <Button
-        title="📸 지금 찍으러 가기"
-        onPress={() => navigation.navigate('Camera')}
-        style={{ marginTop: spacing.lg }}
-      />
-    </View>
-  );
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Header title="피드" />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>피드를 불러오는 중...</Text>
+        {/* 오늘의 미션 박스 */}
+        <View style={styles.missionBox}>
+          <View style={styles.missionRow}>
+            <View style={styles.missionDot} />
+            <Text style={styles.missionLabel}>오늘의 미션</Text>
+          </View>
+          <Text style={styles.missionText}>{p.mission}</Text>
         </View>
-      </SafeAreaView>
+
+        {/* 사진 */}
+        <View style={styles.imageWrap}>
+          <Image source={{ uri: p.image }} style={styles.image} resizeMode="cover" />
+        </View>
+
+        {/* 감정 박스 */}
+        {!!p.mood && (
+          <View style={styles.moodBox}>
+            <View style={styles.moodRow}>
+              <View style={styles.moodDot} />
+              <Text style={styles.moodLabel}>감정</Text>
+            </View>
+            <Text style={styles.moodText}>{p.mood}</Text>
+          </View>
+        )}
+
+        {/* 액션바: 좋아요만 (감정 박스 아래) */}
+        <View style={[styles.actions, { justifyContent: 'flex-start' }]}>
+          <Pressable style={styles.actionBtn} accessibilityLabel="좋아요" onPress={() => handleToggleLike(p.id)}>
+            <Text style={[styles.actionIcon, p.liked && { color: colors.red }]}>{p.liked ? '❤' : '♡'}</Text>
+            <Text style={styles.actionCount}>{p.likes}</Text>
+          </Pressable>
+        </View>
+      </Card>
     );
-  }
+  }, [handleToggleLike]);
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={[styles.safe, { paddingBottom: insets.bottom }]} edges={['bottom']}>
       <Header title="피드" />
-    {!!error && (
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
-      <Text style={{ color: colors.danger }}>{error}</Text>
-        </View>
-      )}
 
       <FlatList
-        data={photos}
-        keyExtractor={(item) => item._id}
-        numColumns={NUM_COLUMNS}
-        columnWrapperStyle={styles.columnWrapper}
-        contentContainerStyle={styles.listContent}
+        data={items}
+        keyExtractor={(it) => it.id}
         renderItem={renderItem}
-        ListEmptyComponent={ListEmpty}
-        onEndReachedThreshold={0.3}
-        onEndReached={loadMore}
-        ListFooterComponent={
-          loadingMore ? (
-            <View style={{ paddingVertical: spacing.md }}>
-              <ActivityIndicator color={colors.primary} />
+        ListHeaderComponent={
+          <View style={styles.listHeaderWrap}>
+            {/* 탭 필터 */}
+            <View style={styles.tabWrap}>
+              <View style={styles.tabPill}>
+                {tabs.map(t => (
+                  <Pressable key={t} onPress={() => setActive(t)} style={[styles.tabBtn, active === t && styles.tabBtnActive]} accessibilityRole="button" accessibilityState={{ selected: active === t }}>
+                    <Text style={[styles.tabLabel, active === t && styles.tabLabelActive]}>{t}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {loading && items.length === 0 && (
+              <View style={{ paddingVertical: spacing.xl }}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={{ textAlign: 'center', marginTop: spacing.md, color: colors.subText }}>피드를 불러오는 중...</Text>
+              </View>
+            )}
+          </View>
+        }
+        ListEmptyComponent={
+          !loading ? (
+            <View style={{ paddingVertical: spacing.xl }}>
+              <Text style={{ textAlign: 'center', color: colors.subText }}>아직 공개된 사진이 없어요.</Text>
             </View>
           ) : null
         }
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListFooterComponent={
+          hasMore ? (
+            <View style={{ paddingVertical: spacing.lg }}>
+              {loadingMore ? (
+                <ActivityIndicator color={colors.primary} />
+              ) : (
+                <Text style={{ textAlign: 'center', color: colors.subText }}>아래로 스크롤하면 더 불러와요</Text>
+              )}
+            </View>
+          ) : (
+            items.length > 0 ? <View style={{ paddingVertical: spacing.md }}><Text style={{ textAlign: 'center', color: colors.subText }}>끝까지 봤어요</Text></View> : null
+          )
+        }
+        contentContainerStyle={styles.listContent}
+        onEndReachedThreshold={0.2}
+        onEndReached={loadMore}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>
   );
 });
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
+  safe: { flex: 1, backgroundColor: colors.background },
+  listContent: { paddingTop: spacing.md, paddingHorizontal: spacing.md, paddingBottom: 96 },
+  listHeaderWrap: {},
+
+  tabWrap: { marginBottom: spacing.lg },
+  tabPill: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 999,
+    padding: 4,
+    flexDirection: 'row',
+    alignSelf: 'center',
   },
-  columnWrapper: { gap: GAP, paddingHorizontal: spacing.xl },
-  listContent: { paddingVertical: spacing.lg, gap: GAP, paddingHorizontal: spacing.xl },
-  gridItem: {
-    width: ITEM_SIZE,
-    height: ITEM_SIZE,
-    overflow: 'hidden',
-    borderRadius: 12,
-  backgroundColor: colors.surface,
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: typography.body,
-    color: colors.subText,
-    marginTop: 10,
-  },
+  tabBtn: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: 999 },
+  tabBtnActive: { backgroundColor: colors.primary, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8 },
+  tabLabel: { color: colors.subText, fontWeight: '600' },
+  tabLabelActive: { color: '#fff' },
+
+  postCard: { padding: 0, overflow: 'hidden' },
+  postHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.md, paddingBottom: spacing.sm },
+  avatarWrap: { width: 36, height: 36, borderRadius: 18, marginRight: spacing.sm, overflow: 'hidden', backgroundColor: '#F3F4F6' },
+  avatar: { width: '100%', height: '100%' },
+  userName: { fontSize: 14, color: colors.text, fontWeight: '700' },
+  date: { fontSize: 12, color: colors.subText },
+  moreBtn: { padding: 8 },
+
+  missionBox: { backgroundColor: '#F5F3FF', margin: spacing.md, borderRadius: 16, padding: spacing.md },
+  missionRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  missionDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, marginRight: 6 },
+  missionLabel: { fontSize: 12, color: colors.primary, fontWeight: '700' },
+  missionText: { fontSize: 16, color: colors.text, fontWeight: '700' },
+
+  imageWrap: { width: '100%', aspectRatio: 1, marginTop: spacing.md, paddingHorizontal: spacing.md },
+  image: { width: '100%', height: '100%', borderRadius: radii.lg },
+
+  actions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 6 },
+  actionIcon: { fontSize: 18, color: colors.grayIcon },
+  actionCount: { fontSize: 13, color: '#374151', fontWeight: '600', marginLeft: 6 },
+
+  moodBox: { backgroundColor: '#FEF2F2', margin: spacing.md, borderRadius: 16, padding: spacing.md },
+  moodRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  moodDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primaryAlt, marginRight: 6 },
+  moodLabel: { fontSize: 12, color: colors.primaryAlt, fontWeight: '700' },
+  moodText: { fontSize: 14, color: '#374151' },
 });
 
 export default FeedScreen;

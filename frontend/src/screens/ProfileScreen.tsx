@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../ui/Header';
+import { Image } from 'react-native';
+import { BASE_URL } from '../services/api';
 
 // Local tokens
 const colors = { background: '#f8f9fa', surface: '#ffffff', text: '#2c3e50', subText: '#7f8c8d', border: '#e9ecef', danger: '#e74c3c', primary: '#3498db' } as const;
@@ -44,9 +46,16 @@ const ProfileScreen = () => {
       <ScrollView style={styles.content}>
         <View style={styles.profileSection}>
           <View style={styles.avatarContainer}>
-            <Text style={styles.avatarText}>
-              {user?.nickname?.charAt(0)?.toUpperCase() || '?'}
-            </Text>
+            {user?.profileImage ? (
+              <Image
+                source={{ uri: user.profileImage.startsWith('http') ? user.profileImage : `${BASE_URL}${user.profileImage}` }}
+                style={{ width: '100%', height: '100%', borderRadius: 50 }}
+              />
+            ) : (
+              <Text style={styles.avatarText}>
+                {user?.nickname?.charAt(0)?.toUpperCase() || '?'}
+              </Text>
+            )}
           </View>
           <Text style={styles.nickname}>{user?.nickname || '사용자'}</Text>
         </View>
@@ -64,6 +73,10 @@ const ProfileScreen = () => {
         </View>
 
         <View style={styles.menuSection}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ProfileEdit')}>
+            <Text style={styles.menuText}>프로필 수정</Text>
+            <Text style={styles.menuArrow}>›</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('MyPhotos')}>
             <Text style={styles.menuText}>내 사진 관리</Text>
             <Text style={styles.menuArrow}>›</Text>

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Image, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Image, TextInput, Alert, ActivityIndicator, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -24,6 +24,7 @@ const PhotoUploadScreen = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [mission, setMission] = useState<{ _id: string; title: string } | null>(null);
   const [loadingMission, setLoadingMission] = useState(true);
+  const [isPublic, setIsPublic] = useState(true);
   
   const { photoUri } = route.params;
 
@@ -77,9 +78,15 @@ const PhotoUploadScreen = () => {
       form.append('file', { uri: photoUri, name, type });
       form.append('comment', comment);
       form.append('missionId', mission._id);
+  form.append('isPublic', String(isPublic));
 
-      await photoAPI.uploadPhoto(form);
-      navigation.navigate('UploadResult');
+      const result = await photoAPI.uploadPhoto(form) as any;
+  if (result?.replaced) {
+        Alert.alert('업로드 완료', '오늘 올린 사진이 있어 새 사진으로 교체됐어요.');
+      } else {
+        Alert.alert('업로드 완료', '오늘의 사진이 등록됐어요.');
+      }
+  navigation.navigate('UploadResult', { replaced: !!result?.replaced });
     } catch (error) {
       console.error('업로드 실패:', error);
       Alert.alert('오류', '업로드에 실패했습니다. 잠시 후 다시 시도해주세요.');
@@ -116,9 +123,15 @@ const PhotoUploadScreen = () => {
           )}
         </View>
 
+        {/* 공개 설정 */}
+        <View style={styles.publicRow}>
+          <Text style={styles.publicLabel}>피드에 공개</Text>
+          <Switch value={isPublic} onValueChange={setIsPublic} />
+        </View>
+
         <TextInput
           style={styles.commentInput}
-          placeholder="코멘트를 입력하세요 (선택사항)"
+          placeholder="오늘의 감정을 입력하세요 (선택사항)"
           value={comment}
           onChangeText={setComment}
           multiline
@@ -166,6 +179,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.text,
   },
+  publicRow: {
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: 12,
+    marginBottom: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  publicLabel: { fontSize: typography.body, color: colors.text },
   commentInput: {
     backgroundColor: colors.surface,
     padding: spacing.md,

@@ -9,7 +9,8 @@ export type RootStackParamList = {
   Privacy: undefined;
   Settings: undefined;
     MyPhotos: undefined;
-    UploadResult: undefined;
+  UploadResult: { replaced?: boolean } | undefined;
+  ProfileEdit: undefined;
 };
 
 export type TabParamList = {

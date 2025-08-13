@@ -16,6 +16,7 @@ interface AuthContextType {
   login: (token: string, user: User) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
+  updateProfile: (partial: Partial<User>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -112,6 +113,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
+  const updateProfile = useCallback(async (partial: Partial<User>) => {
+    setUser((prev) => {
+      const next = { ...prev, ...partial } as User;
+      AsyncStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       const [kakaoLogoutResult] = await Promise.allSettled([
@@ -146,7 +155,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     logout,
     isAuthenticated,
-  }), [user, token, isLoading, login, logout, isAuthenticated]);
+    updateProfile,
+  }), [user, token, isLoading, login, logout, isAuthenticated, updateProfile]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
