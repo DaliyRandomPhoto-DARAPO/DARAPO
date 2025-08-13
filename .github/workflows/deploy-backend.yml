@@ -23,17 +23,8 @@ jobs:
         script: |
           cd ~/DARAPO/backend
           git pull origin main
-          
-          # 전체 의존성 설치 (devDependencies 포함)
           npm ci
-          
-          # NestJS CLI 전역 설치 (필요시)
-          npm list -g @nestjs/cli > /dev/null 2>&1 || npm install -g @nestjs/cli
-          
-          # 빌드
           npm run build
-          
-          # PM2로 무중단 재시작
           pm2 reload ecosystem.config.js
           pm2 status
           echo "✅ 백엔드 배포 완료!"
