@@ -1,0 +1,40 @@
+name: Deploy Backend to EC2
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'backend/**' ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.EC2_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+        
+    - name: Deploy to EC2
+      run: |
+        ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          cd ~/DARAPO/backend
+          git pull origin main
+          npm ci --production
+          npm run build
+          pm2 reload ecosystem.config.js
+          pm2 status
+          echo "✅ 백엔드 배포 완료!"
+        EOF
+        
+    - name: Health Check
+      run: |
+        sleep 10
+        curl -f https://api.darapo.site/api || exit 1
+        echo "✅ 서비스 정상 동작 확인"
