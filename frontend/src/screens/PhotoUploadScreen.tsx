@@ -82,12 +82,22 @@ const PhotoUploadScreen = () => {
   form.append('isPublic', String(isPublic));
 
       const result = await photoAPI.uploadPhoto(form) as any;
-  if (result?.replaced) {
+      if (result?.replaced) {
         Alert.alert('업로드 완료', '오늘 올린 사진이 있어 새 사진으로 교체됐어요.');
       } else {
         Alert.alert('업로드 완료', '오늘의 사진이 등록됐어요.');
       }
-  navigation.navigate('UploadResult', { replaced: !!result?.replaced });
+      // 결과 화면을 거치지 않고 홈으로 이동
+      // @ts-ignore: resetRoot는 NavigationContainer에서 사용되지만 여기선 간단히 루트 리셋 대체
+      navigation.reset({
+        index: 0,
+        routes: [
+          {
+            name: 'MainTabs',
+            params: { screen: 'Home' },
+          } as any,
+        ],
+      });
     } catch (error) {
       console.error('업로드 실패:', error);
       Alert.alert('오류', '업로드에 실패했습니다. 잠시 후 다시 시도해주세요.');
@@ -157,7 +167,7 @@ const PhotoUploadScreen = () => {
         </Card>
 
         <View style={styles.buttonContainer}>
-          <Button title={isUploading ? '업로드 중…' : '📤 업로드'} onPress={handleUpload} size="lg" fullWidth disabled={isUploading || loadingMission} />
+          <Button title={isUploading ? '업로드 중…' : '업로드'} onPress={handleUpload} size="lg" fullWidth disabled={isUploading || loadingMission} />
           {/** SNS 공유 버튼은 배포에서 제외 (추후 활성화)
            * <Button title="📱 SNS 공유" onPress={handleShare} variant="secondary" size="lg" fullWidth />
            */}

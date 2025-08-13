@@ -136,7 +136,7 @@ const HomeScreen = React.memo(() => {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         {/* 인사 */}
         <View style={styles.helloWrap}>
-          <Text style={styles.helloTitle}>안녕하세요, {user?.nickname || '친구'}님! 📸</Text>
+          <Text style={styles.helloTitle}>안녕하세요, {user?.nickname || '친구'}님!</Text>
           <Text style={styles.helloSub}>오늘의 미션을 완성해보세요</Text>
         </View>
 

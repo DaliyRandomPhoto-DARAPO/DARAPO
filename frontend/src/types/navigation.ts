@@ -8,8 +8,7 @@ export type RootStackParamList = {
   Terms: undefined;
   Privacy: undefined;
   Settings: undefined;
-    MyPhotos: undefined;
-  UploadResult: { replaced?: boolean } | undefined;
+  MyPhotos: undefined;
   ProfileEdit: undefined;
 };
 
