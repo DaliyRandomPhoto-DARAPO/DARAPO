@@ -26,11 +26,36 @@ jobs:
           npm ci
           npm run build
           pm2 reload ecosystem.config.js
+          
+          # 서비스 안정화 대기
+          echo "⏳ 서비스 안정화 대기 중..."
+          sleep 15
+          
+          # 로컬 헬스체크
+          for i in {1..5}; do
+            if curl -f http://localhost:3000/api > /dev/null 2>&1; then
+              echo "✅ 로컬 헬스체크 성공 ($i/5)"
+              break
+            else
+              echo "⚠️ 로컬 헬스체크 실패, 재시도 ($i/5)..."
+              sleep 3
+            fi
+          done
+          
           pm2 status
           echo "✅ 백엔드 배포 완료!"
           
-    - name: Health Check
+    - name: External Health Check
       run: |
-        sleep 10
-        curl -f https://api.darapo.site/api || exit 1
-        echo "✅ 서비스 정상 동작 확인"
+        echo "🔍 외부 헬스체크 시작..."
+        for i in {1..10}; do
+          if curl -f https://api.darapo.site/api > /dev/null 2>&1; then
+            echo "✅ 외부 헬스체크 성공! ($i/10)"
+            exit 0
+          else
+            echo "⚠️ 외부 헬스체크 실패, 재시도 ($i/10)..."
+            sleep 5
+          fi
+        done
+        echo "❌ 외부 헬스체크 최종 실패"
+        exit 1
