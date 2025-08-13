@@ -51,16 +51,13 @@ async function bootstrap() {
   // 정적 파일 서빙: 업로드 이미지 제공
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
+  // 정적 페이지 서빙: 개인정보처리방침
+  // /privacy -> backend/public/privacy/index.html
+  app.use('/privacy', express.static(join(process.cwd(), 'public', 'privacy')));
+
   // 모든 네트워크 인터페이스에서 수신하도록 설정 (안드로이드 접근 허용)
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');
 
-  const host = process.env.HOST ?? 'localhost';
-  console.log(`🚀 서버가 실행되었습니다:`);
-  console.log(`📱 로컬: http://localhost:${port}/api`);
-  console.log(`🌐 네트워크: http://${host}:${port}/api`);
-  if (!isProd) {
-    console.log(`📚 API 문서: http://localhost:${port}/api/docs`);
-  }
 }
 bootstrap();
