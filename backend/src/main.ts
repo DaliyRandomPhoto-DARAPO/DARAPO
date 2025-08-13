@@ -49,13 +49,7 @@ async function bootstrap() {
   }
 
   // 정적 파일 서빙: 업로드 이미지 제공
-  app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
-
-  // 정적 페이지 서빙: 개인정보처리방침
-  // /privacy 및 /api/privacy -> backend/public/privacy/index.html
-  const privacyDir = join(__dirname, '..', 'public', 'privacy');
-  app.use('/privacy', express.static(privacyDir, { index: 'index.html' }));
-  app.use('/api/privacy', express.static(privacyDir, { index: 'index.html' }));
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   // 모든 네트워크 인터페이스에서 수신하도록 설정 (안드로이드 접근 허용)
   const port = process.env.PORT || 3000;
