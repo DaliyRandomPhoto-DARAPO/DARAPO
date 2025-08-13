@@ -13,10 +13,14 @@ async function bootstrap() {
   
   // 글로벌 prefix 설정
   app.setGlobalPrefix('api');
-  
-  // CORS 설정
+
+  // CORS 운영 도메인만 허용
+  const isProd = process.env.NODE_ENV === 'production';
+  const allowedOrigins = isProd
+    ? ['https://darapo.app'] // 운영 도메인만 허용, 필요시 추가
+    : true;
   app.enableCors({
-    origin: true,
+    origin: allowedOrigins,
     credentials: true,
   });
 
@@ -32,16 +36,17 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new LoggingInterceptor(), new TransformInterceptor());
 
-  // Swagger 설정
-  const config = new DocumentBuilder()
-    .setTitle('DARAPO API')
-    .setDescription('Daily Random Photo API Documentation')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  // Swagger 운영 환경 비활성화
+  if (!isProd) {
+    const config = new DocumentBuilder()
+      .setTitle('DARAPO API')
+      .setDescription('Daily Random Photo API Documentation')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document);
+  }
 
   // 정적 파일 서빙: 업로드 이미지 제공
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
@@ -49,11 +54,13 @@ async function bootstrap() {
   // 모든 네트워크 인터페이스에서 수신하도록 설정 (안드로이드 접근 허용)
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');
-  
+
   const host = process.env.HOST ?? 'localhost';
   console.log(`🚀 서버가 실행되었습니다:`);
   console.log(`📱 로컬: http://localhost:${port}/api`);
   console.log(`🌐 네트워크: http://${host}:${port}/api`);
-  console.log(`📚 API 문서: http://localhost:${port}/api/docs`);
+  if (!isProd) {
+    console.log(`📚 API 문서: http://localhost:${port}/api/docs`);
+  }
 }
 bootstrap();
