@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Image, TextInput, Alert, ActivityIndicator, Switch, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, Image, TextInput, Alert, ActivityIndicator, Switch, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -21,6 +21,7 @@ type PhotoUploadScreenRouteProp = RouteProp<RootStackParamList, 'PhotoUpload'>;
 const PhotoUploadScreen = () => {
   const navigation = useNavigation<PhotoUploadScreenNavigationProp>();
   const route = useRoute<PhotoUploadScreenRouteProp>();
+  const insets = useSafeAreaInsets();
   const [comment, setComment] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [mission, setMission] = useState<{ _id: string; title: string } | null>(null);
@@ -112,7 +113,21 @@ const PhotoUploadScreen = () => {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <Header title="사진 업로드" />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 12 : 0}
+      >
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: spacing.lg + insets.bottom + 120 },
+        ]}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        automaticallyAdjustKeyboardInsets
+      >
         {/* 미리보기 카드 */}
         <Card style={styles.previewCard}>
           {photoUri ? (
@@ -142,14 +157,6 @@ const PhotoUploadScreen = () => {
           )}
         </Card>
 
-        {/* 공개 설정 */}
-        <Card style={styles.infoCard}>
-          <View style={styles.publicRow}> 
-            <Text style={styles.publicLabel}>피드에 공개</Text>
-            <Switch value={isPublic} onValueChange={setIsPublic} />
-          </View>
-        </Card>
-
         {/* 감정 메모 */}
         <Card style={styles.infoCard}>
           <View style={styles.moodHeader}>
@@ -166,13 +173,22 @@ const PhotoUploadScreen = () => {
           />
         </Card>
 
+        {/* 공개 설정 */}
+        <Card style={styles.infoCard}>
+          <View style={styles.publicRow}> 
+            <Text style={styles.publicLabel}>피드에 공개</Text>
+            <Switch value={isPublic} onValueChange={setIsPublic} />
+          </View>
+        </Card>
+
         <View style={styles.buttonContainer}>
           <Button title={isUploading ? '업로드 중…' : '업로드'} onPress={handleUpload} size="lg" fullWidth disabled={isUploading || loadingMission} />
           {/** SNS 공유 버튼은 배포에서 제외 (추후 활성화)
            * <Button title="📱 SNS 공유" onPress={handleShare} variant="secondary" size="lg" fullWidth />
            */}
         </View>
-      </ScrollView>
+  </ScrollView>
+  </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

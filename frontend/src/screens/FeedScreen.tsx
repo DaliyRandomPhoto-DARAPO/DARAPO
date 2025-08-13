@@ -45,6 +45,16 @@ const FeedScreen = memo(() => {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
 
+  const handleSelectTab = useCallback((t: Tab) => {
+    if (t === active) return;
+    // 즉시 시각적 피드백과 로딩 상태 초기화
+    setActive(t);
+    setItems([]);
+    setPage(0);
+    setHasMore(true);
+    setLoading(true);
+  }, [active]);
+
   useEffect(() => {
     loadInitial();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -226,7 +236,7 @@ const FeedScreen = memo(() => {
             <View style={styles.tabWrap}>
               <View style={styles.tabPill}>
                 {tabs.map(t => (
-                  <Pressable key={t} onPress={() => setActive(t)} style={[styles.tabBtn, active === t && styles.tabBtnActive]} accessibilityRole="button" accessibilityState={{ selected: active === t }}>
+                  <Pressable key={t} onPress={() => handleSelectTab(t)} hitSlop={10} style={[styles.tabBtn, active === t && styles.tabBtnActive]} accessibilityRole="button" accessibilityState={{ selected: active === t }}>
                     <Text style={[styles.tabLabel, active === t && styles.tabLabelActive]}>{t}</Text>
                   </Pressable>
                 ))}

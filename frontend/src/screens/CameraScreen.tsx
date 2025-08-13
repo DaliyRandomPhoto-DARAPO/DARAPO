@@ -75,7 +75,12 @@ const CameraScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <CameraView style={styles.camera} facing={facing} ref={cameraRef} />
+      <CameraView
+        style={styles.camera}
+        facing={facing}
+        ref={cameraRef}
+        {...({ enableShutterSound: false } as any)}
+      />
       
       <View style={styles.overlay}>
         <View style={styles.topBar}>
