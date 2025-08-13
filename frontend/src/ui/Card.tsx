@@ -1,6 +1,22 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
-import { colors, spacing, radii, elevation } from './theme';
+import { View, StyleSheet, ViewStyle, Platform } from 'react-native';
+
+// Local tokens
+const colors = { surface: '#ffffff' } as const;
+const spacing = { lg: 16 } as const;
+const radii = { lg: 20 } as const;
+const elevation = {
+  card: Platform.select({
+    ios: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.12,
+      shadowRadius: 12,
+    },
+    android: { elevation: 6 },
+    default: {},
+  }),
+} as const;
 
 type Props = {
   style?: ViewStyle | ViewStyle[];

@@ -1,9 +1,14 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { SafeAreaView, StyleSheet, FlatList, View, Image, Text, Alert, RefreshControl } from 'react-native';
+import { StyleSheet, FlatList, View, Image, Text, Alert, RefreshControl } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../ui/Header';
 import Button from '../ui/Button';
 import EmptyState from '../ui/EmptyState';
-import { colors, spacing, typography } from '../ui/theme';
+
+// Local tokens
+const colors = { background: '#f8f9fa', surface: '#ffffff', text: '#2c3e50' } as const;
+const spacing = { lg: 16, md: 12, sm: 8 } as const;
+const typography = { body: 16 } as const;
 import { photoAPI, BASE_URL } from '../services/api';
 
 type PhotoItem = {
@@ -73,15 +78,16 @@ const MyPhotosScreen = () => {
           title={item.isPublic ? '비공개로 전환' : '공개로 전환'}
           onPress={() => togglePublic(item)}
           variant="outline"
+          size="lg"
           style={{ flex: 1, marginRight: spacing.sm }}
         />
-        <Button title="삭제" onPress={() => confirmDelete(item._id)} variant="danger" style={{ flex: 1 }} />
+        <Button title="삭제" onPress={() => confirmDelete(item._id)} variant="danger" size="lg" style={{ flex: 1 }} />
       </View>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <Header title="내 사진 관리" />
       {(!loading && photos.length === 0) ? (
         <View style={{ paddingHorizontal: spacing.lg }}>
@@ -91,7 +97,7 @@ const MyPhotosScreen = () => {
         <FlatList
           data={photos}
           keyExtractor={(item) => item._id}
-          contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, gap: spacing.md }}
+          contentContainerStyle={styles.listContent}
           renderItem={renderItem}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         />
@@ -102,6 +108,7 @@ const MyPhotosScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  listContent: { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, gap: spacing.md },
   card: {
     backgroundColor: colors.surface,
     borderRadius: 12,

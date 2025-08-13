@@ -1,6 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, spacing, typography } from './theme';
+
+// Local tokens
+const colors = { text: '#2c3e50', subText: '#7f8c8d' } as const;
+const spacing = { lg: 16, xl: 24, md: 12, sm: 8 } as const;
+const typography = { h2: 20, body: 16 } as const;
 
 type Props = {
   icon?: string;

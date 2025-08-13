@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
-import { SafeAreaView, StyleSheet, View, Text, Switch, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, Switch, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../ui/Header';
-import { colors, spacing, typography } from '../ui/theme';
+
+// Local tokens
+const colors = { background: '#f8f9fa', surface: '#ffffff', text: '#2c3e50' } as const;
+const spacing = { md: 12, lg: 16 } as const;
+const typography = { body: 16 } as const;
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
@@ -11,7 +16,7 @@ const SettingsScreen = () => {
   const [notifications, setNotifications] = useState(true);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <Header title="설정" />
 
       <View style={styles.section}>

@@ -1,7 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle, Platform } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, typography } from './theme';
+
+// Local tokens
+const colors = { surface: '#ffffff', border: '#e9ecef', text: '#2c3e50' } as const;
+const spacing = { xs: 6, md: 12, lg: 16 } as const;
+const typography = { title: 28 } as const;
 
 type Props = {
   title: string;

@@ -1,15 +1,17 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from '../screens/HomeScreen';
 import FeedScreen from '../screens/FeedScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { TabParamList } from '../types/navigation';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
 const TabNavigator = () => {
+  // Back handling is implemented globally in AppNavigator.
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({

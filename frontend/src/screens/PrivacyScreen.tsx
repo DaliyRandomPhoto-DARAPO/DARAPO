@@ -1,13 +1,18 @@
 import React from 'react';
-import { SafeAreaView, ScrollView, Text, StyleSheet, View } from 'react-native';
+import { ScrollView, Text, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../ui/Header';
-import { colors, spacing, typography } from '../ui/theme';
+
+// Local tokens
+const colors = { background: '#f8f9fa', text: '#2c3e50', subText: '#7f8c8d' } as const;
+const spacing = { xl: 24, lg: 16, sm: 8 } as const;
+const typography = { h1: 24, body: 16, small: 14 } as const;
 
 const PrivacyScreen = () => {
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <Header title="개인정보처리방침" />
-  <ScrollView style={styles.content} contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg }}>
+  <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <Text style={styles.sectionTitle}>1. 수집하는 개인정보 항목</Text>
         <Text style={styles.body}>서비스 제공을 위해 카카오 계정 식별자, 닉네임 등을 수집할 수 있습니다.</Text>
 
@@ -27,6 +32,7 @@ const PrivacyScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { flex: 1 },
+  contentContainer: { paddingHorizontal: spacing.xl, paddingVertical: spacing.lg },
   sectionTitle: {
     fontSize: typography.h1,
     fontWeight: '700',

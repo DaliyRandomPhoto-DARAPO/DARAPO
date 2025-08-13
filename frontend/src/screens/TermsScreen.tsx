@@ -1,13 +1,18 @@
 import React from 'react';
-import { SafeAreaView, ScrollView, Text, StyleSheet, View } from 'react-native';
+import { ScrollView, Text, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../ui/Header';
-import { colors, spacing, typography } from '../ui/theme';
+
+// Local tokens
+const colors = { background: '#f8f9fa', text: '#2c3e50', subText: '#7f8c8d' } as const;
+const spacing = { xl: 24, lg: 16, sm: 8 } as const;
+const typography = { h1: 24, body: 16, small: 14 } as const;
 
 const TermsScreen = () => {
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <Header title="이용약관" />
-  <ScrollView style={styles.content} contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg }}>
+  <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <Text style={styles.sectionTitle}>제1조 목적</Text>
         <Text style={styles.body}>
           본 약관은 DARAPO(이하 "서비스")의 이용과 관련하여 회사와 이용자 간의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.
@@ -29,6 +34,7 @@ const TermsScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { flex: 1 },
+  contentContainer: { paddingHorizontal: spacing.xl, paddingVertical: spacing.lg },
   sectionTitle: {
     fontSize: typography.h1,
     fontWeight: '700',

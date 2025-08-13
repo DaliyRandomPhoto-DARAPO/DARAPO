@@ -1,22 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  SafeAreaView,
-  Image,
-  TextInput,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet, Image, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
 import { photoAPI, missionAPI } from '../services/api';
 import Header from '../ui/Header';
-import { colors, spacing, typography } from '../ui/theme';
+
+// Local tokens
+const colors = { background: '#f8f9fa', text: '#2c3e50', subText: '#7f8c8d', surface: '#ffffff', primary: '#3498db' } as const;
+const spacing = { xl: 24, lg: 16, md: 12, sm: 8, xs: 6 } as const;
+const typography = { small: 14, h2: 20, body: 16 } as const;
+import Button from '../ui/Button';
 
 type PhotoUploadScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PhotoUpload'>;
 type PhotoUploadScreenRouteProp = RouteProp<RootStackParamList, 'PhotoUpload'>;
@@ -97,7 +93,7 @@ const PhotoUploadScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+  <SafeAreaView style={styles.container} edges={['bottom']}>
       <Header title="사진 업로드" />
       <View style={styles.content}>
         {photoUri ? (
@@ -130,21 +126,8 @@ const PhotoUploadScreen = () => {
         />
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.button, styles.uploadButton, isUploading && { opacity: 0.7 }]}
-            onPress={handleUpload}
-            disabled={isUploading || loadingMission}
-          >
-            <Text style={styles.buttonText}>{isUploading ? '업로드 중…' : '📤 업로드'}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.shareButton]}
-            onPress={handleShare}
-            disabled={isUploading}
-          >
-            <Text style={styles.buttonText}>📱 SNS 공유</Text>
-          </TouchableOpacity>
+          <Button title={isUploading ? '업로드 중…' : '📤 업로드'} onPress={handleUpload} size="lg" fullWidth disabled={isUploading || loadingMission} />
+          <Button title="📱 SNS 공유" onPress={handleShare} variant="secondary" size="lg" fullWidth />
         </View>
       </View>
     </SafeAreaView>
@@ -158,8 +141,8 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-  paddingHorizontal: spacing.lg,
-  paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
   },
   previewImage: {
     width: '100%',
@@ -191,25 +174,7 @@ const styles = StyleSheet.create({
     minHeight: 80,
     textAlignVertical: 'top',
   },
-  buttonContainer: {
-    gap: spacing.md,
-  },
-  button: {
-    padding: spacing.md,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  uploadButton: {
-    backgroundColor: colors.primary,
-  },
-  shareButton: {
-    backgroundColor: '#34C759',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: typography.body,
-    fontWeight: 'bold',
-  },
+  buttonContainer: { gap: spacing.md },
 });
 
 export default PhotoUploadScreen;

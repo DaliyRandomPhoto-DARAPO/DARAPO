@@ -1,146 +1,154 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  Image,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet, Image, Alert } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import backendKakaoAuthService from '../services/kakao_api';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
-import { spacing } from '../ui/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authAPI } from '../services/api';
+// Local tokens (screen-scoped)
+const colors = { background: '#f8f9fa', surface: '#ffffff', text: '#2c3e50', subText: '#7f8c8d' } as const;
+const spacing = { xs: 6, sm: 8, md: 12, lg: 16, xl: 24 } as const;
+const radii = { lg: 20, pill: 999 } as const;
+const typography = { title: 28, h2: 20, body: 16, small: 14 } as const;
+import KakaoLoginButton from '../ui/KakaoLoginButton';
 
-// 성능 최적화를 위한 상수 정의
-const LOGIN_MESSAGES = Object.freeze({
-  START: '카카오 로그인 프로세스 시작',
-  SUCCESS_BACKEND: '카카오 로그인 성공, 백엔드 API 호출 시작',
-  LOGIN_SUCCESS_TITLE: '로그인 성공',
-  LOGIN_FAILED_TITLE: '로그인 실패',
-  DEFAULT_ERROR: '로그인 중 오류가 발생했습니다.',
-  CANCEL_KEYWORD: '취소',
-});
-
-const STRINGS = Object.freeze({
-  APP_NAME: 'DARAPO',
-  APP_SUBTITLE: 'Daily Random Photo',
-  DESCRIPTION: '매일 새로운 미션으로\n특별한 순간을 기록해보세요',
-  KAKAO_LOGIN: '카카오톡으로 로그인',
-  TERMS_TEXT: '로그인 시 ',
-  PRIVACY_POLICY: '개인정보처리방침',
-  SERVICE_TERMS: '서비스 이용약관',
-  TERMS_AGREE: '에 동의하게 됩니다.',
-});
+// 화면 단위 여백 관리 (한 곳에서 조절)
+const LAYOUT = {
+  sectionGap: spacing.lg,      // 로고영역 ↔ 버튼/약관 섹션 간격(16)
+  logoBottom: spacing.sm,      // 로고 카드 하단 여백(8)
+  subtitleTop: spacing.xs,     // 앱 서브타이틀 상단 여백(6)
+  descTop: spacing.sm,         // 설명문 상단 여백(8)
+  termsTop: spacing.md,        // 약관 문구 상단 여백(12)
+} as const;
 
 const LoginScreen = React.memo(() => {
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const insets = useSafeAreaInsets();
 
   const handleKakaoLogin = useCallback(async () => {
     if (loading) return; // 중복 실행 방지
-    
     try {
       setLoading(true);
-      
       console.log('🔄 백엔드 완전 처리 카카오 로그인 시작');
-      
-      // 백엔드에서 완전히 처리된 로그인 결과 받기
+
       const result = await backendKakaoAuthService.login();
-      
-      if (result.success && result.accessToken && result.user) {
-        console.log('✅ 로그인 성공, 토큰 및 사용자 정보 수신');
-        
-        // AuthContext를 통해 로그인 상태 업데이트
-        await login(result.accessToken, result.user);
-        
-        Alert.alert(LOGIN_MESSAGES.LOGIN_SUCCESS_TITLE, `안녕하세요, ${result.user.nickname}님!`);
+
+      if (result.success && result.accessToken) {
+        console.log('✅ 로그인 성공, 토큰 수신');
+        let resolvedUser = result.user;
+        // 콜백에 user가 없을 수 있으므로 /auth/me로 보완
+        if (!resolvedUser) {
+          try {
+            await AsyncStorage.setItem('auth_token', result.accessToken);
+            resolvedUser = await authAPI.getCurrentUser();
+          } catch (e) {
+            console.warn('유저 조회 실패:', e);
+          }
+        }
+
+        if (resolvedUser) {
+          await login(result.accessToken, resolvedUser);
+          // 루트 네비게이터는 isAuthenticated에 따라 MainTabs로 교체됨(App.tsx)
+          Alert.alert(LOGIN_MESSAGES.LOGIN_SUCCESS_TITLE, `안녕하세요, ${resolvedUser.nickname}님!`);
+        } else {
+          throw new Error('사용자 정보를 가져오지 못했습니다.');
+        }
       } else {
         console.error('❌ 로그인 실패:', result.error);
-        Alert.alert(LOGIN_MESSAGES.LOGIN_FAILED_TITLE, result.error || '로그인에 실패했습니다.');
+        Alert.alert(
+          LOGIN_MESSAGES.LOGIN_FAILED_TITLE,
+          result.error || LOGIN_MESSAGES.DEFAULT_ERROR,
+        );
       }
-    } catch (error: any) {
-      console.error('❌ 카카오 로그인 오류:', error.message);
-      const errorMessage = error.message || LOGIN_MESSAGES.DEFAULT_ERROR;
-      
-      if (!errorMessage.includes(LOGIN_MESSAGES.CANCEL_KEYWORD)) {
-        Alert.alert(LOGIN_MESSAGES.LOGIN_FAILED_TITLE, errorMessage);
+    } catch (error: unknown) {
+      const message = ((): string => {
+        if (typeof error === 'string') return error;
+        if (error && typeof error === 'object' && 'message' in error) {
+          // @ts-expect-error safe access
+          return error.message || LOGIN_MESSAGES.DEFAULT_ERROR;
+        }
+        return LOGIN_MESSAGES.DEFAULT_ERROR;
+      })();
+      console.error('❌ 카카오 로그인 오류:', message);
+      const lower = String(message).toLowerCase();
+      if (!lower.includes(LOGIN_MESSAGES.CANCEL_KEYWORD)) {
+        Alert.alert(LOGIN_MESSAGES.LOGIN_FAILED_TITLE, message);
       }
     } finally {
       setLoading(false);
-      // 딥링크 리스너 정리
       backendKakaoAuthService.stopDeepLinkHandling();
     }
   }, [loading, login]);
 
-  // 성능 최적화: 버튼 스타일 메모이제이션
-  const kakaoButtonStyle = useMemo(() => [
-    styles.kakaoButton,
-    loading && styles.disabledButton
-  ], [loading]);
-
-  // 성능 최적화: 로고 이미지 소스 메모이제이션
-  const logoSource = useMemo(() => require('../../assets/icon.png'), []);
-
-  // 성능 최적화: 로딩 컴포넌트 메모이제이션
-  const renderLoadingContent = useCallback(() => (
-    <ActivityIndicator size="small" color="#3C1E1E" />
-  ), []);
-
-  // 성능 최적화: 카카오 버튼 아이콘 메모이제이션
-  const renderKakaoIcon = useCallback(() => (
-    <>
-      <View style={styles.kakaoIcon}>
-        <Text style={styles.kakaoIconText}>K</Text>
-      </View>
-      <Text style={styles.kakaoButtonText}>{STRINGS.KAKAO_LOGIN}</Text>
-    </>
-  ), []);
-
+  const logoSource = require('../../assets/icon.png');
+  const containerInsetsStyle = useMemo(
+    () => ({
+      paddingTop: Math.max(spacing.lg, insets.top + spacing.xs),
+      paddingBottom: Math.max(spacing.xl, insets.bottom + spacing.xs),
+    }),
+    [insets.top, insets.bottom],
+  );
+  const openPrivacy = useCallback(() => navigation.navigate('Privacy'), [navigation]);
+  const openTerms = useCallback(() => navigation.navigate('Terms'), [navigation]);
 
   return (
-    <SafeAreaView style={styles.container}>
+  <SafeAreaView style={[styles.container, containerInsetsStyle]} edges={['top', 'bottom']}>
       <View style={styles.content}>
-        {/* 로고 영역 */}
+        {/* 로고 & 헤드라인 */}
+
         <View style={styles.logoSection}>
           <View style={styles.logoContainer}>
-            <Image
-              source={logoSource}
-              style={styles.logoImage}
-              resizeMode="contain"
-            />
+            <Image source={logoSource} style={styles.logoImage} resizeMode="contain" />
           </View>
-          <Text style={styles.appName}>{STRINGS.APP_NAME}</Text>
+          <Text style={styles.appName} accessibilityRole="header">
+            {STRINGS.APP_NAME}
+          </Text>
           <Text style={styles.appSubtitle}>{STRINGS.APP_SUBTITLE}</Text>
-          <Text style={styles.description}>
+          <Text style={styles.description} maxFontSizeMultiplier={1.2}>
             {STRINGS.DESCRIPTION}
           </Text>
         </View>
 
-        {/* 로그인 버튼 영역 */}
+        {/* 액션 영역 */}
         <View style={styles.loginSection}>
-          <TouchableOpacity
-            style={kakaoButtonStyle}
-            onPress={handleKakaoLogin}
-            disabled={loading}
-          >
-            {loading ? renderLoadingContent() : renderKakaoIcon()}
-          </TouchableOpacity>
+          {/* 카카오 공식 스타일 버튼 */}
+          <View style={styles.kakaoButtonWrapper}>
+            <KakaoLoginButton
+              title="카카오로 계속하기"
+              onPress={handleKakaoLogin}
+              loading={loading}
+              fullWidth
+              accessibilityLabel="카카오톡으로 로그인"
+              testID="kakao-login-button"
+            />
+          </View>
 
-          <Text style={styles.termsText}>
+          {/* 약관 */}
+          <Text style={styles.termsText} maxFontSizeMultiplier={1.1}>
             {STRINGS.TERMS_TEXT}
-            <Text style={styles.linkText} onPress={() => navigation.navigate('Privacy')}>
+            <Text
+              style={styles.linkText}
+              onPress={openPrivacy}
+              accessibilityRole="link"
+              accessibilityLabel="개인정보처리방침"
+            >
               {STRINGS.PRIVACY_POLICY}
-            </Text>{' '}및{`\n`}
-            <Text style={styles.linkText} onPress={() => navigation.navigate('Terms')}>
+            </Text>
+            {' '}및{' '}
+            <Text
+              style={styles.linkText}
+              onPress={openTerms}
+              accessibilityRole="link"
+              accessibilityLabel="서비스 이용약관"
+            >
               {STRINGS.SERVICE_TERMS}
             </Text>
-            {STRINGS.TERMS_AGREE}
+            {` ${STRINGS.TERMS_AGREE}`}
           </Text>
         </View>
       </View>
@@ -148,157 +156,110 @@ const LoginScreen = React.memo(() => {
   );
 });
 
-// 성능 최적화: StyleSheet 메모이제이션 및 상수화
-const SHADOW_CONFIG = Object.freeze({
-  color: '#000',
-  offset: { width: 0, height: 4 },
-  opacity: 0.1,
-  radius: 12,
-  elevation: 8,
-});
 
-const KAKAO_SHADOW_CONFIG = Object.freeze({
-  color: '#FEE500',
-  offset: { width: 0, height: 2 },
-  opacity: 0.3,
-  radius: 8,
-  elevation: 4,
-});
+// ===== 텍스트/메시지 상수 =====
+const STRINGS = {
+  APP_NAME: 'DARAPO',
+  APP_SUBTITLE: '매일 하나, 랜덤 사진 미션',
+  DESCRIPTION:
+    '카카오로 로그인하고 오늘의 미션을 받아보세요.\n촬영부터 업로드까지 간편하게 즐길 수 있어요.',
+  TERMS_TEXT: '계속 진행하면 ',
+  PRIVACY_POLICY: '개인정보처리방침',
+  SERVICE_TERMS: '서비스 이용약관',
+  TERMS_AGREE: '에 동의한 것으로 간주됩니다.',
+} as const;
 
-const COLORS = Object.freeze({
-  background: '#f8f9fa',
-  white: '#ffffff',
-  primary: '#2c3e50',
-  secondary: '#7f8c8d',
-  text: '#34495e',
-  kakaoMain: '#FEE500',
-  kakaoText: '#3C1E1E',
-  border: '#e0e6ed',
-  muted: '#95a5a6',
-  link: '#3498db',
-});
+const LOGIN_MESSAGES = {
+  LOGIN_SUCCESS_TITLE: '로그인 완료',
+  LOGIN_FAILED_TITLE: '로그인 실패',
+  DEFAULT_ERROR: '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
+  // 사용자 취소계열 메시지를 잡기 위한 키워드(영문이 더 자주 반환됨)
+  CANCEL_KEYWORD: 'cancel',
+} as const;
 
+
+// ===== 스타일 =====
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
-    justifyContent: 'space-between',
-    padding: 24,
-  },
-  logoSection: {
-    flex: 1,
-    justifyContent: 'center',
+  // 상하로 너무 벌어지지 않도록 가운데 정렬 후 섹션 간 간격은 LAYOUT으로 제어
+  justifyContent: 'center',
     alignItems: 'center',
+  },
+  // 상단 로고/헤드라인
+  logoSection: {
+    width: '100%',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
   },
   logoContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 30,
-    backgroundColor: COLORS.white,
-    justifyContent: 'center',
+    width: 112,
+    height: 112,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
     alignItems: 'center',
-    marginBottom: 30,
-    shadowColor: SHADOW_CONFIG.color,
-    shadowOffset: SHADOW_CONFIG.offset,
-    shadowOpacity: SHADOW_CONFIG.opacity,
-    shadowRadius: SHADOW_CONFIG.radius,
-    elevation: SHADOW_CONFIG.elevation,
+    justifyContent: 'center',
+  marginBottom: LAYOUT.logoBottom,
+    // subtle shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  logoImage: {
-    width: 80,
-    height: 80,
-  },
+  logoImage: { width: 84, height: 84 },
   appName: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginBottom: 8,
-    letterSpacing: 1,
+    fontSize: typography.title,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: 0.3,
   },
   appSubtitle: {
-    fontSize: 18,
-    color: COLORS.secondary,
-    marginBottom: 40,
-    fontWeight: '500',
-  },
-  description: {
-    fontSize: 16,
-    color: COLORS.text,
-    textAlign: 'center',
-    lineHeight: 24,
-    paddingHorizontal: 20,
-  },
-  loginSection: {
-    paddingBottom: spacing.xl,
-  },
-  kakaoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.kakaoMain,
-    paddingVertical: spacing.md,
-    borderRadius: 16,
-    marginBottom: 16,
-    shadowColor: KAKAO_SHADOW_CONFIG.color,
-    shadowOffset: KAKAO_SHADOW_CONFIG.offset,
-    shadowOpacity: KAKAO_SHADOW_CONFIG.opacity,
-    shadowRadius: KAKAO_SHADOW_CONFIG.radius,
-    elevation: KAKAO_SHADOW_CONFIG.elevation,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  kakaoIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: COLORS.kakaoText,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  kakaoIconText: {
-    color: COLORS.kakaoMain,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  kakaoButtonText: {
-    color: COLORS.kakaoText,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  guestButton: {
-    paddingVertical: spacing.md,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    marginBottom: 24,
-    backgroundColor: COLORS.white,
-  },
-  guestButtonText: {
-    color: COLORS.secondary,
-    fontSize: 16,
+  marginTop: LAYOUT.subtitleTop,
+    fontSize: typography.h2,
+    color: colors.subText,
     fontWeight: '600',
   },
-  termsText: {
-    fontSize: 13,
-    color: COLORS.muted,
+  description: {
+  marginTop: LAYOUT.descTop,
+    fontSize: typography.body,
+    color: colors.subText,
     textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: 20,
+    lineHeight: 22,
+  },
+
+  // 하단 액션/약관
+  loginSection: {
+    width: '100%',
+    paddingHorizontal: spacing.lg,
+  // 섹션 간 간격은 marginTop으로만 제어
+  marginTop: LAYOUT.sectionGap,
+  },
+  kakaoButtonWrapper: {
+    // raised button feel
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 6,
+    borderRadius: radii.pill,
+  },
+  termsText: {
+  marginTop: LAYOUT.termsTop,
+    color: colors.subText,
+    fontSize: typography.small,
+    textAlign: 'center',
   },
   linkText: {
-    color: COLORS.link,
+    color: colors.text,
     textDecorationLine: 'underline',
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });
 
-// 성능 최적화: displayName 설정
-LoginScreen.displayName = 'LoginScreen';
-
 export default LoginScreen;
+

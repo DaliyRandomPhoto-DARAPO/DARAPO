@@ -1,18 +1,22 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ActivityIndicator,
   FlatList,
   Image,
   Dimensions,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../ui/Header';
 import EmptyState from '../ui/EmptyState';
-import { colors, typography, spacing } from '../ui/theme';
+
+// Local tokens
+const colors = { background: '#f8f9fa', text: '#2c3e50', subText: '#7f8c8d', primary: '#3498db', surface: '#ffffff', danger: '#e74c3c' } as const;
+const typography = { body: 16 } as const;
+const spacing = { sm: 8, md: 12, lg: 16, xl: 24 } as const;
 import Button from '../ui/Button';
 import { useNavigation } from '@react-navigation/native';
 import { photoAPI, BASE_URL } from '../services/api';
@@ -31,7 +35,7 @@ const NUM_COLUMNS = 2;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const ITEM_SIZE = (SCREEN_WIDTH - spacing.lg * 2 - GAP) / NUM_COLUMNS; // 좌우 패딩 + 컬럼 간격 고려
 
-const FeedScreen = () => {
+const FeedScreen = React.memo(() => {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -92,9 +96,9 @@ const FeedScreen = () => {
   const renderItem = ({ item }: { item: PhotoItem }) => {
     const uri = `${BASE_URL}${item.imageUrl}`;
     return (
-      <View style={styles.gridItem}>
-        <Image source={{ uri }} style={styles.image} resizeMode="cover" />
-      </View>
+        <View style={styles.gridItem}>
+          <Image source={{ uri }} style={styles.image} resizeMode="cover" />
+        </View>
     );
   };
 
@@ -122,7 +126,7 @@ const FeedScreen = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <Header title="피드" />
     {!!error && (
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
@@ -134,8 +138,8 @@ const FeedScreen = () => {
         data={photos}
         keyExtractor={(item) => item._id}
         numColumns={NUM_COLUMNS}
-  columnWrapperStyle={{ gap: GAP, paddingHorizontal: spacing.lg }}
-  contentContainerStyle={{ paddingVertical: spacing.lg, gap: GAP }}
+        columnWrapperStyle={styles.columnWrapper}
+        contentContainerStyle={styles.listContent}
         renderItem={renderItem}
         ListEmptyComponent={ListEmpty}
         onEndReachedThreshold={0.3}
@@ -151,13 +155,15 @@ const FeedScreen = () => {
       />
     </SafeAreaView>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
   },
+  columnWrapper: { gap: GAP, paddingHorizontal: spacing.xl },
+  listContent: { paddingVertical: spacing.lg, gap: GAP, paddingHorizontal: spacing.xl },
   gridItem: {
     width: ITEM_SIZE,
     height: ITEM_SIZE,

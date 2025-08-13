@@ -106,6 +106,12 @@ export const authAPI = {
     return response.data;
   },
 
+  // returnUrl을 state로 전달하기 위한 변형 API (Expo Go/Dev Client 복귀 보장)
+  getKakaoAuthUrlWithReturn: async (returnUrl: string) => {
+    const response = await apiClient.get('/auth/kakao', { params: { returnUrl } });
+    return response.data;
+  },
+
 
   logout: async () => {
     const response = await apiClient.post('/auth/logout');

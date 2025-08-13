@@ -2,7 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../ui/Header';
-import { colors, spacing, typography } from '../ui/theme';
+
+// Local tokens
+const colors = { background: '#f8f9fa', surface: '#ffffff', text: '#2c3e50', subText: '#7f8c8d', border: '#e9ecef', danger: '#e74c3c', primary: '#3498db' } as const;
+const spacing = { xl: 24, lg: 16, md: 12, sm: 8 } as const;
+const typography = { h1: 24, body: 16 } as const;
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
@@ -147,7 +151,7 @@ const styles = StyleSheet.create({
   },
   menuSection: {
     backgroundColor: colors.surface,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   menuItem: {
     flexDirection: 'row',
@@ -169,7 +173,7 @@ const styles = StyleSheet.create({
   logoutButton: {
     backgroundColor: colors.danger,
     marginHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.lg,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: spacing.xl,
