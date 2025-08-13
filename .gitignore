@@ -50,7 +50,6 @@ dist
 
 # Gatsby 파일
 .cache/
-public
 
 # Vuepress 빌드 출력
 .vuepress/dist
