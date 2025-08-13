@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../ui/Header';
 import { Image } from 'react-native';
-import { BASE_URL } from '../services/api';
+import { BASE_URL, photoAPI } from '../services/api';
 
 // Local tokens
 const colors = { background: '#f8f9fa', surface: '#ffffff', text: '#2c3e50', subText: '#7f8c8d', border: '#e9ecef', danger: '#e74c3c', primary: '#3498db' } as const;
@@ -15,6 +15,41 @@ import { RootStackParamList } from '../types/navigation';
 
 const ProfileScreen = () => {
   const { user, logout } = useAuth();
+  const [uploadedCount, setUploadedCount] = useState<number>(0);
+  const [completedCount, setCompletedCount] = useState<number>(0);
+  const [loadingStats, setLoadingStats] = useState<boolean>(false);
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        setLoadingStats(true);
+        const list: any[] = (await photoAPI.getMyPhotos()) || [];
+        setUploadedCount(list.length);
+        // 완료한 미션 수: 고유 미션ID 또는 미션 날짜 기준으로 집계
+        const toKey = (p: any) => {
+          const mid = p?.missionId?._id;
+          if (mid) return `m:${String(mid)}`;
+          const ds = p?.missionId?.date || p?.createdAt;
+          const d = ds ? new Date(ds) : null;
+          if (!d) return `d:unknown`;
+          d.setHours(0, 0, 0, 0);
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `d:${y}-${m}-${day}`;
+        };
+        const uniq = new Set<string>();
+        list.forEach((p) => uniq.add(toKey(p)));
+        setCompletedCount(uniq.size);
+      } catch (e) {
+        setUploadedCount(0);
+        setCompletedCount(0);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+    loadStats();
+  }, []);
 
   const handleLogout = async () => {
     Alert.alert(
@@ -62,12 +97,12 @@ const ProfileScreen = () => {
 
         <View style={styles.statsSection}>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>0</Text>
+            <Text style={styles.statNumber}>{loadingStats ? '-' : completedCount}</Text>
             <Text style={styles.statLabel}>완료한 미션</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>0</Text>
+            <Text style={styles.statNumber}>{loadingStats ? '-' : uploadedCount}</Text>
             <Text style={styles.statLabel}>업로드한 사진</Text>
           </View>
         </View>

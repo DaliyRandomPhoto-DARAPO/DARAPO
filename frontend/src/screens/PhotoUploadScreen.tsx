@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Image, TextInput, Alert, ActivityIndicator, Switch } from 'react-native';
+import { View, Text, StyleSheet, Image, TextInput, Alert, ActivityIndicator, Switch, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,11 +7,12 @@ import type { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
 import { photoAPI, missionAPI } from '../services/api';
 import Header from '../ui/Header';
+import Card from '../ui/Card';
+import { theme } from '../ui/theme';
 
-// Local tokens
-const colors = { background: '#f8f9fa', text: '#2c3e50', subText: '#7f8c8d', surface: '#ffffff', primary: '#3498db' } as const;
-const spacing = { xl: 24, lg: 16, md: 12, sm: 8, xs: 6 } as const;
-const typography = { small: 14, h2: 20, body: 16 } as const;
+// Use shared theme with brand overrides to match Home/Feed
+const colors = { ...theme.colors, primary: '#7C3AED', primaryAlt: '#EC4899' } as const;
+const { spacing, typography, radii } = theme;
 import Button from '../ui/Button';
 
 type PhotoUploadScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PhotoUpload'>;
@@ -100,19 +101,28 @@ const PhotoUploadScreen = () => {
   };
 
   return (
-  <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <Header title="사진 업로드" />
-      <View style={styles.content}>
-        {photoUri ? (
-          <Image source={{ uri: photoUri }} style={[styles.previewImage, { height: previewHeight }]} />
-        ) : (
-          <View style={[styles.previewImage, { height: previewHeight, alignItems: 'center', justifyContent: 'center' }]}>
-            <Text style={{ color: colors.subText }}>사진이 없습니다</Text>
-          </View>
-        )}
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* 미리보기 카드 */}
+        <Card style={styles.previewCard}>
+          {photoUri ? (
+            <View style={{ borderRadius: radii.lg, overflow: 'hidden' }}>
+              <Image source={{ uri: photoUri }} style={[styles.previewImage, { height: previewHeight }]} resizeMode="cover" />
+            </View>
+          ) : (
+            <View style={[styles.previewImage, { height: previewHeight, alignItems: 'center', justifyContent: 'center' }]}>
+              <Text style={{ color: colors.subText }}>사진이 없습니다</Text>
+            </View>
+          )}
+        </Card>
 
-        <View style={styles.missionInfo}>        
-          <Text style={styles.missionLabel}>미션</Text>
+        {/* 오늘의 미션 박스 (Feed 스타일) */}
+        <Card style={styles.infoCard}>
+          <View style={styles.missionRowTop}>
+            <View style={styles.missionDot} />
+            <Text style={styles.missionBadge}>오늘의 미션</Text>
+          </View>
           {loadingMission ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
               <ActivityIndicator color={colors.primary} />
@@ -121,28 +131,37 @@ const PhotoUploadScreen = () => {
           ) : (
             <Text style={styles.missionText}>{mission?.title || '미션 없음'}</Text>
           )}
-        </View>
+        </Card>
 
         {/* 공개 설정 */}
-        <View style={styles.publicRow}>
-          <Text style={styles.publicLabel}>피드에 공개</Text>
-          <Switch value={isPublic} onValueChange={setIsPublic} />
-        </View>
+        <Card style={styles.infoCard}>
+          <View style={styles.publicRow}> 
+            <Text style={styles.publicLabel}>피드에 공개</Text>
+            <Switch value={isPublic} onValueChange={setIsPublic} />
+          </View>
+        </Card>
 
-        <TextInput
-          style={styles.commentInput}
-          placeholder="오늘의 감정을 입력하세요 (선택사항)"
-          value={comment}
-          onChangeText={setComment}
-          multiline
-          maxLength={200}
-        />
+        {/* 감정 메모 */}
+        <Card style={styles.infoCard}>
+          <View style={styles.moodHeader}>
+            <View style={[styles.moodDot]} />
+            <Text style={styles.moodBadge}>감정</Text>
+          </View>
+          <TextInput
+            style={styles.commentInput}
+            placeholder="오늘의 감정을 입력하세요 (선택사항)"
+            value={comment}
+            onChangeText={setComment}
+            multiline
+            maxLength={200}
+          />
+        </Card>
 
         <View style={styles.buttonContainer}>
           <Button title={isUploading ? '업로드 중…' : '📤 업로드'} onPress={handleUpload} size="lg" fullWidth disabled={isUploading || loadingMission} />
           <Button title="📱 SNS 공유" onPress={handleShare} variant="secondary" size="lg" fullWidth />
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -153,50 +172,31 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
   },
-  previewImage: {
-    width: '100%',
-    borderRadius: 12,
-    marginBottom: spacing.lg,
-    backgroundColor: colors.surface,
-  },
-  missionInfo: {
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: 12,
-    marginBottom: spacing.lg,
-  },
-  missionLabel: {
-    fontSize: typography.small,
-    color: colors.subText,
-    marginBottom: spacing.xs,
-  },
+  previewCard: { marginBottom: spacing.lg },
+  previewImage: { width: '100%', backgroundColor: colors.surface },
+  infoCard: { marginBottom: spacing.lg },
+  missionRowTop: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs },
+  missionDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, marginRight: 6 },
+  missionBadge: { fontSize: typography.small, color: colors.primary, fontWeight: '700' },
   missionText: {
     fontSize: typography.h2,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: colors.text,
   },
-  publicRow: {
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: 12,
-    marginBottom: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  publicRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   publicLabel: { fontSize: typography.body, color: colors.text },
   commentInput: {
     backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: 12,
-    marginBottom: spacing.lg,
+    paddingVertical: spacing.sm,
     minHeight: 80,
     textAlignVertical: 'top',
   },
+  moodHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs },
+  moodDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primaryAlt, marginRight: 6 },
+  moodBadge: { fontSize: typography.small, color: colors.primaryAlt, fontWeight: '700' },
   buttonContainer: { gap: spacing.md },
 });
 

@@ -166,21 +166,21 @@ const HomeScreen = React.memo(() => {
 
         {/* 통계 그리드 (간단 카드 두 개) */}
         <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
+          <Card style={styles.statCard}>
             <Text style={[styles.statValue, { color: colors.primary }]}>{streak}</Text>
             <Text style={styles.statLabel}>연속 달성</Text>
-          </View>
-          <View style={styles.statCard}>
+          </Card>
+          <Card style={styles.statCard}>
             <Text style={[styles.statValue, { color: colors.primaryAlt }]}>{totalPhotos}</Text>
             <Text style={styles.statLabel}>총 미션</Text>
-          </View>
+          </Card>
         </View>
 
         {/* 최근 사진들 */}
         <View style={styles.recentWrap}>
           <Text style={styles.sectionTitle}>최근 사진들</Text>
           {recents.map((r, i) => (
-            <View key={i} style={styles.recentItem}>
+            <Card key={i} style={styles.recentItem}>
               <View style={styles.recentTopRow}>
                 <Text style={styles.recentDate}>{r.date}</Text>
                 <View style={styles.recentDot} />
@@ -198,7 +198,7 @@ const HomeScreen = React.memo(() => {
                   <Text style={styles.recentText}>{r.mood || '메모 없음'}</Text>
                 </View>
               </View>
-            </View>
+            </Card>
           ))}
           {recents.length === 0 && !loading && (
             <Text style={[styles.recentText, { textAlign: 'center', color: colors.subText }]}>아직 업로드된 사진이 없어요.</Text>
@@ -227,8 +227,8 @@ const styles = StyleSheet.create({
 
   card: {
   borderRadius: radii.xl,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: colors.border,
     marginBottom: spacing.xl,
   },
   cardTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
@@ -245,13 +245,13 @@ const styles = StyleSheet.create({
   hero: { width: '100%', height: 192 },
 
   statsGrid: { flexDirection: 'row', gap: spacing.lg, marginBottom: spacing.xl },
-  statCard: { flex: 1, backgroundColor: colors.surface, borderRadius: radii.lg, paddingVertical: spacing.lg, alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  statCard: { flex: 1, borderRadius: radii.lg, paddingVertical: spacing.lg, alignItems: 'center' },
   statValue: { fontSize: 22, fontWeight: '800', marginBottom: 4 },
   statLabel: { fontSize: typography.small, color: colors.subText },
 
   recentWrap: { marginBottom: spacing.xl },
   sectionTitle: { fontSize: 16, fontWeight: '800', color: colors.text, marginBottom: spacing.md },
-  recentItem: { backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.lg, marginBottom: spacing.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  recentItem: { borderRadius: radii.lg, padding: spacing.lg, marginBottom: spacing.lg },
   recentTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
   recentDate: { fontSize: typography.small, color: colors.subText },
   recentDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#C4B5FD' },

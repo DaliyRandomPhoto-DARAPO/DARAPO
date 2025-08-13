@@ -11,11 +11,9 @@ export class Photo {
   @Prop({ type: Types.ObjectId, ref: 'Mission', required: true })
   missionId: Types.ObjectId;
 
+  // S3 object key (e.g., users/<uid>/YYYY/MM/DD/uuid.jpg)
   @Prop({ required: true })
-  imageUrl: string;
-
-  @Prop({ required: true })
-  fileName: string;
+  objectKey: string;
 
   @Prop()
   comment: string;
@@ -27,10 +25,16 @@ export class Photo {
   isShared: boolean;
 
   @Prop()
-  fileSize: number;
+  fileSize: number; // bytes
 
   @Prop()
   mimeType: string;
+
+  @Prop()
+  width?: number;
+
+  @Prop()
+  height?: number;
 }
 
 export const PhotoSchema = SchemaFactory.createForClass(Photo);

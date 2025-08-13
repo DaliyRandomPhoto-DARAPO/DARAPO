@@ -16,6 +16,13 @@ export function validateEnv(config: Record<string, any>) {
   requireIf('KAKAO_CLIENT_SECRET');
   requireIf('KAKAO_REDIRECT_URI');
 
+  // AWS S3
+  requireIf('AWS_REGION');
+  requireIf('AWS_S3_BUCKET');
+  // Credentials can be provided via environment/instance profile; optional explicit keys
+  // requireIf('AWS_ACCESS_KEY_ID');
+  // requireIf('AWS_SECRET_ACCESS_KEY');
+
   if (errors.length) {
     throw new Error('Invalid environment: ' + errors.join(', '));
   }

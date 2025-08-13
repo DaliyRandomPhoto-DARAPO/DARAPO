@@ -1,14 +1,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { StyleSheet, FlatList, View, Image, Text, Alert, RefreshControl } from 'react-native';
+import { StyleSheet, FlatList, View, Image, Text, Alert, RefreshControl, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../ui/Header';
 import Button from '../ui/Button';
 import EmptyState from '../ui/EmptyState';
+import Card from '../ui/Card';
+import { theme } from '../ui/theme';
 
-// Local tokens
-const colors = { background: '#f8f9fa', surface: '#ffffff', text: '#2c3e50' } as const;
-const spacing = { lg: 16, md: 12, sm: 8 } as const;
-const typography = { body: 16 } as const;
+// Shared theme with minor overrides to match app
+const colors = { ...theme.colors, primary: '#7C3AED', primaryAlt: '#EC4899' } as const;
+const { spacing, typography, radii } = theme;
 import { photoAPI, BASE_URL } from '../services/api';
 
 type PhotoItem = {
@@ -70,20 +71,34 @@ const MyPhotosScreen = () => {
   };
 
   const renderItem = ({ item }: { item: PhotoItem }) => (
-    <View style={styles.card}>
-      <Image source={{ uri: `${BASE_URL}${item.imageUrl}` }} style={styles.photo} />
-      {item.comment ? <Text style={styles.comment}>{item.comment}</Text> : null}
-      <View style={styles.row}>
-        <Button
-          title={item.isPublic ? '비공개로 전환' : '공개로 전환'}
-          onPress={() => togglePublic(item)}
-          variant="outline"
-          size="lg"
-          style={{ flex: 1, marginRight: spacing.sm }}
+    <Card style={styles.card}>
+      <View style={styles.imageWrap}>
+        <Image
+          source={{ uri: item.imageUrl?.startsWith('http') ? item.imageUrl : `${BASE_URL}${item.imageUrl}` }}
+          style={styles.photo}
+          resizeMode="cover"
         />
-        <Button title="삭제" onPress={() => confirmDelete(item._id)} variant="danger" size="lg" style={{ flex: 1 }} />
       </View>
-    </View>
+
+      {!!item.comment && (
+        <View style={styles.moodBox}>
+          <View style={styles.moodRow}>
+            <View style={styles.moodDot} />
+            <Text style={styles.moodLabel}>감정</Text>
+          </View>
+          <Text style={styles.moodText}>{item.comment}</Text>
+        </View>
+      )}
+
+      <View style={styles.publicRow}>
+        <Text style={styles.publicLabel}>피드에 공개</Text>
+        <Switch value={!!item.isPublic} onValueChange={() => togglePublic(item)} />
+      </View>
+
+      <View style={styles.actions}>
+        <Button title="삭제" onPress={() => confirmDelete(item._id)} variant="danger" size="lg" fullWidth />
+      </View>
+    </Card>
   );
 
   return (
@@ -109,26 +124,17 @@ const MyPhotosScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   listContent: { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, gap: spacing.md },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  photo: {
-    width: '100%',
-    height: 220,
-  },
-  comment: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    fontSize: typography.body,
-    color: colors.text,
-  },
-  row: {
-    flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
-  },
+  card: { padding: 0, overflow: 'hidden' },
+  imageWrap: { padding: spacing.md, paddingBottom: 0 },
+  photo: { width: '100%', height: 220, borderRadius: radii.lg },
+  moodBox: { backgroundColor: '#FEF2F2', marginHorizontal: spacing.md, marginTop: spacing.md, borderRadius: 16, padding: spacing.md },
+  moodRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  moodDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primaryAlt, marginRight: 6 },
+  moodLabel: { fontSize: 12, color: colors.primaryAlt, fontWeight: '700' },
+  moodText: { fontSize: 14, color: '#374151' },
+  publicRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.md },
+  publicLabel: { fontSize: typography.body, color: colors.text },
+  actions: { paddingHorizontal: spacing.md, paddingBottom: spacing.md },
 });
 
 export default MyPhotosScreen;

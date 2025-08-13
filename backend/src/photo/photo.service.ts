@@ -2,24 +2,25 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Photo, PhotoDocument } from './schemas/photo.schema';
-import { promises as fs } from 'fs';
-import { join } from 'path';
+import { S3Service } from '../common/s3.service';
 
 type CreatePhotoInput = {
   userId: string;
   missionId: string;
-  imageUrl: string;
-  fileName: string;
+  objectKey: string;
   comment?: string;
   isPublic?: boolean;
   fileSize?: number;
   mimeType?: string;
+  width?: number;
+  height?: number;
 };
 
 @Injectable()
 export class PhotoService {
   constructor(
     @InjectModel(Photo.name) private photoModel: Model<PhotoDocument>,
+    private readonly s3: S3Service,
   ) {}
 
   async createPhoto(photoData: CreatePhotoInput) {
@@ -48,20 +49,19 @@ export class PhotoService {
       return { photo: created, replaced: false };
     }
 
-    // 기존 파일 삭제 시도(베스트 에포트)
-    const oldPath = existing.imageUrl?.startsWith('/uploads/')
-      ? join(process.cwd(), existing.imageUrl.replace(/^\//, ''))
-      : undefined;
-    if (oldPath) {
-      fs.unlink(oldPath).catch(() => {});
+    // 기존 S3 오브젝트 삭제(베스트 에포트)
+    const prevKey = (existing as any).objectKey as string | undefined;
+    if (prevKey) {
+      this.s3.deleteObject(prevKey).catch(() => {});
     }
 
-    existing.imageUrl = photoData.imageUrl;
-    existing.fileName = photoData.fileName;
+    (existing as any).objectKey = photoData.objectKey;
     if (typeof photoData.comment !== 'undefined') existing.comment = photoData.comment;
     if (typeof photoData.isPublic !== 'undefined') (existing as any).isPublic = photoData.isPublic;
     if (typeof photoData.fileSize !== 'undefined') (existing as any).fileSize = photoData.fileSize;
     if (typeof photoData.mimeType !== 'undefined') (existing as any).mimeType = photoData.mimeType;
+    if (typeof photoData.width !== 'undefined') (existing as any).width = photoData.width;
+    if (typeof photoData.height !== 'undefined') (existing as any).height = photoData.height;
 
     const saved = await existing.save();
     return { photo: saved, replaced: true };
@@ -72,6 +72,7 @@ export class PhotoService {
       .find({ userId: new Types.ObjectId(userId) })
       .populate('missionId', 'title description date')
       .sort({ createdAt: -1 })
+  .lean()
       .exec();
   }
 
@@ -81,6 +82,7 @@ export class PhotoService {
       .populate('missionId', 'title description date')
       .sort({ createdAt: -1 })
       .limit(limit)
+  .lean()
       .exec();
   }
 
@@ -88,7 +90,9 @@ export class PhotoService {
     return this.photoModel
       .find({ missionId: new Types.ObjectId(missionId), isPublic: true })
       .populate('userId', 'nickname profileImage')
+  .populate('missionId', 'title description date')
       .sort({ createdAt: -1 })
+  .lean()
       .exec();
   }
 
@@ -97,6 +101,7 @@ export class PhotoService {
       .findById(new Types.ObjectId(photoId))
       .populate('userId', 'nickname profileImage')
       .populate('missionId', 'title description date')
+  .lean()
       .exec();
   }
 
@@ -114,6 +119,10 @@ export class PhotoService {
   }
 
   async deletePhoto(photoId: string) {
+    const doc = await this.photoModel.findById(new Types.ObjectId(photoId)).exec();
+    if (doc?.objectKey) {
+      this.s3.deleteObject(doc.objectKey).catch(() => {});
+    }
     return this.photoModel.findByIdAndDelete(new Types.ObjectId(photoId)).exec();
   }
 
@@ -125,6 +134,7 @@ export class PhotoService {
       .sort({ createdAt: -1 })
       .limit(limit)
       .skip(skip)
+  .lean()
       .exec();
   }
 
