@@ -96,9 +96,8 @@ const PhotoUploadScreen = () => {
     }
   };
 
-  const handleShare = () => {
-    Alert.alert('공유', 'SNS 공유 기능을 구현합니다.');
-  };
+  // TODO: SNS 공유 기능 추후 활성화 예정
+  // const handleShare = async () => { /* ... */ };
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -159,7 +158,9 @@ const PhotoUploadScreen = () => {
 
         <View style={styles.buttonContainer}>
           <Button title={isUploading ? '업로드 중…' : '📤 업로드'} onPress={handleUpload} size="lg" fullWidth disabled={isUploading || loadingMission} />
-          <Button title="📱 SNS 공유" onPress={handleShare} variant="secondary" size="lg" fullWidth />
+          {/** SNS 공유 버튼은 배포에서 제외 (추후 활성화)
+           * <Button title="📱 SNS 공유" onPress={handleShare} variant="secondary" size="lg" fullWidth />
+           */}
         </View>
       </ScrollView>
     </SafeAreaView>

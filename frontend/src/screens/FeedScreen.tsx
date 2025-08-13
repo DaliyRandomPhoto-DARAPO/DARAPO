@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useEffect, useState } from 'react';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, StyleSheet, Pressable, Image, ActivityIndicator, FlatList } from 'react-native';
 import Header from '../ui/Header';
 import Card from '../ui/Card';
@@ -36,7 +36,7 @@ type FeedItem = {
 const PAGE_SIZE = 10;
 
 const FeedScreen = memo(() => {
-  const insets = useSafeAreaInsets();
+  
   const [active, setActive] = useState<Tab>('오늘의 미션');
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -213,7 +213,7 @@ const FeedScreen = memo(() => {
   }, [handleToggleLike]);
 
   return (
-    <SafeAreaView style={[styles.safe, { paddingBottom: insets.bottom }]} edges={['bottom']}>
+  <SafeAreaView style={styles.safe} edges={[]}>
       <Header title="피드" />
 
       <FlatList
@@ -274,7 +274,7 @@ const FeedScreen = memo(() => {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  listContent: { paddingTop: spacing.sm, paddingHorizontal: spacing.sm, paddingBottom: 80 },
+  listContent: { paddingTop: spacing.sm, paddingHorizontal: spacing.sm, paddingBottom: 0 },
   listHeaderWrap: {},
 
   tabWrap: { marginBottom: spacing.lg },
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   tabLabel: { color: colors.subText, fontWeight: '600', fontSize: typography.body },
   tabLabelActive: { color: '#fff' },
 
-  postCard: { padding: 0, overflow: 'hidden' },
+  postCard: { padding: 0 },
   postHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.sm, paddingBottom: spacing.xs },
   avatarWrap: { width: 36, height: 36, borderRadius: 18, marginRight: spacing.xs, overflow: 'hidden', backgroundColor: '#F3F4F6' },
   avatar: { width: '100%', height: '100%' },

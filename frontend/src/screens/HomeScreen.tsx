@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { missionAPI, photoAPI, BASE_URL } from '../services/api';
@@ -33,6 +33,7 @@ const HomeScreen = React.memo(() => {
   const navigation = useNavigation<HomeNav>();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
 
   const [loading, setLoading] = useState(true);
   const [todayMission, setTodayMission] = useState<string>('');
@@ -41,17 +42,11 @@ const HomeScreen = React.memo(() => {
   const [streak, setStreak] = useState<number>(0);
   const [totalPhotos, setTotalPhotos] = useState<number>(0);
   const [recents, setRecents] = useState<RecentItem[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const containerInsetsStyle = useMemo(
-    () => ({ paddingBottom: Math.max(spacing.lg, insets.bottom) }),
-    [insets.bottom]
-  );
+  const containerInsetsStyle = useMemo(() => ({ paddingBottom: 0 }), []);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [mission, myPhotos, myRecents] = await Promise.all([
@@ -111,15 +106,34 @@ const HomeScreen = React.memo(() => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // 포커스 시마다 최신화
+  useEffect(() => {
+    if (isFocused) {
+      loadData();
+    }
+  }, [isFocused, loadData]);
+
+  const onRefresh = useCallback(async () => {
+    try {
+      setRefreshing(true);
+      await loadData();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadData]);
 
   return (
-    <SafeAreaView style={[styles.container, containerInsetsStyle]} edges={['bottom']}> 
+  <SafeAreaView style={[styles.container, containerInsetsStyle]} edges={[]}> 
       {/* 상단 헤더: 네가 쓰던 컴포넌트 */}
       <Header title="오늘의 미션" />
 
       {/* 본문 */}
-      <ScrollView contentContainerStyle={styles.scrollBody} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollBody}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         {/* 인사 */}
         <View style={styles.helloWrap}>
           <Text style={styles.helloTitle}>안녕하세요, {user?.nickname || '친구'}님! 📸</Text>
@@ -205,8 +219,7 @@ const HomeScreen = React.memo(() => {
           )}
         </View>
 
-        {/* 하단 여유 패딩 (탭바 가림 방지) */}
-        <View style={{ height: Math.max(80, insets.bottom + 24) }} />
+  {/* 하단 여유 패딩 제거로 바텀바 위 여백 최소화 */}
       </ScrollView>
     </SafeAreaView>
   );

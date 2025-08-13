@@ -102,7 +102,7 @@ const MyPhotosScreen = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <Header title="내 사진 관리" />
       {(!loading && photos.length === 0) ? (
         <View style={{ paddingHorizontal: spacing.lg }}>

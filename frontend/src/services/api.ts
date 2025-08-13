@@ -25,6 +25,12 @@ const apiClient = axios.create({
   },
 });
 
+// 인증 실패(리프레시 불가) 시 앱에 알리기 위한 핸들러 훅
+let onAuthFailure: (() => void) | null = null;
+export const setAuthFailureHandler = (fn: (() => void) | null) => {
+  onAuthFailure = fn;
+};
+
 // 공통 에러 처리
 const logError = (operation: string, error: any) => {
   console.error(`❌ ${operation}:`, {
@@ -82,8 +88,10 @@ apiClient.interceptors.response.use(
         
       } catch (refreshError) {
         await AsyncStorage.multiRemove(['auth_token', 'user_info']);
-  await AsyncStorage.removeItem('refresh_token');
-  if (__DEV__) console.info('토큰 갱신 실패로 로그아웃');
+        await AsyncStorage.removeItem('refresh_token');
+        if (__DEV__) console.info('토큰 갱신 실패로 로그아웃');
+        // 앱 전역에 인증 만료 알림 → AuthContext에서 자동 로그아웃 처리
+        try { onAuthFailure?.(); } catch {}
       }
     }
     // 에러 메시지 포맷 표준화

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import backendKakaoAuthService from '../services/kakao_api';
-import apiClient, { authAPI } from '../services/api';
+import apiClient, { authAPI, setAuthFailureHandler } from '../services/api';
 
 interface User {
   id: string;
@@ -39,6 +39,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     loadStoredAuth();
+    // 토큰 갱신 실패 등 전역 인증 오류 시 자동 로그아웃 처리
+    setAuthFailureHandler(() => {
+      // 안전하게 비동기로 처리
+      (async () => {
+        await AsyncStorage.multiRemove([
+          STORAGE_KEYS.AUTH_TOKEN,
+          STORAGE_KEYS.USER_INFO,
+          STORAGE_KEYS.REFRESH_TOKEN,
+        ]);
+        setToken(null);
+        setUser(null);
+      })();
+    });
+    return () => setAuthFailureHandler(null);
   }, []);
 
   const loadStoredAuth = useCallback(async () => {

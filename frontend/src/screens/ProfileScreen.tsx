@@ -1,17 +1,21 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../ui/Header';
 import { Image } from 'react-native';
 import { BASE_URL, photoAPI } from '../services/api';
+import Card from '../ui/Card';
+import Button from '../ui/Button';
+import { theme } from '../ui/theme';
 
-// Local tokens
-const colors = { background: '#f8f9fa', surface: '#ffffff', text: '#2c3e50', subText: '#7f8c8d', border: '#e9ecef', danger: '#e74c3c', primary: '#3498db' } as const;
-const spacing = { xl: 24, lg: 16, md: 12, sm: 8 } as const;
-const typography = { h1: 24, body: 16 } as const;
+// Use shared theme for consistency
+const colors = { ...theme.colors, primary: '#7C3AED', primaryAlt: '#EC4899' } as const;
+const { spacing, typography, radii } = theme;
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
+import { useIsFocused } from '@react-navigation/native';
 
 const ProfileScreen = () => {
   const { user, logout } = useAuth();
@@ -19,37 +23,41 @@ const ProfileScreen = () => {
   const [completedCount, setCompletedCount] = useState<number>(0);
   const [loadingStats, setLoadingStats] = useState<boolean>(false);
 
-  useEffect(() => {
-    const loadStats = async () => {
-      try {
-        setLoadingStats(true);
-        const list: any[] = (await photoAPI.getMyPhotos()) || [];
-        setUploadedCount(list.length);
-        // 완료한 미션 수: 고유 미션ID 또는 미션 날짜 기준으로 집계
-        const toKey = (p: any) => {
-          const mid = p?.missionId?._id;
-          if (mid) return `m:${String(mid)}`;
-          const ds = p?.missionId?.date || p?.createdAt;
-          const d = ds ? new Date(ds) : null;
-          if (!d) return `d:unknown`;
-          d.setHours(0, 0, 0, 0);
-          const y = d.getFullYear();
-          const m = String(d.getMonth() + 1).padStart(2, '0');
-          const day = String(d.getDate()).padStart(2, '0');
-          return `d:${y}-${m}-${day}`;
-        };
-        const uniq = new Set<string>();
-        list.forEach((p) => uniq.add(toKey(p)));
-        setCompletedCount(uniq.size);
-      } catch (e) {
-        setUploadedCount(0);
-        setCompletedCount(0);
-      } finally {
-        setLoadingStats(false);
-      }
-    };
-    loadStats();
+  const isFocused = useIsFocused();
+  const loadStats = useCallback(async () => {
+    try {
+      setLoadingStats(true);
+      const list: any[] = (await photoAPI.getMyPhotos()) || [];
+      setUploadedCount(list.length);
+      // 완료한 미션 수: 고유 미션ID 또는 미션 날짜 기준으로 집계
+      const toKey = (p: any) => {
+        const mid = p?.missionId?._id;
+        if (mid) return `m:${String(mid)}`;
+        const ds = p?.missionId?.date || p?.createdAt;
+        const d = ds ? new Date(ds) : null;
+        if (!d) return `d:unknown`;
+        d.setHours(0, 0, 0, 0);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `d:${y}-${m}-${day}`;
+      };
+      const uniq = new Set<string>();
+      list.forEach((p) => uniq.add(toKey(p)));
+      setCompletedCount(uniq.size);
+    } catch (e) {
+      setUploadedCount(0);
+      setCompletedCount(0);
+    } finally {
+      setLoadingStats(false);
+    }
   }, []);
+
+  useEffect(() => {
+    if (isFocused) {
+      loadStats();
+    }
+  }, [isFocused, loadStats]);
 
   const handleLogout = async () => {
     Alert.alert(
@@ -75,11 +83,11 @@ const ProfileScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   return (
-    <SafeAreaView style={styles.container}>
+  <SafeAreaView style={styles.container} edges={[]}>
       <Header title="프로필" />
       
-      <ScrollView style={styles.content}>
-        <View style={styles.profileSection}>
+      <ScrollView style={styles.content} contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }}>
+        <Card style={styles.profileSection}>
           <View style={styles.avatarContainer}>
             {user?.profileImage ? (
               <Image
@@ -93,9 +101,9 @@ const ProfileScreen = () => {
             )}
           </View>
           <Text style={styles.nickname}>{user?.nickname || '사용자'}</Text>
-        </View>
+        </Card>
 
-        <View style={styles.statsSection}>
+        <Card style={styles.statsSection}>
           <View style={styles.statItem}>
             <Text style={styles.statNumber}>{loadingStats ? '-' : completedCount}</Text>
             <Text style={styles.statLabel}>완료한 미션</Text>
@@ -105,9 +113,9 @@ const ProfileScreen = () => {
             <Text style={styles.statNumber}>{loadingStats ? '-' : uploadedCount}</Text>
             <Text style={styles.statLabel}>업로드한 사진</Text>
           </View>
-        </View>
+        </Card>
 
-        <View style={styles.menuSection}>
+        <Card style={styles.menuSection}>
           <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ProfileEdit')}>
             <Text style={styles.menuText}>프로필 수정</Text>
             <Text style={styles.menuArrow}>›</Text>
@@ -128,11 +136,9 @@ const ProfileScreen = () => {
             <Text style={styles.menuText}>개인정보처리방침</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
-        </View>
+        </Card>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>로그아웃</Text>
-        </TouchableOpacity>
+        <Button title="로그아웃" onPress={handleLogout} variant="danger" size="lg" fullWidth style={{ marginTop: spacing.md }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -144,10 +150,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileSection: {
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-    marginBottom: spacing.md,
+  alignItems: 'center',
+  paddingVertical: spacing.xl,
+  marginBottom: spacing.md,
   },
   avatarContainer: {
     width: 100,
@@ -173,12 +178,7 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     color: colors.subText,
   },
-  statsSection: {
-    backgroundColor: colors.surface,
-    flexDirection: 'row',
-    paddingVertical: spacing.lg,
-    marginBottom: spacing.md,
-  },
+  statsSection: { flexDirection: 'row', paddingVertical: spacing.lg, marginBottom: spacing.md },
   statItem: {
     flex: 1,
     alignItems: 'center',
@@ -197,10 +197,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.subText,
   },
-  menuSection: {
-    backgroundColor: colors.surface,
-    marginBottom: spacing.lg,
-  },
+  menuSection: { marginBottom: spacing.lg },
   menuItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
