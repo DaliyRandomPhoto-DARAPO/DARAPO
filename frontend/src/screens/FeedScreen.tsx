@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
   tabLabel: { color: colors.subText, fontWeight: '600', fontSize: typography.body },
   tabLabelActive: { color: '#fff' },
 
-  postCard: { padding: 0 },
+  postCard: { padding: 0, marginBottom: spacing.lg},
   postHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.sm, paddingBottom: spacing.xs },
   avatarWrap: { width: 36, height: 36, borderRadius: 18, marginRight: spacing.xs, overflow: 'hidden', backgroundColor: '#F3F4F6' },
   avatar: { width: '100%', height: '100%' },

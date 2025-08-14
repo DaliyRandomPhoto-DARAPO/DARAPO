@@ -90,6 +90,10 @@ export default {
     extra: {
       // 프론트에서는 API 베이스 URL만 필요(실제 요청은 /api 접미사 자동 부착)
       apiUrl: RAW_API_URL,
+      eas: {
+        // EAS 프로젝트 식별자 (UUID). 'eas init' 후 발급된 값을 환경변수로 주입하세요.
+        projectId: process.env.EAS_PROJECT_ID,
+      },
     },
   },
 };
