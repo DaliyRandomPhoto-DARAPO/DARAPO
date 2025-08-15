@@ -36,7 +36,7 @@ export class AuthService {
     this.KAKAO_CLIENT_ID = this.configService.get<string>('KAKAO_REST_API_KEY')!;
     this.KAKAO_CLIENT_SECRET = this.configService.get<string>('KAKAO_CLIENT_SECRET')!;
     this.KAKAO_REDIRECT_URI =
-      this.configService.get<string>('KAKAO_REDIRECT_URI') || 'http://localhost:3000/api/auth/kakao/callback';
+      this.configService.get<string>('KAKAO_REDIRECT_URI')!;
   }
 
   /**

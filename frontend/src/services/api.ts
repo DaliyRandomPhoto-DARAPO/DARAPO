@@ -4,9 +4,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // 동적 require로 타입 에러 및 번들 이슈 회피
 import Constants from 'expo-constants';
 
-// 환경에서 받은 값의 트레일링 슬래시 제거
+// 환경에서 받은 값의 트레일링 슬래시 제거 + 안전한 기본값 적용
+const configuredApi = (Constants.expoConfig?.extra?.apiUrl as string | undefined) || '';
+const DEFAULT_API = 'https://api.darapo.site';
 export const RAW_API_BASE_URL = (
-  Constants.expoConfig?.extra?.apiUrl || 'http://localhost:3000'
+  configuredApi && !/localhost|127\.0\.0\.1/i.test(configuredApi)
+    ? configuredApi
+    : DEFAULT_API
 ).replace(/\/+$/, '');
 
 // Nest 전역 prefix('api') 중복 방지: 이미 /api로 끝나면 그대로, 아니면 /api 추가
@@ -24,6 +28,16 @@ const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// 런타임 로그로 실제 API 엔드포인트 확인(문제 상황 진단 용이)
+try {
+  // eslint-disable-next-line no-console
+  console.info(`API base: ${API_BASE_URL}`);
+  if (!configuredApi || /localhost|127\.0\.0\.1/i.test(configuredApi)) {
+    // eslint-disable-next-line no-console
+    console.warn('EXPO_PUBLIC_API_URL 미설정 또는 localhost 감지 → 기본값으로 대체됨:', DEFAULT_API);
+  }
+} catch {}
 
 // 인증 실패(리프레시 불가) 시 앱에 알리기 위한 핸들러 훅
 let onAuthFailure: (() => void) | null = null;

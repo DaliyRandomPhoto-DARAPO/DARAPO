@@ -5,7 +5,7 @@ const SCHEME = 'darapo';
 const APP_NAME = 'DARAPO';
 const PKG_ANDROID = 'com.darapo.drapoapp';
 const BUNDLE_IOS = 'com.darapo.drapoapp';
-const RAW_API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+const RAW_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.darapo.site';
 
 export default {
   expo: {
