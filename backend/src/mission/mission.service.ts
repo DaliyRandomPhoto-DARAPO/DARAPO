@@ -10,17 +10,18 @@ export class MissionService {
   ) {}
 
   async getTodayMission() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+  // Compute KST day range (Asia/Seoul)
+  const now = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const kstNow = new Date(utcMs + 9 * 60 * 60000);
+  // KST midnight
+  kstNow.setHours(0, 0, 0, 0);
+  // Convert KST midnight to UTC for querying Mongo (Date stored as UTC)
+  const start = new Date(kstNow.getTime() - 9 * 60 * 60000);
+  const end = new Date(start.getTime() + 24 * 60 * 60000);
 
     let todayMission = await this.missionModel.findOne({
-      date: {
-        $gte: today,
-        $lt: tomorrow,
-      },
+  date: { $gte: start, $lt: end },
       isActive: true,
     }).exec();
 
@@ -46,7 +47,7 @@ export class MissionService {
   }
 
   private async createTodayMission() {
-    const missionTitles = [
+  const missionTitles = [
       '오늘의 노란색 찾기',
       '웃고 있는 사람 촬영',
       '하늘 바라보기',
@@ -64,14 +65,18 @@ export class MissionService {
       '아름다운 그림자',
     ];
 
-    const randomTitle = missionTitles[Math.floor(Math.random() * missionTitles.length)];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  const randomTitle = missionTitles[Math.floor(Math.random() * missionTitles.length)];
+  // Use KST midnight for mission date
+  const now = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const kstMidnight = new Date(utcMs + 9 * 60 * 60000);
+  kstMidnight.setHours(0, 0, 0, 0);
+  const missionDate = new Date(kstMidnight.getTime() - 9 * 60 * 60000);
 
     return this.createMission({
       title: randomTitle,
       description: `${randomTitle}를 주제로 사진을 찍어보세요!`,
-      date: today,
+  date: missionDate,
       isActive: true,
     });
   }

@@ -24,6 +24,7 @@ import PrivacyScreen from './src/screens/PrivacyScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import MyPhotosScreen from './src/screens/MyPhotosScreen';
 import ProfileEditScreen from './src/screens/ProfileEditScreen';
+import PhotoSettingsScreen from './src/screens/PhotoSettingsScreen';
 
 const AuthStack = createNativeStackNavigator<RootStackParamList>();
 const AppStack = createNativeStackNavigator<RootStackParamList>();
@@ -45,6 +46,7 @@ function MainAppNavigator() {
       <AppStack.Screen name="Camera" component={CameraScreen} options={{ title: '사진 촬영' }} />
       <AppStack.Screen name="PhotoUpload" component={PhotoUploadScreen} options={{ headerShown: false }} />
       <AppStack.Screen name="MyPhotos" component={MyPhotosScreen} options={{ headerShown: false }} />
+  <AppStack.Screen name="PhotoSettings" component={PhotoSettingsScreen} options={{ headerShown: false }} />
       <AppStack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
   <AppStack.Screen name="ProfileEdit" component={ProfileEditScreen} options={{ headerShown: false }} />
       <AppStack.Screen name="Terms" component={TermsScreen} options={{ headerShown: false }} />

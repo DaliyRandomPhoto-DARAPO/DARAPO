@@ -77,7 +77,7 @@ export default {
         {
           android: {
             compileSdkVersion: 35,
-            targetSdkVersion: 34,
+            targetSdkVersion: 35,
             buildToolsVersion: '35.0.0',
           },
           ios: {

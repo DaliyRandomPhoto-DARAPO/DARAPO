@@ -5,6 +5,7 @@ import { useNavigation, useIsFocused } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { missionAPI, photoAPI, BASE_URL } from '../services/api';
+import { formatKstMMDD, kstDateKey } from '../utils/date';
 import { useAuth } from '../contexts/AuthContext';
 
 // 재사용 컴포넌트 (네가 쓰던 거 그대로)
@@ -58,18 +59,11 @@ const HomeScreen = React.memo(() => {
       // 오늘의 미션
   setTodayMission(mission?.title || '오늘의 미션');
   setTodayMissionObj(mission || null);
-      const md = mission?.date ? new Date(mission.date) : new Date();
-      setTodayDate(`${String(md.getMonth() + 1).padStart(2, '0')}/${String(md.getDate()).padStart(2, '0')}`);
+  const md = mission?.date ? new Date(mission.date) : new Date();
+  setTodayDate(formatKstMMDD(md));
 
       // 통계 계산
-      const toKey = (d: Date) => {
-        const nd = new Date(d);
-        nd.setHours(0, 0, 0, 0);
-        const y = nd.getFullYear();
-        const m = String(nd.getMonth() + 1).padStart(2, '0');
-        const day = String(nd.getDate()).padStart(2, '0');
-        return `${y}-${m}-${day}`;
-      };
+  const toKey = (d: Date) => kstDateKey(d);
       const dateKeys = new Set<string>();
       (myPhotos || []).forEach((p: any) => {
         const ds = p?.missionId?.date; // 미션 날짜 기준으로만 계산
@@ -89,8 +83,8 @@ const HomeScreen = React.memo(() => {
       // 최근 3개
       const recentItems: RecentItem[] = (myRecents || []).map((p: any) => {
         const ds = p?.missionId?.date || p?.createdAt;
-        const d = ds ? new Date(ds) : new Date();
-        const dateStr = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+  const d = ds ? new Date(ds) : new Date();
+  const dateStr = formatKstMMDD(d);
         const rawUrl: string = p?.imageUrl || '';
         const image = rawUrl.startsWith('http') ? rawUrl : `${BASE_URL}${rawUrl}`;
         const missionTitle: string = p?.missionId?.title || '오늘의 미션';

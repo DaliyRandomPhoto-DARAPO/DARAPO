@@ -121,7 +121,7 @@ const ProfileScreen = () => {
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('MyPhotos')}>
-            <Text style={styles.menuText}>내 사진 관리</Text>
+            <Text style={styles.menuText}>내 사진 보기</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Settings')}>

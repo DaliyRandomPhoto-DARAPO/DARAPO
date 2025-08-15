@@ -5,6 +5,7 @@ import Header from '../ui/Header';
 import Card from '../ui/Card';
 import { photoAPI, missionAPI, BASE_URL } from '../services/api';
 import { theme } from '../ui/theme';
+import { formatKstMMDD } from '../utils/date';
 
 // 공용 theme + 브랜드 컬러 오버라이드
 const colors = {
@@ -60,11 +61,11 @@ const FeedScreen = memo(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
-  const toMMDD = (d: Date) => `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+  const toMMDD = (d: Date) => formatKstMMDD(d);
 
   const mapPhotoToItem = (p: any): FeedItem => {
     const ds = p?.missionId?.date || p?.createdAt;
-    const d = ds ? new Date(ds) : new Date();
+  const d = ds ? new Date(ds) : new Date();
     const rawImage: string = p?.imageUrl || '';
     const image = rawImage.startsWith('http') ? rawImage : `${BASE_URL}${rawImage}`;
     const userName: string = p?.userId?.nickname || '익명';
@@ -75,7 +76,7 @@ const FeedScreen = memo(() => {
     return {
       id: String(p?._id || ''),
       user: { name: userName, avatar },
-      date: toMMDD(d),
+  date: formatKstMMDD(d),
       mission: missionTitle,
       image,
       likes: 0,
@@ -210,14 +211,6 @@ const FeedScreen = memo(() => {
             <Text style={styles.moodText}>{p.mood}</Text>
           </View>
         )}
-
-        {/* 액션바: 좋아요만 (감정 박스 아래) */}
-        <View style={[styles.actions, { justifyContent: 'flex-start' }]}>
-          <Pressable style={styles.actionBtn} accessibilityLabel="좋아요" onPress={() => handleToggleLike(p.id)}>
-            <Text style={[styles.actionIcon, p.liked && { color: colors.red }]}>{p.liked ? '❤' : '♡'}</Text>
-            <Text style={styles.actionCount}>{p.likes}</Text>
-          </Pressable>
-        </View>
       </Card>
     );
   }, [handleToggleLike]);
