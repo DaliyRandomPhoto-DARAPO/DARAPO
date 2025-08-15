@@ -153,6 +153,7 @@ const styles = StyleSheet.create({
   alignItems: 'center',
   paddingVertical: spacing.xl,
   marginBottom: spacing.md,
+  marginTop: spacing.md,
   },
   avatarContainer: {
     width: 100,

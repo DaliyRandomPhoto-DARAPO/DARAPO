@@ -202,15 +202,22 @@ const HomeScreen = React.memo(() => {
               <View style={styles.recentImageWrap}>
                 <Image source={{ uri: r.image }} style={styles.recentImage} resizeMode="cover" />
               </View>
-              <View style={{ gap: 6 }}>
-                <View>
-                  <Text style={[styles.tag, { color: colors.primary }]}>미션</Text>
-                  <Text style={styles.recentTitle}>{r.mission}</Text>
+              {/* 미션 박스 (보라색) */}
+              <View style={styles.recentMissionBox}>
+                <View style={styles.missionRow}> 
+                  <View style={styles.missionDot} />
+                  <Text style={styles.missionLabel}>오늘의 미션</Text>
                 </View>
-                <View>
-                  <Text style={[styles.tag, { color: colors.primaryAlt }]}>감정</Text>
-                  <Text style={styles.recentText}>{r.mood || '메모 없음'}</Text>
+                <Text style={styles.missionText}>{r.mission}</Text>
+              </View>
+
+              {/* 감정 박스 (핑크색) */}
+              <View style={styles.recentMoodBox}>
+                <View style={styles.moodRow}> 
+                  <View style={styles.moodDot} />
+                  <Text style={styles.moodLabel}>감정</Text>
                 </View>
+                <Text style={styles.moodText}>{r.mood || '메모 없음'}</Text>
               </View>
             </Card>
           ))}
@@ -273,6 +280,19 @@ const styles = StyleSheet.create({
   tag: { fontSize: 11, fontWeight: '700', marginBottom: 2 },
   recentTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
   recentText: { fontSize: 14, color: colors.subText },
+
+  // Feed 스타일과 맞춘 보라/핑크 박스들
+  recentMissionBox: { backgroundColor: '#F5F3FF', marginTop: spacing.sm, marginBottom: spacing.xs, borderRadius: 16, padding: spacing.sm },
+  missionRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  missionDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, marginRight: 6 },
+  missionLabel: { fontSize: 12, color: colors.primary, fontWeight: '700' },
+  missionText: { fontSize: 16, color: colors.text, fontWeight: '700' },
+
+  recentMoodBox: { backgroundColor: '#FEF2F2', marginTop: spacing.xs, borderRadius: 16, padding: spacing.sm },
+  moodRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  moodDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primaryAlt, marginRight: 6 },
+  moodLabel: { fontSize: 12, color: colors.primaryAlt, fontWeight: '700' },
+  moodText: { fontSize: 14, color: '#374151' },
 });
 
 export default HomeScreen;

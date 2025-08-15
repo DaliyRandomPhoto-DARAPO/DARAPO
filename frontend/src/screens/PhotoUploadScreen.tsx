@@ -165,7 +165,8 @@ const PhotoUploadScreen = () => {
           </View>
           <TextInput
             style={styles.commentInput}
-            placeholder="오늘의 감정을 입력하세요 (선택사항)"
+            placeholder="오늘의 감정을 입력해주세요.(선택사항)"
+            placeholderTextColor={colors.subText}
             value={comment}
             onChangeText={setComment}
             multiline
@@ -217,9 +218,15 @@ const styles = StyleSheet.create({
   publicLabel: { fontSize: typography.body, color: colors.text },
   commentInput: {
     backgroundColor: colors.surface,
-    paddingVertical: spacing.sm,
+  paddingVertical: spacing.sm,
+  paddingHorizontal: spacing.md,
     minHeight: 80,
     textAlignVertical: 'top',
+  color: colors.text,
+  borderWidth: 1,
+  borderColor: colors.border,
+  borderRadius: radii.md,
+  fontSize: typography.body,
   },
   moodHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs },
   moodDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primaryAlt, marginRight: 6 },

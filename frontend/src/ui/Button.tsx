@@ -75,6 +75,7 @@ export const Button: React.FC<Props> = React.memo(({
           alignSelf: fullWidth ? 'stretch' : 'auto',
           minHeight: dims.minH,
         },
+  (variant === 'primary' || variant === 'danger') ? styles.elevated : null,
         style,
       ]}
       onPress={onPress}
@@ -104,6 +105,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  elevated: {
+    // iOS shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    // Android elevation
+    elevation: 3,
   },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   title: {
