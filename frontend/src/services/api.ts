@@ -155,10 +155,25 @@ export const missionAPI = {
 };
 
 export const photoAPI = {
-  uploadPhoto: async (formData: FormData) => {
+  uploadPhoto: async (
+    formData: FormData,
+    opts?: { onProgress?: (progress: { loaded: number; total?: number; percent?: number }) => void; signal?: AbortSignal }
+  ) => {
+    const controller = new AbortController();
+    if (opts?.signal) {
+      opts.signal.addEventListener('abort', () => controller.abort());
+    }
     const response = await apiClient.post('/photo/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
+      },
+      signal: controller.signal,
+      onUploadProgress: (e: any) => {
+        if (!opts?.onProgress) return;
+        const total = e.total || e.currentTarget?.getResponseHeader?.('Content-Length') || undefined;
+        const loaded = e.loaded ?? 0;
+        const percent = total ? Math.min(100, Math.round((loaded / total) * 100)) : undefined;
+        opts.onProgress({ loaded, total: typeof total === 'number' ? total : undefined, percent });
       },
     });
     return response.data;

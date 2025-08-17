@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Image, TextInput, Alert, ActivityIndicator, Switch, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
 import { photoAPI, missionAPI } from '../services/api';
+import * as ImageManipulator from 'expo-image-manipulator';
 import Header from '../ui/Header';
 import Card from '../ui/Card';
 import { theme } from '../ui/theme';
@@ -27,6 +28,8 @@ const PhotoUploadScreen = () => {
   const [mission, setMission] = useState<{ _id: string; title: string } | null>(null);
   const [loadingMission, setLoadingMission] = useState(true);
   const [isPublic, setIsPublic] = useState(true);
+  const abortRef = useRef<AbortController | null>(null);
+  const [progress, setProgress] = useState<number | undefined>(undefined);
   
   const { photoUri } = route.params;
 
@@ -61,6 +64,18 @@ const PhotoUploadScreen = () => {
     return { name, type };
   };
 
+  const preprocessImage = async (uri: string) => {
+    // 업로드 시간을 줄이기 위해 너비를 1440px로 제한하고 JPEG 품질 0.8로 압축
+    // 원본이 더 작으면 리사이즈 생략됨
+    const actions: ImageManipulator.Action[] = [{ resize: { width: 1440 } }];
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      actions,
+      { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+    );
+    return result.uri;
+  };
+
   const handleUpload = async () => {
     if (!photoUri) {
       Alert.alert('오류', '사진이 선택되지 않았습니다.');
@@ -71,18 +86,25 @@ const PhotoUploadScreen = () => {
       return;
     }
 
-    setIsUploading(true);
+  setIsUploading(true);
+  setProgress(undefined);
+  abortRef.current = new AbortController();
     
     try {
       const form = new FormData();
+      // 사전 리사이즈/압축으로 업로드 바이트를 줄여 속도 개선
+      const processedUri = await preprocessImage(photoUri);
       const { name, type } = getFileInfo();
       // @ts-ignore: React Native FormData file
-      form.append('file', { uri: photoUri, name, type });
+      form.append('file', { uri: processedUri, name, type });
       form.append('comment', comment);
       form.append('missionId', mission._id);
   form.append('isPublic', String(isPublic));
 
-      const result = await photoAPI.uploadPhoto(form) as any;
+      const result = await photoAPI.uploadPhoto(form, {
+        onProgress: (p) => setProgress(p.percent),
+        signal: abortRef.current.signal,
+      }) as any;
       if (result?.replaced) {
         Alert.alert('업로드 완료', '오늘 올린 사진이 있어 새 사진으로 교체됐어요.');
       } else {
@@ -103,7 +125,9 @@ const PhotoUploadScreen = () => {
       console.error('업로드 실패:', error);
       Alert.alert('오류', '업로드에 실패했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
-      setIsUploading(false);
+  setIsUploading(false);
+  setProgress(undefined);
+  abortRef.current = null;
     }
   };
 
@@ -190,6 +214,19 @@ const PhotoUploadScreen = () => {
         </View>
   </ScrollView>
   </KeyboardAvoidingView>
+      {/* 전체 화면 로딩 오버레이 */}
+      {isUploading && (
+        <View style={styles.overlay} accessibilityLabel="업로드 진행 중">
+          <View style={styles.overlayBox}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={{ marginTop: 8, color: colors.text, fontWeight: '600' }}>
+              {typeof progress === 'number' ? `업로드 ${progress}%` : '업로드 준비 중…'}
+            </Text>
+            <View style={{ height: 12 }} />
+            <Button title="취소" onPress={() => abortRef.current?.abort()} variant="secondary" />
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -232,6 +269,23 @@ const styles = StyleSheet.create({
   moodDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primaryAlt, marginRight: 6 },
   moodBadge: { fontSize: typography.small, color: colors.primaryAlt, fontWeight: '700' },
   buttonContainer: { gap: spacing.md },
+  overlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overlayBox: {
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
+    minWidth: 200,
+    alignItems: 'center',
+  },
 });
 
 export default PhotoUploadScreen;
