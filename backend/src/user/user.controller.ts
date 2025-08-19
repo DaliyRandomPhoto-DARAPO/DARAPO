@@ -30,6 +30,7 @@ export class UserController {
 		return {
 			id: user?._id?.toString(),
 			kakaoId: user?.kakaoId,
+		name: user?.name,
 			nickname: user?.nickname,
 			profileImage: profileUrl,
 			email: user?.email,
@@ -49,6 +50,7 @@ export class UserController {
 		return {
 			id: updated?._id?.toString(),
 			kakaoId: updated?.kakaoId,
+		name: updated?.name,
 			nickname: updated?.nickname,
 			profileImage: profileUrl,
 			email: updated?.email,
@@ -75,6 +77,7 @@ export class UserController {
 			imageUrl: signed,
 			user: {
 				id: updated?._id?.toString(),
+				name: updated?.name,
 				nickname: updated?.nickname,
 				profileImage: signed,
 				email: updated?.email,
@@ -93,6 +96,7 @@ export class UserController {
 			imageUrl: null,
 			user: {
 				id: (updated as any)._id?.toString(),
+				name: (updated as any).name,
 				nickname: (updated as any).nickname,
 				profileImage: (updated as any).profileImage,
 				email: (updated as any).email,

@@ -147,6 +147,7 @@ export class AuthController {
       return {
         id: (user as any)._id.toString(),
         kakaoId: user.kakaoId,
+  name: (user as any).name,
         nickname: user.nickname,
         profileImage: user.profileImage,
         email: user.email,

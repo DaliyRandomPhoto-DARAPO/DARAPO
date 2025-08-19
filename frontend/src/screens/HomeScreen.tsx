@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, Alert, RefreshControl } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useCallback, useEffect, useMemo, useState, memo } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, RefreshControl, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
@@ -8,33 +8,46 @@ import { missionAPI, photoAPI, BASE_URL } from '../services/api';
 import { formatKstMMDD, kstDateKey } from '../utils/date';
 import { useAuth } from '../contexts/AuthContext';
 
-// 재사용 컴포넌트 (네가 쓰던 거 그대로)
 import Header from '../ui/Header';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import { theme } from '../ui/theme';
 
-// ===== 토큰(공용 theme 기반 + 브랜드 컬러만 오버라이드) =====
-const colors = {
+const baseColors = {
   ...theme.colors,
   primary: '#7C3AED',
   primaryAlt: '#EC4899',
   success: '#22C55E',
 } as const;
+
 const { spacing, typography } = theme;
 const radii = { ...theme.radii, xl: 24 } as const;
-// 최근 항목 개수(필요 시 숫자만 바꾸면 됨)
 const RECENT_LIMIT = 3;
 
 type HomeNav = NativeStackNavigationProp<RootStackParamList, 'MainTabs'>;
-
 type RecentItem = { date: string; image: string; mission: string; mood?: string };
 
-const HomeScreen = React.memo(() => {
+const HomeScreen = memo(() => {
   const navigation = useNavigation<HomeNav>();
   const { user } = useAuth();
-  const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
+
+  // 라이트 테마 고정값만 씀
+  const colors = useMemo(
+    () => ({
+      ...baseColors,
+      subtleBg: '#F9FAFB',
+      outline: '#E6E8EC',
+      purpleBoxBg: '#F5F3FF',
+      purpleBoxBorder: '#E9E5FF',
+      pinkBoxBg: '#FEF2F2',
+      pinkBoxBorder: '#FCE2E2',
+      skeletonBg: '#EEF0F3',
+    }),
+    []
+  );
+
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [loading, setLoading] = useState(true);
   const [todayMission, setTodayMission] = useState<string>('');
@@ -56,21 +69,19 @@ const HomeScreen = React.memo(() => {
         photoAPI.getMyRecentPhotos(RECENT_LIMIT),
       ]);
 
-      // 오늘의 미션
-  setTodayMission(mission?.title || '오늘의 미션');
-  setTodayMissionObj(mission || null);
-  const md = mission?.date ? new Date(mission.date) : new Date();
-  setTodayDate(formatKstMMDD(md));
+      setTodayMission(mission?.title || '오늘의 미션');
+      setTodayMissionObj(mission || null);
+      const md = mission?.date ? new Date(mission.date) : new Date();
+      setTodayDate(formatKstMMDD(md));
 
-      // 통계 계산
-  const toKey = (d: Date) => kstDateKey(d);
+      const toKey = (d: Date) => kstDateKey(d);
       const dateKeys = new Set<string>();
       (myPhotos || []).forEach((p: any) => {
-        const ds = p?.missionId?.date; // 미션 날짜 기준으로만 계산
+        const ds = p?.missionId?.date;
         if (ds) dateKeys.add(toKey(new Date(ds)));
       });
       setTotalPhotos((myPhotos || []).length);
-      // 연속 달성 계산(오늘부터 과거로 연속 촬영일 수)
+
       let cnt = 0;
       const cur = new Date();
       cur.setHours(0, 0, 0, 0);
@@ -80,11 +91,10 @@ const HomeScreen = React.memo(() => {
       }
       setStreak(cnt);
 
-      // 최근 3개
       const recentItems: RecentItem[] = (myRecents || []).map((p: any) => {
         const ds = p?.missionId?.date || p?.createdAt;
-  const d = ds ? new Date(ds) : new Date();
-  const dateStr = formatKstMMDD(d);
+        const d = ds ? new Date(ds) : new Date();
+        const dateStr = formatKstMMDD(d);
         const rawUrl: string = p?.imageUrl || '';
         const image = rawUrl.startsWith('http') ? rawUrl : `${BASE_URL}${rawUrl}`;
         const missionTitle: string = p?.missionId?.title || '오늘의 미션';
@@ -94,7 +104,6 @@ const HomeScreen = React.memo(() => {
       setRecents(recentItems);
     } catch (e) {
       console.error('미션 로드 실패:', e);
-      Alert.alert('오류', '오늘의 미션을 불러오는데 실패했습니다.');
       setTodayMission('오늘의 미션');
       setRecents([]);
     } finally {
@@ -102,11 +111,8 @@ const HomeScreen = React.memo(() => {
     }
   }, []);
 
-  // 포커스 시마다 최신화
   useEffect(() => {
-    if (isFocused) {
-      loadData();
-    }
+    if (isFocused) loadData();
   }, [isFocused, loadData]);
 
   const onRefresh = useCallback(async () => {
@@ -119,45 +125,53 @@ const HomeScreen = React.memo(() => {
   }, [loadData]);
 
   return (
-  <SafeAreaView style={[styles.container, containerInsetsStyle]} edges={[]}> 
-      {/* 상단 헤더: 네가 쓰던 컴포넌트 */}
+    <SafeAreaView style={[styles.container, containerInsetsStyle]} edges={['top']}>
       <Header title="오늘의 미션" />
 
-      {/* 본문 */}
       <ScrollView
         contentContainerStyle={styles.scrollBody}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+            progressBackgroundColor={colors.subtleBg}
+          />
+        }
+      >
         {/* 인사 */}
         <View style={styles.helloWrap}>
           <Text style={styles.helloTitle}>안녕하세요, {user?.nickname || '친구'}님!</Text>
           <Text style={styles.helloSub}>오늘의 미션을 완성해보세요</Text>
         </View>
 
-        {/* 오늘의 미션 카드 (Card 활용) */}
-        <Card style={styles.card}>
-          <View style={styles.cardTopRow}>
-            <View style={styles.rowCenter}>
-              <View style={styles.dot} />
-              <Text style={styles.cardBadge}>오늘의 미션</Text>
-            </View>
-            <Text style={styles.cardDate}>{todayDate}</Text>
+      <Card style={[styles.card, styles.elevated]}>
+        <View style={styles.cardTopRow}>
+          <View style={styles.rowCenter}>
+            <View style={styles.dot} />
+            <Text style={styles.cardBadge}>오늘의 미션</Text>
           </View>
+          <Text style={styles.cardDate}>{todayDate}</Text>
+        </View>
 
+        {/* 이 블록으로 묶어서 가운데 정렬 */}
+        <View style={styles.cardBodyCenter}>
           {loading ? (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.loadingText}>미션을 불러오는 중...</Text>
-            </View>
+            <Skeleton lines={1} height={28} radius={8} />
           ) : (
             <Text style={styles.missionTitle}>{todayMission}</Text>
           )}
 
-      {/* 미션 이미지(있을 때만 표시) */}
-      {Boolean((todayMissionObj as any)?.imageUrl) && (
+          {!!(todayMissionObj as any)?.imageUrl && (
             <View style={styles.heroWrap}>
               <Image
-        source={{ uri: String((todayMissionObj as any).imageUrl).startsWith('http') ? (todayMissionObj as any).imageUrl : `${BASE_URL}${(todayMissionObj as any).imageUrl}` }}
+                source={{
+                  uri: String((todayMissionObj as any).imageUrl).startsWith('http')
+                    ? (todayMissionObj as any).imageUrl
+                    : `${BASE_URL}${(todayMissionObj as any).imageUrl}`,
+                }}
                 style={styles.hero}
                 resizeMode="cover"
               />
@@ -168,125 +182,206 @@ const HomeScreen = React.memo(() => {
             title="📸 사진 찍기"
             onPress={() => navigation.navigate('Camera')}
             disabled={loading}
-            style={{ marginTop: spacing.lg, paddingHorizontal: spacing.xl }}
+            style={styles.cta}
           />
-        </Card>
+        </View>
+      </Card>
 
-        {/* 통계 그리드 (간단 카드 두 개) */}
+
+        {/* 통계 */}
         <View style={styles.statsGrid}>
-          <Card style={styles.statCard}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>{streak}</Text>
-            <Text style={styles.statLabel}>연속 달성</Text>
-          </Card>
-          <Card style={styles.statCard}>
-            <Text style={[styles.statValue, { color: colors.primaryAlt }]}>{totalPhotos}</Text>
-            <Text style={styles.statLabel}>총 미션</Text>
-          </Card>
+          <StatCard label="연속 달성" value={String(streak)} valueColor={colors.primary} />
+          <StatCard label="총 미션" value={String(totalPhotos)} valueColor={colors.primaryAlt} />
         </View>
 
-        {/* 최근 사진들 */}
+        {/* 최근 */}
         <View style={styles.recentWrap}>
           <Text style={styles.sectionTitle}>최근 사진들</Text>
-          {recents.map((r, i) => (
-            <Card key={i} style={styles.recentItem}>
-              <View style={styles.recentTopRow}>
-                <Text style={styles.recentDate}>{r.date}</Text>
-                <View style={styles.recentDot} />
-              </View>
-              <View style={styles.recentImageWrap}>
-                <Image source={{ uri: r.image }} style={styles.recentImage} resizeMode="cover" />
-              </View>
-              {/* 미션 박스 (보라색) */}
-              <View style={styles.recentMissionBox}>
-                <View style={styles.missionRow}> 
-                  <View style={styles.missionDot} />
-                  <Text style={styles.missionLabel}>오늘의 미션</Text>
-                </View>
-                <Text style={styles.missionText}>{r.mission}</Text>
-              </View>
 
-              {/* 감정 박스 (핑크색) */}
-              <View style={styles.recentMoodBox}>
-                <View style={styles.moodRow}> 
-                  <View style={styles.moodDot} />
-                  <Text style={styles.moodLabel}>감정</Text>
-                </View>
-                <Text style={styles.moodText}>{r.mood || '메모 없음'}</Text>
-              </View>
-            </Card>
-          ))}
-          {recents.length === 0 && !loading && (
-            <Text style={[styles.recentText, { textAlign: 'center', color: colors.subText }]}>아직 업로드된 사진이 없어요.</Text>
+          {!loading && recents.length === 0 ? (
+            <Text style={[styles.recentText, styles.centerText]}>아직 업로드된 사진이 없어요.</Text>
+          ) : null}
+
+          {loading ? (
+            <View style={{ gap: spacing.md }}>
+              <Skeleton height={220} radius={16} />
+              <Skeleton height={220} radius={16} />
+            </View>
+          ) : (
+            recents.map((r, i) => <RecentCard key={`${r.image}-${i}`} item={r} />)
           )}
         </View>
-
-  {/* 하단 여유 패딩 제거로 바텀바 위 여백 최소화 */}
       </ScrollView>
     </SafeAreaView>
   );
 });
 
+function StatCard({ label, value, valueColor }: { label: string; value: string; valueColor: string }) {
+  // Card에 접근성 prop 안 꽂음 (타입 충돌 방지)
+  return (
+    <Card style={[styles.statCard, styles.elevatedSm]}>
+      <Text style={[styles.statValue, { color: valueColor }]}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </Card>
+  );
+}
+
+const RecentCard = memo(({ item }: { item: RecentItem }) => {
+  return (
+    <Card style={[styles.recentItem, styles.elevatedSm]}>
+      <View style={styles.recentTopRow}>
+        <Text style={styles.recentDate}>{item.date}</Text>
+        <View style={styles.recentDot} />
+      </View>
+
+      <View style={styles.recentImageWrap}>
+        <Image source={{ uri: item.image }} style={styles.recentImage} resizeMode="cover" />
+      </View>
+
+      <View style={styles.recentMissionBox}>
+        <View style={styles.missionRow}>
+          <View style={styles.missionDot} />
+          <Text style={styles.missionLabel}>오늘의 미션</Text>
+        </View>
+        <Text style={styles.missionText}>{item.mission}</Text>
+      </View>
+
+      <View style={styles.recentMoodBox}>
+        <View style={styles.moodRow}>
+          <View style={styles.moodDot} />
+          <Text style={styles.moodLabel}>감정</Text>
+        </View>
+        <Text style={styles.moodText}>{item.mood || '메모 없음'}</Text>
+      </View>
+    </Card>
+  );
+});
+
+function Skeleton({
+  lines = 1,
+  height = 16,
+  radius = 8,
+}: {
+  lines?: number;
+  height?: number;
+  radius?: number;
+}) {
+  return (
+    <View style={{ gap: 8, marginVertical: 6 }}>
+      {Array.from({ length: lines }).map((_, i) => (
+        <View key={i} style={[styles.skeleton, { height, borderRadius: radius }]} />
+      ))}
+    </View>
+  );
+}
+
+const shadow = Platform.select({
+  ios: {
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  android: { elevation: 2 },
+});
+
+const shadowSm = Platform.select({
+  ios: {
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  android: { elevation: 1 },
+});
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: baseColors.background,
   },
   scrollBody: {
-  paddingHorizontal: spacing.lg,
-  paddingTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
   },
-  helloWrap: { marginBottom: spacing.lg },
-  helloTitle: { fontSize: typography.h1, fontWeight: '800', color: colors.text, marginBottom: 6 },
-  helloSub: { fontSize: typography.body, color: colors.subText },
 
-  card: {
-  borderRadius: radii.xl,
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: colors.border,
-    marginBottom: spacing.xl,
+  cardBodyCenter: {
+    alignItems: 'center',
   },
+
+  // greeting
+  helloWrap: { marginBottom: spacing.lg },
+  helloTitle: { fontSize: typography.h1, fontWeight: '800', color: baseColors.text, marginBottom: 6 },
+  helloSub: { fontSize: typography.body, color: baseColors.subText },
+
+  // card
+  card: {
+    borderRadius: radii.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E6E8EC',
+    marginBottom: spacing.xl,
+    backgroundColor: baseColors.surface,
+  },
+  elevated: { ...(shadow as object) },
+  elevatedSm: { ...(shadowSm as object) },
+
   cardTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
   rowCenter: { flexDirection: 'row', alignItems: 'center' },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success, marginRight: 6 },
-  cardBadge: { fontSize: typography.small, color: colors.subText, fontWeight: '600' },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: baseColors.success, marginRight: 6 },
+  cardBadge: { fontSize: typography.small, color: baseColors.subText, fontWeight: '600' },
   cardDate: { fontSize: typography.small, color: '#9CA3AF' },
-  missionTitle: { fontSize: typography.h2, color: colors.text, fontWeight: '800', lineHeight: 26 },
+  missionTitle: { fontSize: typography.h2, color: baseColors.text, fontWeight: '800', lineHeight: 26,  textAlign: 'center', alignSelf: 'center' },
 
-  loadingBox: { alignItems: 'center', paddingVertical: spacing.md },
-  loadingText: { marginTop: spacing.md, color: colors.subText, fontSize: typography.body, textAlign: 'center' },
+  heroWrap: { borderRadius: radii.lg, overflow: 'hidden', marginTop: spacing.lg, backgroundColor: '#F9FAFB', alignSelf: 'stretch' },
+  hero: { width: '100%', aspectRatio: 16 / 9 },
 
-  heroWrap: { borderRadius: radii.lg, overflow: 'hidden', marginTop: spacing.lg },
-  hero: { width: '100%', height: 192 },
+  cta: { marginTop: spacing.lg, paddingHorizontal: spacing.xl, minHeight: 48, alignSelf: 'center' },
 
+  // stats
   statsGrid: { flexDirection: 'row', gap: spacing.lg, marginBottom: spacing.xl },
-  statCard: { flex: 1, borderRadius: radii.lg, paddingVertical: spacing.lg, alignItems: 'center' },
+  statCard: { flex: 1, borderRadius: radii.lg, paddingVertical: spacing.lg, alignItems: 'center', backgroundColor: baseColors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E6E8EC' },
   statValue: { fontSize: 22, fontWeight: '800', marginBottom: 4 },
-  statLabel: { fontSize: typography.small, color: colors.subText },
+  statLabel: { fontSize: typography.small, color: baseColors.subText },
 
+  // recents
   recentWrap: { marginBottom: spacing.xl },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: colors.text, marginBottom: spacing.md },
-  recentItem: { borderRadius: radii.lg, padding: spacing.lg, marginBottom: spacing.lg },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: baseColors.text, marginBottom: spacing.md },
+  recentItem: { borderRadius: radii.lg, padding: spacing.lg, marginBottom: spacing.lg, backgroundColor: baseColors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E6E8EC' },
   recentTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
-  recentDate: { fontSize: typography.small, color: colors.subText },
+  recentDate: { fontSize: typography.small, color: baseColors.subText },
   recentDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#C4B5FD' },
-  recentImageWrap: { borderRadius: radii.md, overflow: 'hidden', marginBottom: spacing.sm },
-  recentImage: { width: '100%', height: 192 },
-  tag: { fontSize: 11, fontWeight: '700', marginBottom: 2 },
-  recentTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
-  recentText: { fontSize: 14, color: colors.subText },
+  recentImageWrap: { borderRadius: radii.md, overflow: 'hidden', marginBottom: spacing.sm, backgroundColor: '#F9FAFB' },
+  recentImage: { width: '100%', aspectRatio: 4 / 3 },
 
-  // Feed 스타일과 맞춘 보라/핑크 박스들
-  recentMissionBox: { backgroundColor: '#F5F3FF', marginTop: spacing.sm, marginBottom: spacing.xs, borderRadius: 16, padding: spacing.sm },
+  recentText: { fontSize: 14, color: baseColors.subText },
+  centerText: { textAlign: 'center' },
+
+  // purple/pink boxes (라이트 고정)
+  recentMissionBox: { backgroundColor: '#F5F3FF', marginTop: spacing.sm, marginBottom: spacing.xs, borderRadius: 16, padding: spacing.sm, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E9E5FF' },
   missionRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  missionDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, marginRight: 6 },
-  missionLabel: { fontSize: 12, color: colors.primary, fontWeight: '700' },
-  missionText: { fontSize: 16, color: colors.text, fontWeight: '700' },
+  missionDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: baseColors.primary, marginRight: 6 },
+  missionLabel: { fontSize: 12, color: baseColors.primary, fontWeight: '700' },
+  missionText: { fontSize: 16, color: baseColors.text, fontWeight: '700' },
 
-  recentMoodBox: { backgroundColor: '#FEF2F2', marginTop: spacing.xs, borderRadius: 16, padding: spacing.sm },
+  recentMoodBox: { backgroundColor: '#FEF2F2', marginTop: spacing.xs, borderRadius: 16, padding: spacing.sm, borderWidth: StyleSheet.hairlineWidth, borderColor: '#FCE2E2' },
   moodRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  moodDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primaryAlt, marginRight: 6 },
-  moodLabel: { fontSize: 12, color: colors.primaryAlt, fontWeight: '700' },
-  moodText: { fontSize: 14, color: '#374151' },
+  moodDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: baseColors.primaryAlt, marginRight: 6 },
+  moodLabel: { fontSize: 12, color: baseColors.primaryAlt, fontWeight: '700' },
+  moodText: { fontSize: 14, color: baseColors.text },
+
+  // skeleton
+  skeleton: {
+    width: '100%',
+    backgroundColor: '#EEF0F3',
+    overflow: 'hidden',
+  },
 });
+
+function makeStyles(colors: any) {
+  // 위에서 바로 styles 객체에 baseColors/고정값 써서,
+  // 여기선 타입만 맞추려고 남겨둠. 필요하면 colors 활용해서 확장.
+  return StyleSheet.create(styles as any);
+}
 
 export default HomeScreen;

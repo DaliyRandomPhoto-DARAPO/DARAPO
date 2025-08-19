@@ -5,6 +5,7 @@ import apiClient, { authAPI, setAuthFailureHandler } from '../services/api';
 
 interface User {
   id: string;
+  name?: string;
   nickname: string;
   profileImage?: string;
 }

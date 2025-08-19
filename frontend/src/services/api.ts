@@ -216,7 +216,7 @@ export const photoAPI = {
 };
 
 export const userAPI = {
-  updateMe: async (data: { nickname?: string; profileImage?: string; email?: string }) => {
+  updateMe: async (data: { name?: string; nickname?: string; profileImage?: string; email?: string }) => {
     const response = await apiClient.put('/user/me', data);
     return response.data;
   },

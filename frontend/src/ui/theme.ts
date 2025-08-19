@@ -1,12 +1,18 @@
-import { Platform, Dimensions } from 'react-native';
+// theme.ts
+import { Platform, Dimensions, PixelRatio } from 'react-native';
 
-// 화면 크기 기반 반응형 여백 계산
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const clamp = (val: number, min: number, max?: number) => {
+
+// clamp 유틸 (타입 안전)
+const clamp = (val: number, min: number, max?: number): number => {
   const v = Math.max(val, min);
   return typeof max === 'number' ? Math.min(v, max) : v;
 };
 
+// 픽셀 스냅
+const px = (n: number) => PixelRatio.roundToNearestPixel(n);
+
+// 팔레트 (라이트 고정)
 export const colors = {
   background: '#f8f9fa',
   surface: '#ffffff',
@@ -15,24 +21,23 @@ export const colors = {
   primary: '#3498db',
   danger: '#e74c3c',
   border: '#e9ecef',
-};
+} as const;
 
-// 퍼센트 기반 스케일에 최소 픽셀을 보장
+// 반응형 간격 (너비 기반, 하한 보장 + 픽셀 스냅)
 export const spacing = {
-  // 약 1.2% ~ 10% of width (세로 여백이 타이트하지 않도록 소폭 상향)
-  xs: clamp(Math.round(SCREEN_WIDTH * 0.012), 4),
-  sm: clamp(Math.round(SCREEN_WIDTH * 0.03), 8),
-  md: clamp(Math.round(SCREEN_WIDTH * 0.05), 16),
-  lg: clamp(Math.round(SCREEN_WIDTH * 0.075), 24),
-  xl: clamp(Math.round(SCREEN_WIDTH * 0.1), 32),
-};
+  xs: px(clamp(SCREEN_WIDTH * 0.012, 4)),
+  sm: px(clamp(SCREEN_WIDTH * 0.03, 8)),
+  md: px(clamp(SCREEN_WIDTH * 0.05, 16)),
+  lg: px(clamp(SCREEN_WIDTH * 0.075, 24)),
+  xl: px(clamp(SCREEN_WIDTH * 0.1, 32)),
+} as const;
 
 export const radii = {
   sm: 8,
   md: 12,
   lg: 20,
   pill: 999,
-};
+} as const;
 
 export const typography = {
   title: 28,
@@ -40,23 +45,24 @@ export const typography = {
   h2: 20,
   body: 16,
   small: 14,
-};
+} as const;
+
+// 플랫폼별 그림자/고도
+const iosShadow = {
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.12,
+  shadowRadius: 12,
+} as const;
 
 export const elevation = {
-  card: Platform.select({
-    ios: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.12,
-      shadowRadius: 12,
-    },
-    android: {
-      elevation: 6,
-    },
-    default: {},
-  }),
-};
+  card:
+    Platform.OS === 'ios'
+      ? iosShadow
+      : Platform.OS === 'android'
+      ? ({ elevation: 6 } as const)
+      : ({} as const),
+} as const;
 
-export const theme = { colors, spacing, radii, typography, elevation };
-
+export const theme = { colors, spacing, radii, typography, elevation } as const;
 export type Theme = typeof theme;

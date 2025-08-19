@@ -16,18 +16,33 @@ export default function ProfileEditScreen() {
   const navigation = useNavigation<any>();
   const { user, updateProfile } = useAuth();
   const [nickname, setNickname] = useState(user?.nickname ?? '');
+  const [name, setName] = useState(user?.name ?? '');
   const [profileImage, setProfileImage] = useState(user?.profileImage ?? '');
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     try {
       setSaving(true);
-      const updated = await userAPI.updateMe({ nickname, profileImage });
-      await updateProfile({ nickname: updated.nickname, profileImage: updated.profileImage });
+      const nick = nickname.trim();
+      if (!nick) {
+        Alert.alert('입력 필요', '닉네임을 입력해주세요.');
+        return;
+      }
+      const payload: any = {};
+  if (user?.nickname !== nick) payload.nickname = nick;
+  const plainName = name.trim();
+  if (plainName && user?.name !== plainName) payload.name = plainName;
+      if (profileImage && user?.profileImage !== profileImage) payload.profileImage = profileImage;
+      if (Object.keys(payload).length === 0) {
+        Alert.alert('안내', '변경된 내용이 없습니다.');
+        return;
+      }
+      const updated = await userAPI.updateMe(payload);
+  await updateProfile({ name: updated.name, nickname: updated.nickname, profileImage: updated.profileImage });
       Alert.alert('저장 완료', '프로필이 업데이트되었습니다.');
       navigation.goBack();
-    } catch (e) {
-      Alert.alert('저장 실패', '프로필 저장에 실패했습니다.');
+    } catch (e: any) {
+      Alert.alert('저장 실패', String(e?.message || '프로필 저장에 실패했습니다.'));
     } finally {
       setSaving(false);
     }
@@ -128,6 +143,7 @@ export default function ProfileEditScreen() {
           )}
         </TouchableOpacity>
         <Text style={styles.hint}>프로필 이미지를 변경하려면 위 이미지를 탭하세요</Text>
+        <View style={{ height: spacing.md }} />
         <Text style={styles.label}>닉네임</Text>
         <TextInput
           style={styles.input}

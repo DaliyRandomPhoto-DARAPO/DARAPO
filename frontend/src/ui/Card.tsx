@@ -1,38 +1,46 @@
-import React from 'react';
-import { View, StyleSheet, ViewStyle, Platform } from 'react-native';
+import React, { forwardRef, memo } from 'react';
+import { View, StyleSheet, Platform, type ViewProps, type StyleProp, type ViewStyle } from 'react-native';
 
-// Local tokens
-const colors = { surface: '#ffffff' } as const;
-const spacing = { lg: 16 } as const;
-const radii = { lg: 20 } as const;
-const elevation = {
-  card: Platform.select({
-    ios: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.12,
-      shadowRadius: 12,
-    },
-    android: { elevation: 6 },
-    default: {},
-  }),
+const tokens = {
+  surface: '#ffffff',
+  padding: 16,
+  radius: 20,
 } as const;
 
-type Props = {
-  style?: ViewStyle | ViewStyle[];
-  children: React.ReactNode;
+const elevation = Platform.select({
+  ios: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+  },
+  android: { elevation: 6 },
+  default: {},
+}) as object;
+
+export type CardProps = ViewProps & {
+  style?: StyleProp<ViewStyle>;
+  children?: React.ReactNode;
 };
 
-export const Card: React.FC<Props> = ({ style, children }) => {
-  return <View style={[styles.card, style]}>{children}</View>;
-};
+const BaseCard = forwardRef<View, CardProps>(({ style, children, ...rest }, ref) => {
+  return (
+    <View ref={ref} style={[styles.card, style]} {...rest}>
+      {children}
+    </View>
+  );
+});
+
+BaseCard.displayName = 'Card';
+
+export const Card = memo(BaseCard);
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
-    padding: spacing.lg,
-    borderRadius: radii.lg,
-    ...(elevation.card as object),
+    backgroundColor: tokens.surface,
+    padding: tokens.padding,
+    borderRadius: tokens.radius,
+    ...elevation,
   },
 });
 

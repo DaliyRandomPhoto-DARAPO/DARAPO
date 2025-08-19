@@ -12,6 +12,9 @@ export class User {
   nickname: string;
 
   @Prop()
+  name?: string;
+
+  @Prop()
   profileImage: string;
 
   @Prop()

@@ -118,7 +118,19 @@ export class AuthService {
     let user = await this.userService.findByKakaoId(kakaoUserInfo.kakaoId);
     
     if (!user) {
-      user = await this.userService.create(kakaoUserInfo);
+      // 신규 가입: 카카오 프로필 닉네임을 name으로 저장하고, nickname도 동일하게 초기화
+      user = await this.userService.create({
+        kakaoId: kakaoUserInfo.kakaoId,
+        name: kakaoUserInfo.nickname,
+        nickname: kakaoUserInfo.nickname,
+        email: kakaoUserInfo.email,
+        profileImage: kakaoUserInfo.profileImage,
+      });
+    } else if (!(user as any).name) {
+      // 기존 사용자: name이 비어있다면 안전하게 nickname으로 백필
+      user = (await this.userService.updateProfile((user as any)._id?.toString() || (user as any).id?.toString(), {
+        name: (user as any).nickname,
+      } as any)) as any;
     }
 
     return this.generateJWT(user);
@@ -144,12 +156,13 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = this.jwtService.sign({ sub: userId, typ: 'refresh' }, { expiresIn: '14d' });
     
-    return {
+  return {
       accessToken,
       refreshToken,
       user: {
         id: userId,
         kakaoId: user.kakaoId,
+    name: (user as any).name,
         nickname: user.nickname,
         profileImage: user.profileImage,
         email: user.email,
