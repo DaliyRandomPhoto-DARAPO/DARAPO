@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback, memo, useRef, useEffect } from 'react';
 import { View, StyleSheet, Text, Switch, Alert, Image, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Header from '../ui/Header';
@@ -9,12 +9,90 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { photoAPI, BASE_URL } from '../services/api';
 
-const colors = { ...theme.colors, primary: '#7C3AED' } as const;
-const { spacing, typography } = theme;
-
 type Props = NativeStackScreenProps<RootStackParamList, 'PhotoSettings'>;
 
-const CONTENT_MAX_WIDTH = 720;
+// ===== Theme/Consts (불변)
+const colors = Object.freeze({ ...theme.colors, primary: '#7C3AED', primaryAlt: '#EC4899' } as const);
+const { spacing, typography } = theme;
+const CONTENT_MAX_WIDTH = 640 as const;
+const HIT_SLOP_8 = 8 as const;
+
+// ===== utils
+const joinUrl = (base: string, path?: string) => {
+  if (!path) return undefined;
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${base.replace(/\/$/, '')}/${String(path).replace(/^\//, '')}`;
+};
+
+// ===== Subcomponents
+const Preview = memo(function Preview({ uri }: { uri?: string }) {
+  if (!uri) return null;
+  return (
+    <View style={styles.imageWrap}>
+      <Image source={{ uri }} style={styles.image} resizeMode="cover" />
+    </View>
+  );
+});
+
+const MissionInfo = memo(function MissionInfo({ title }: { title?: string }) {
+  if (!title) return null;
+  return (
+    <View style={styles.missionBox}>
+      <View style={styles.missionRow}>
+        <View style={styles.missionDot} />
+        <Text style={styles.missionLabel}>오늘의 미션</Text>
+      </View>
+      <Text style={styles.missionText}>{title}</Text>
+    </View>
+  );
+});
+
+const MoodInfo = memo(function MoodInfo({ comment }: { comment?: string }) {
+  if (!comment) return null;
+  return (
+    <View style={styles.moodBox}>
+      <View style={styles.moodRow}>
+        <View style={styles.moodDot} />
+        <Text style={styles.moodLabel}>감정</Text>
+      </View>
+      <Text style={styles.moodText}>{comment}</Text>
+    </View>
+  );
+});
+
+const Controls = memo(function Controls({
+  isPublic,
+  busy,
+  onToggle,
+  onDelete,
+}: {
+  isPublic: boolean;
+  busy: boolean;
+  onToggle: (next: boolean) => void;
+  onDelete: () => void;
+}) {
+  return (
+    <View style={styles.controls}>
+      <View style={styles.row}>
+        <Text style={styles.label}>피드에 공개</Text>
+        <Switch
+          value={isPublic}
+          onValueChange={onToggle}
+          disabled={busy}
+          accessibilityLabel="피드 공개 여부 토글"
+        />
+      </View>
+      <Button
+        title={busy ? '처리 중…' : '삭제'}
+        onPress={onDelete}
+        variant="danger"
+        size="md"
+        fullWidth
+        disabled={busy}
+      />
+    </View>
+  );
+});
 
 const PhotoSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
   const { photoId, isPublic: initialPublic, imageUrl, missionTitle, comment } = route.params;
@@ -22,118 +100,88 @@ const PhotoSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
   const [busy, setBusy] = useState<boolean>(false);
   const insets = useSafeAreaInsets();
 
-  // Switch는 onValueChange로 새 값이 넘어온다. 그 값 기준으로 처리해.
-  const handleTogglePublic = async (nextValue: boolean) => {
+  // unmount 가드: 비동기 중 setState 방지
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  // URL 메모
+  const resolvedUri = useMemo(() => joinUrl(BASE_URL, imageUrl), [imageUrl]);
+
+  // 낙관적 토글 + 롤백 + 중복클릭 가드
+  const toggleInFlight = useRef(false);
+  const handleTogglePublic = useCallback(async (nextValue: boolean) => {
+    if (toggleInFlight.current || busy) return;
+    toggleInFlight.current = true;
     try {
       setBusy(true);
-      setIsPublic(nextValue); // 낙관적 업데이트
+      setIsPublic(nextValue); // optimistic
       const updated = await photoAPI.updatePhoto(photoId, { isPublic: nextValue });
-      setIsPublic(!!updated.isPublic);
+      if (mountedRef.current) setIsPublic(!!updated?.isPublic);
     } catch (e) {
-      setIsPublic(prev => !prev); // 롤백
-      Alert.alert('오류', '공개 설정 변경 실패');
+      if (mountedRef.current) {
+        setIsPublic(prev => !prev); // rollback
+        Alert.alert('오류', '공개 설정 변경 실패');
+      }
     } finally {
-      setBusy(false);
+      if (mountedRef.current) setBusy(false);
+      toggleInFlight.current = false;
     }
-  };
+  }, [photoId, busy]);
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
+    if (busy) return;
     Alert.alert('삭제', '이 사진을 삭제할까요?', [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제',
         style: 'destructive',
         onPress: async () => {
+          if (busy) return;
           try {
             setBusy(true);
             await photoAPI.deletePhoto(photoId);
-            // 이전 화면 새로고침 필요하면 params로 신호 던져라
+            if (!mountedRef.current) return;
             navigation.goBack();
           } catch (e) {
-            Alert.alert('오류', '삭제에 실패했습니다.');
+            if (mountedRef.current) Alert.alert('오류', '삭제에 실패했습니다.');
           } finally {
-            setBusy(false);
+            if (mountedRef.current) setBusy(false);
           }
         },
       },
     ]);
-  };
+  }, [busy, navigation, photoId]);
 
-  // 이미지 URL 안전하게 합치기 (이중 슬래시 방지)
-  const resolvedUri =
-    imageUrl && imageUrl.startsWith('http')
-      ? imageUrl
-      : imageUrl
-      ? `${BASE_URL.replace(/\/$/, '')}/${imageUrl.replace(/^\//, '')}`
-      : undefined;
+  const contentPadBottom = useMemo(() => insets.bottom + spacing.xl, [insets.bottom]);
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <Header title="사진 설정" />
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={styles.flex1}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
       >
         <ScrollView
           contentInsetAdjustmentBehavior="automatic"
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{
-            paddingHorizontal: spacing.lg,
-            paddingTop: spacing.lg,
-            paddingBottom: insets.bottom + spacing.xl, // 하단 여유 + 안전영역
-          }}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: contentPadBottom }]}
+          showsVerticalScrollIndicator={false}
         >
-          <View style={{ alignSelf: 'center', width: '100%', maxWidth: CONTENT_MAX_WIDTH }}>
+          <View style={styles.centered}>
             <Card style={styles.card}>
-              {/* 미리보기 */}
-              {resolvedUri ? (
-                <View style={styles.imageWrap}>
-                  <Image source={{ uri: resolvedUri }} style={styles.image} resizeMode="cover" />
-                </View>
-              ) : null}
-
-              {/* 미션/감정 정보 */}
-              {!!missionTitle && (
-                <View style={styles.missionBox}>
-                  <View style={styles.missionRow}>
-                    <View style={styles.missionDot} />
-                    <Text style={styles.missionLabel}>오늘의 미션</Text>
-                  </View>
-                  <Text style={styles.missionText}>{missionTitle}</Text>
-                </View>
-              )}
-
-              {!!comment && (
-                <View style={styles.moodBox}>
-                  <View style={styles.moodRow}>
-                    <View style={styles.moodDot} />
-                    <Text style={styles.moodLabel}>감정</Text>
-                  </View>
-                  <Text style={styles.moodText}>{comment}</Text>
-                </View>
-              )}
-
-              {/* 하단 설정 컨트롤 */}
-              <View style={styles.controls}>
-                <View style={styles.row}>
-                  <Text style={styles.label}>피드에 공개</Text>
-                  <Switch
-                    value={isPublic}
-                    onValueChange={handleTogglePublic}
-                    disabled={busy}
-                    accessibilityLabel="피드 공개 여부 토글"
-                  />
-                </View>
-                <Button
-                  title={busy ? '처리 중…' : '삭제'}
-                  onPress={handleDelete}
-                  variant="danger"
-                  size="lg"
-                  fullWidth
-                  disabled={busy}
-                />
-              </View>
+              <Preview uri={resolvedUri} />
+              <MissionInfo title={missionTitle} />
+              <MoodInfo comment={comment} />
+              <Controls
+                isPublic={isPublic}
+                busy={busy}
+                onToggle={handleTogglePublic}
+                onDelete={handleDelete}
+              />
             </Card>
           </View>
         </ScrollView>
@@ -143,38 +191,64 @@ const PhotoSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  flex1: { flex: 1 },
   container: { flex: 1, backgroundColor: colors.background },
-  card: { padding: spacing.md },
 
-  imageWrap: { borderRadius: 16, overflow: 'hidden', marginBottom: spacing.lg },
-  image: { width: '100%', aspectRatio: 1 }, // 폭 기준 정사각. 반응형 OK
+  scrollContent: {
+    paddingHorizontal: spacing.md,   // lg → md
+    paddingTop: spacing.md,          // lg → md
+  },
+  centered: { alignSelf: 'center', width: '100%', maxWidth: CONTENT_MAX_WIDTH },
 
-  missionBox: { backgroundColor: '#F5F3FF', borderRadius: 16, padding: spacing.md, marginBottom: spacing.md },
-  missionRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  missionDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, marginRight: 6 },
-  missionLabel: { fontSize: 12, color: colors.primary, fontWeight: '600', lineHeight: 16 },
-  missionText: { fontSize: 16, color: colors.text, fontWeight: '700', lineHeight: 20 },
+  card: { padding: spacing.md - 4 }, // md보다 살짝 더 타이트
 
-  moodBox: { backgroundColor: '#FEF2F2', borderRadius: 16, padding: spacing.md, marginBottom: spacing.lg },
-  moodRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  moodDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#EC4899', marginRight: 6 },
-  moodLabel: { fontSize: 12, color: '#EC4899', fontWeight: '600', lineHeight: 16 },
-  moodText: { fontSize: 14, color: '#374151', lineHeight: 18 },
+  // 이미지
+  imageWrap: { borderRadius: 12, overflow: 'hidden', marginBottom: spacing.md }, // 16→12, lg→md
+  image: { width: '100%', aspectRatio: 1 },
 
-  // gap은 RN 0.71+ 아니면 안 먹음. 구버전이면 아래 margin 방식으로 대체
-  controls: { gap: spacing.md },
+  // 미션 박스 (컴팩트)
+  missionBox: {
+    backgroundColor: '#F5F3FF',
+    borderRadius: 12,            // 16 → 12
+    padding: spacing.sm,         // md → sm
+    marginBottom: spacing.sm,    // md → sm
+  },
+  missionRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 }, // 4 → 2
+  missionDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginRight: 4 }, // 8 → 6
+  missionLabel: { fontSize: 11, color: colors.primary, fontWeight: '600', lineHeight: 14 }, // 12→11
+  missionText: { fontSize: 14, color: colors.text, fontWeight: '700', lineHeight: 18 },     // 16→14
+
+  // 감정 박스 (컴팩트)
+  moodBox: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: 12,            // 16 → 12
+    padding: spacing.sm,         // md → sm
+    marginBottom: spacing.md,    // lg → md
+  },
+  moodRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 }, // 4 → 2
+  moodDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primaryAlt, marginRight: 4 }, // 8 → 6
+  moodLabel: { fontSize: 11, color: colors.primaryAlt, fontWeight: '600', lineHeight: 14 }, // 12→11
+  moodText: { fontSize: 13, color: '#374151', lineHeight: 17 },                              // 14→13
+
+  // 컨트롤 영역 전반 축소
+  controls: { gap: spacing.sm }, // md → sm
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: colors.surface,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: 16,
+    paddingHorizontal: spacing.md, // lg → md
+    paddingVertical: spacing.sm,   // md → sm
+    borderRadius: 12,              // 16 → 12
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  label: { fontSize: Number(typography.body) || 16, color: colors.text, fontWeight: '600' },
+  label: {
+    // 기존 typography.body 그대로면 큰 편이면 살짝 다운
+    fontSize: Math.max(14, (Number(typography.body) || 16) - 2), // 16→14 근처
+    color: colors.text,
+    fontWeight: '600',
+  },
 });
 
 export default PhotoSettingsScreen;

@@ -1,12 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
+import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
   SafeAreaView,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
 } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { useNavigation } from '@react-navigation/native';
@@ -16,184 +16,179 @@ import { missionAPI } from '../services/api';
 
 type CameraScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Camera'>;
 
+const COLORS = Object.freeze({
+  overlay: 'rgba(0,0,0,0.5)',
+  white: '#fff',
+  primary: '#007AFF',
+} as const);
+
+const TAKE_OPTIONS = Object.freeze({ quality: 0.85, skipProcessing: true } as const);
+const CAMERA_STATIC_PROPS = Object.freeze({ enableShutterSound: false } as any);
+
+const TopBar = memo(({ loading, title }: { loading: boolean; title: string }) => (
+  <View style={styles.topBar}>
+    <View style={styles.missionContainer}>
+      {loading ? (
+        <ActivityIndicator size="small" color={COLORS.white} />
+      ) : (
+        <Text style={styles.missionText} numberOfLines={1}>
+          {title}
+        </Text>
+      )}
+    </View>
+  </View>
+));
+
+const CaptureButton = memo(({ disabled, onPress }: { disabled?: boolean; onPress: () => void }) => (
+  <TouchableOpacity
+    style={[styles.captureButton, disabled && styles.captureDisabled]}
+    onPress={onPress}
+    disabled={disabled}
+    activeOpacity={0.8}
+  >
+    <View style={[styles.captureButtonInner, disabled && styles.captureInnerDisabled]} />
+  </TouchableOpacity>
+));
+
+const BottomBar = memo(({ captureDisabled, onCapture }: { captureDisabled: boolean; onCapture: () => void }) => (
+  <View style={styles.bottomBar}>
+    <View style={styles.spacer} />
+    <CaptureButton disabled={captureDisabled} onPress={onCapture} />
+    <View style={styles.spacer} />
+  </View>
+));
+
 const CameraScreen = () => {
+  // --------- 모든 훅은 여기(조건부 X) ----------
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
-  const [todayMission, setTodayMission] = useState<string>('');
+  const [todayMission, setTodayMission] = useState<string>('오늘의 미션');
   const [loading, setLoading] = useState(true);
+
   const navigation = useNavigation<CameraScreenNavigationProp>();
   const cameraRef = useRef<CameraView>(null);
+  const takingRef = useRef(false);
 
-  useEffect(() => {
-    loadTodayMission();
-  }, []);
+  const permissionGranted = !!permission?.granted;
 
-  const loadTodayMission = async () => {
+  const loadTodayMission = useCallback(async () => {
     try {
       setLoading(true);
       const mission = await missionAPI.getTodayMission();
-      setTodayMission(mission.title);
-    } catch (error) {
-      console.error('미션 로드 실패:', error);
-      setTodayMission('오늘의 미션'); // 기본값
+      setTodayMission(mission?.title || '오늘의 미션');
+    } catch (e) {
+      console.error('미션 로드 실패:', e);
+      setTodayMission('오늘의 미션');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  if (!permission) {
-    return <View />;
-  }
+  useEffect(() => {
+    loadTodayMission();
+  }, [loadTodayMission]);
 
-  if (!permission.granted) {
+  const toggleCameraFacing = useCallback(() => {
+    setFacing((cur) => (cur === 'back' ? 'front' : 'back'));
+  }, []);
+
+  const takePicture = useCallback(async () => {
+    if (takingRef.current) return;
+    const cam = cameraRef.current as any;
+    if (!cam?.takePictureAsync) return;
+    try {
+      takingRef.current = true;
+      const photo = await cam.takePictureAsync(TAKE_OPTIONS);
+      if (photo?.uri) {
+        navigation.navigate('PhotoUpload', { photoUri: photo.uri });
+      } else {
+        Alert.alert('오류', '사진 데이터가 비정상이에요.');
+      }
+    } catch (e) {
+      console.error(e);
+      Alert.alert('오류', '사진 촬영에 실패했습니다.');
+    } finally {
+      takingRef.current = false;
+    }
+  }, [navigation]);
+
+  const onGrant = useCallback(() => {
+    requestPermission();
+  }, [requestPermission]);
+
+  const captureDisabled = useMemo(() => loading || takingRef.current, [loading]);
+
+  // --------- 여기서 분기(return). 훅은 이미 전부 호출됨 ----------
+  if (!permission) return <View />;
+
+  if (!permissionGranted) {
     return (
       <View style={styles.container}>
         <Text style={{ textAlign: 'center' }}>카메라 권한이 필요합니다</Text>
-        <TouchableOpacity onPress={requestPermission} style={styles.permissionButton}>
+        <TouchableOpacity onPress={onGrant} style={styles.permissionButton} activeOpacity={0.8}>
           <Text style={styles.permissionButtonText}>권한 허용</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  function toggleCameraFacing() {
-    setFacing(current => (current === 'back' ? 'front' : 'back'));
-  }
-
-  const takePicture = async () => {
-    if (cameraRef.current) {
-      try {
-        const photo = await cameraRef.current.takePictureAsync();
-        if (photo) {
-          navigation.navigate('PhotoUpload', { photoUri: photo.uri });
-        }
-      } catch (error) {
-        Alert.alert('오류', '사진 촬영에 실패했습니다.');
-      }
-    }
-  };
-
   return (
     <SafeAreaView style={styles.container}>
-      <CameraView
-        style={styles.camera}
-        facing={facing}
-        ref={cameraRef}
-        {...({ enableShutterSound: false } as any)}
-      />
-      
-      <View style={styles.overlay}>
-        <View style={styles.topBar}>
-          <View style={styles.missionContainer}>
-            {loading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.missionText}>{todayMission}</Text>
-            )}
-          </View>
-        </View>
-        
-        <View style={styles.bottomBar}>
-          <View style={styles.spacer} />
-          
-          <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
-            <View style={styles.captureButtonInner} />
-          </TouchableOpacity>
-          
-          <View style={styles.spacer} />
-        </View>
+      <CameraView style={styles.camera} facing={facing} ref={cameraRef} {...CAMERA_STATIC_PROPS} />
+
+      <View style={styles.overlay} pointerEvents="box-none">
+        <TopBar loading={loading} title={todayMission} />
+
+        {/* 필요하면 토글 버튼 노출 */}
+        {/* <TouchableOpacity style={styles.flipButton} onPress={toggleCameraFacing} /> */}
+
+        <BottomBar captureDisabled={captureDisabled} onCapture={takePicture} />
       </View>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  camera: {
-    flex: 1,
-  },
+  container: { flex: 1, justifyContent: 'center' },
+  camera: { flex: 1 },
   overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     justifyContent: 'space-between',
   },
   topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 15,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: COLORS.overlay, padding: 15,
   },
-  backButton: {
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 15,
-  },
-  missionContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-  },
-  missionText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  flipButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  missionContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
+  missionText: { color: COLORS.white, fontSize: 16, fontWeight: 'bold', textAlign: 'center' },
+
   bottomBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingTop: 20,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40,
+    backgroundColor: COLORS.overlay, justifyContent: 'space-between',
   },
-  spacer: {
-    width: 50,
-  },
+  spacer: { width: 50 },
+
   captureButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: COLORS.white, justifyContent: 'center', alignItems: 'center',
   },
   captureButtonInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#007AFF',
+    width: 60, height: 60, borderRadius: 30, backgroundColor: COLORS.primary,
   },
+  captureDisabled: { opacity: 0.5 },
+  captureInnerDisabled: { backgroundColor: '#9CC3FF' },
+
+  flipButton: {
+    position: 'absolute', right: 20, top: 12,
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.3)', justifyContent: 'center', alignItems: 'center',
+  },
+
   permissionButton: {
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 10,
-    margin: 20,
+    backgroundColor: COLORS.primary, padding: 15, borderRadius: 10, margin: 20,
   },
-  permissionButtonText: {
-    color: '#fff',
-    textAlign: 'center',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  permissionButtonText: { color: COLORS.white, textAlign: 'center', fontSize: 16, fontWeight: 'bold' },
 });
 
-export default CameraScreen;
+export default memo(CameraScreen);

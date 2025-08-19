@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
   missionRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   missionDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, marginRight: 6 },
   missionLabel: { fontSize: 12, color: colors.primary, fontWeight: '700' },
-  missionText: { fontSize: 16, color: colors.text, fontWeight: '700' },
+  missionText: { fontSize: 14, color: colors.text, fontWeight: '700' },
 
   imageWrap: { width: '100%', aspectRatio: 1, marginTop: spacing.sm, paddingHorizontal: spacing.sm },
   image: { width: '100%', height: '100%', borderRadius: radii.lg },
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
   moodRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   moodDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primaryAlt, marginRight: 6 },
   moodLabel: { fontSize: 12, color: colors.primaryAlt, fontWeight: '700' },
-  moodText: { fontSize: 14, color: '#374151' },
+  moodText: { fontSize: 13, color: '#374151' },
 });
 
 export default FeedScreen;

@@ -1,4 +1,4 @@
-import React, { memo, forwardRef } from 'react';
+import React, { memo, forwardRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -40,33 +40,90 @@ const elevation = Platform.select({
   default: {},
 }) as object;
 
+// ===== 고정 객체(렌더마다 새로 안 만듦)
+const RIPPLE = Object.freeze({ color: tokens.colors.ripple, borderless: true } as const);
+const HIT_SLOP_10 = 10 as const;
+
+// ===== Props
 export type HeaderProps = ViewProps & {
-  /** 앱 로고 이미지 소스 (require(...) or { uri }) */
   logoSource?: ImageSourcePropType;
-  /** 로고 눌렀을 때 */
   onLogoPress?: () => void;
 
-  /** 메인 타이틀(중앙 정렬 가능) */
   title?: string;
-  /** 서브타이틀(작게, 타이틀 아래) */
   subtitle?: string;
 
-  /** 오른쪽 액션(아이콘 버튼들 등) */
   right?: React.ReactNode;
 
-  /** 레이아웃 커스텀 */
-  style?: StyleProp<ViewStyle>;           // 바깥 컨테이너(배경/보더)
-  contentStyle?: StyleProp<ViewStyle>;    // 내부 행 레이아웃
+  style?: StyleProp<ViewStyle>;
+  contentStyle?: StyleProp<ViewStyle>;
   titleStyle?: StyleProp<TextStyle>;
   subtitleStyle?: StyleProp<TextStyle>;
 
-  /** 옵션들 */
-  centerTitle?: boolean;   // 타이틀 중앙정렬
-  showDivider?: boolean;   // 하단 보더
-  elevated?: boolean;      // 그림자
-  safeTop?: boolean;       // SafeArea top 패딩 적용
+  centerTitle?: boolean;
+  showDivider?: boolean;
+  elevated?: boolean;
+  safeTop?: boolean;
 };
 
+// ====== Sub Components (memo)
+const LogoArea = memo(function LogoArea({
+  logoSource,
+  onLogoPress,
+}: {
+  logoSource?: ImageSourcePropType;
+  onLogoPress?: () => void;
+}) {
+  if (!logoSource) return <View style={styles.logoPlaceholder} />;
+  return (
+    <Pressable
+      onPress={onLogoPress}
+      android_ripple={RIPPLE}
+      hitSlop={HIT_SLOP_10}
+      style={styles.logoBtn}
+      accessibilityRole="button"
+      accessibilityLabel="앱 로고"
+    >
+      <Image source={logoSource} style={styles.logo} resizeMode="contain" />
+    </Pressable>
+  );
+});
+
+const TitleArea = memo(function TitleArea({
+  title,
+  subtitle,
+  centerTitle,
+  titleStyle,
+  subtitleStyle,
+}: {
+  title?: string;
+  subtitle?: string;
+  centerTitle?: boolean;
+  titleStyle?: StyleProp<TextStyle>;
+  subtitleStyle?: StyleProp<TextStyle>;
+}) {
+  return (
+    <View style={[styles.center, centerTitle && styles.centerTitle]}>
+      {title ? (
+        <Text style={[styles.title, titleStyle]} numberOfLines={1}>
+          {title}
+        </Text>
+      ) : null}
+      {subtitle ? (
+        <Text style={[styles.subtitle, subtitleStyle]} numberOfLines={1}>
+          {subtitle}
+        </Text>
+      ) : null}
+    </View>
+  );
+});
+
+const RightArea = memo(function RightArea({ right }: { right?: React.ReactNode }) {
+  // gap 호환 위해 children 사이 간격 수동 처리 권장하지만,
+  // 여기서는 최신 RN 전제하에 유지. 필요한 경우 마진으로 바꿔.
+  return <View style={styles.right}>{right}</View>;
+});
+
+// ====== Header
 const BaseHeader = forwardRef<View, HeaderProps>((props, ref) => {
   const {
     logoSource,
@@ -86,67 +143,70 @@ const BaseHeader = forwardRef<View, HeaderProps>((props, ref) => {
   } = props;
 
   const insets = useSafeAreaInsets();
-  const topPad = safeTop ? Math.max(tokens.spacing.md, (insets.top || 0) + tokens.spacing.xs) : tokens.spacing.lg;
+
+  // 재계산 줄이기
+  const topPad = useMemo(() => {
+    return safeTop ? Math.max(tokens.spacing.md, (insets.top || 0) + tokens.spacing.xs) : tokens.spacing.lg;
+  }, [insets.top, safeTop]);
+
+  const containerStyle = useMemo(
+    () => [
+      styles.container,
+      elevated && styles.elevated,
+      showDivider && styles.divider,
+      { paddingTop: topPad },
+      style,
+    ],
+    [elevated, showDivider, topPad, style]
+  );
+
+  const rowStyle = useMemo(() => [styles.row, contentStyle], [contentStyle]);
 
   return (
-    <View
-      ref={ref}
-      style={[
-        styles.container,
-        elevated && styles.elevated,
-        showDivider && styles.divider,
-        { paddingTop: topPad },
-        style,
-      ]}
-      {...rest}
-    >
-      {/* Android 상태바 아이콘 컬러를 위해 배경 지정 */}
+    <View ref={ref} style={containerStyle} {...rest}>
+      {/* 상태바 설정(안드로이드 배경 포함) */}
       <StatusBar barStyle="dark-content" backgroundColor={tokens.colors.bg} />
 
-      <View style={[styles.row, contentStyle]}>
-        {/* Left: Logo */}
-        {logoSource ? (
-          <Pressable
-            onPress={onLogoPress}
-            android_ripple={{ color: tokens.colors.ripple, borderless: true }}
-            hitSlop={10}
-            style={styles.logoBtn}
-            accessibilityRole="button"
-            accessibilityLabel="앱 로고"
-          >
-            <Image source={logoSource} style={styles.logo} resizeMode="contain" />
-          </Pressable>
-        ) : (
-          <View style={styles.logoPlaceholder} />
-        )}
-
-        {/* Center: Title */}
-        <View style={[styles.center, centerTitle && styles.centerTitle]}>
-          {title ? (
-            <Text style={[styles.title, titleStyle]} numberOfLines={1}>
-              {title}
-            </Text>
-          ) : null}
-          {subtitle ? (
-            <Text style={[styles.subtitle, subtitleStyle]} numberOfLines={1}>
-              {subtitle}
-            </Text>
-          ) : null}
-        </View>
-
-        {/* Right: Actions */}
-        <View style={styles.right}>
-          {right}
-        </View>
+      <View style={rowStyle}>
+        <LogoArea logoSource={logoSource} onLogoPress={onLogoPress} />
+        <TitleArea
+          title={title}
+          subtitle={subtitle}
+          centerTitle={centerTitle}
+          titleStyle={titleStyle}
+          subtitleStyle={subtitleStyle}
+        />
+        <RightArea right={right} />
       </View>
     </View>
   );
 });
 
 BaseHeader.displayName = 'Header';
-export const Header = memo(BaseHeader);
 
-export function HeaderAction({
+// props 얕은 비교(스타일/노드는 ref 동일성만 체크)
+function areEqual(prev: HeaderProps, next: HeaderProps) {
+  return (
+    prev.logoSource === next.logoSource &&
+    prev.onLogoPress === next.onLogoPress &&
+    prev.title === next.title &&
+    prev.subtitle === next.subtitle &&
+    prev.right === next.right &&
+    prev.style === next.style &&
+    prev.contentStyle === next.contentStyle &&
+    prev.titleStyle === next.titleStyle &&
+    prev.subtitleStyle === next.subtitleStyle &&
+    prev.centerTitle === next.centerTitle &&
+    prev.showDivider === next.showDivider &&
+    prev.elevated === next.elevated &&
+    prev.safeTop === next.safeTop
+  );
+}
+
+export const Header = memo(BaseHeader, areEqual);
+
+// ===== HeaderAction (memo + 고정 객체 사용)
+const _HeaderAction = ({
   children,
   onPress,
   accessibilityLabel,
@@ -154,20 +214,21 @@ export function HeaderAction({
   children: React.ReactNode;
   onPress?: () => void;
   accessibilityLabel?: string;
-}) {
+}) => {
   return (
     <Pressable
       onPress={onPress}
       style={styles.actionBtn}
-      hitSlop={10}
-      android_ripple={{ color: tokens.colors.ripple, borderless: true }}
+      hitSlop={HIT_SLOP_10}
+      android_ripple={RIPPLE}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
     >
       <View style={styles.actionInner}>{children}</View>
     </Pressable>
   );
-}
+};
+export const HeaderAction = memo(_HeaderAction);
 
 const styles = StyleSheet.create({
   container: {
@@ -193,6 +254,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: tokens.spacing.md,
+    overflow: 'hidden',
   },
   logoPlaceholder: {
     width: tokens.sizes.action,
@@ -224,7 +286,7 @@ const styles = StyleSheet.create({
     marginLeft: tokens.spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: tokens.spacing.sm as unknown as number, // RN 구버전 대응
+    gap: tokens.spacing.sm as unknown as number,
   },
   actionBtn: {
     width: tokens.sizes.action,

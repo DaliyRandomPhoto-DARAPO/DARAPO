@@ -125,7 +125,7 @@ const HomeScreen = memo(() => {
   }, [loadData]);
 
   return (
-    <SafeAreaView style={[styles.container, containerInsetsStyle]} edges={['top']}>
+    <SafeAreaView style={[styles.container, containerInsetsStyle]} edges={['bottom']}>
       <Header title="오늘의 미션" />
 
       <ScrollView
@@ -362,13 +362,13 @@ const styles = StyleSheet.create({
   missionRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   missionDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: baseColors.primary, marginRight: 6 },
   missionLabel: { fontSize: 12, color: baseColors.primary, fontWeight: '700' },
-  missionText: { fontSize: 16, color: baseColors.text, fontWeight: '700' },
+  missionText: { fontSize: 14, color: baseColors.text, fontWeight: '700' },
 
   recentMoodBox: { backgroundColor: '#FEF2F2', marginTop: spacing.xs, borderRadius: 16, padding: spacing.sm, borderWidth: StyleSheet.hairlineWidth, borderColor: '#FCE2E2' },
   moodRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   moodDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: baseColors.primaryAlt, marginRight: 6 },
   moodLabel: { fontSize: 12, color: baseColors.primaryAlt, fontWeight: '700' },
-  moodText: { fontSize: 14, color: baseColors.text },
+  moodText: { fontSize: 13, color: baseColors.text },
 
   // skeleton
   skeleton: {
