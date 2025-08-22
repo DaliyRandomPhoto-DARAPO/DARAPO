@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosRequestConfig, AxiosError } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // SecureStore는 선택적 사용(설치 안 된 환경 대비)
 // 동적 require로 타입 에러 및 번들 이슈 회피
@@ -66,7 +66,7 @@ apiClient.interceptors.request.use(
     }
     return config;
   },
-  (error: any) => { throw error; }
+  (error: unknown) => { throw error; }
 );
 
 // 응답 인터셉터 - 성공 래핑 언래핑 및 토큰 만료 처리
@@ -81,8 +81,8 @@ apiClient.interceptors.response.use(
     }
     return response;
   },
-  async (error: any) => {
-    const originalRequest = error.config || {};
+  async (error: AxiosError | any) => {
+    const originalRequest = (error as any)?.config || {};
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
@@ -110,13 +110,15 @@ apiClient.interceptors.response.use(
     }
     // 에러 메시지 포맷 표준화
     try {
-      const data = error.response?.data;
+      const data = (error as any)?.response?.data;
       if (data && typeof data === 'object') {
         // 전역 HttpExceptionFilter 포맷: { success:false, statusCode, error }
-        const message = data.error?.message || data.message || error.message;
+        const message = data.error?.message || data.message || (error as any).message;
         throw { ...error, message };
       }
-    } catch {}
+    } catch (err) {
+      // ignore formatting errors
+    }
     throw error;
   }
 );
