@@ -14,6 +14,7 @@ permissions:
   contents: read
 
 env:
+  REPO_DIR: /home/ec2-user/DARAPO
   SERVICE_DIR: /home/ec2-user/DARAPO/server
   HEALTH_LOCAL: http://localhost:3000/api/health/liveness
   HEALTH_EXTERNAL: https://api.darapo.site/api/health/liveness
@@ -27,26 +28,45 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Ensure server dir on EC2
+      - name: Ensure base dir on EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
           script: |
-            mkdir -p "${{ env.SERVICE_DIR }}"
+            mkdir -p "${{ env.REPO_DIR }}"
 
-      - name: Sync server/ to EC2
+      # server 폴더 자체를 상위에 놓는다 → 결과: /DARAPO/server/...
+      - name: Sync server folder (no nesting)
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
           source: "server"
-          target: ${{ env.SERVICE_DIR }}
+          target: ${{ env.REPO_DIR }}
           overwrite: true
 
-      - name: SSH Build & Reload (use preinstalled node/pm2)
+      # 혹시 이전에 생긴 server/server 중첩 있으면 즉시 정리
+      - name: Flatten accidental nesting
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          envs: SERVICE_DIR
+          script: |
+            set -Eeuo pipefail
+            if [ -d "$SERVICE_DIR/server" ]; then
+              echo "⚠️ nested server/server 발견 → 정리"
+              shopt -s dotglob
+              mv "$SERVICE_DIR/server/"* "$SERVICE_DIR/" || true
+              rmdir "$SERVICE_DIR/server" || true
+            fi
+            echo "📂 내용 확인"; ls -la "$SERVICE_DIR"
+
+      # 서버에 node/npm/pm2는 이미 깔려있다는 전제
+      - name: Build & PM2 reload (preinstalled node/pm2)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -70,21 +90,18 @@ jobs:
             echo "⚒️ build"
             npm run build
 
-            echo "🚀 pm2 reload"
+            echo "🚀 pm2 start/reload"
+            command -v pm2 >/dev/null 2>&1 || { echo "❌ pm2 없음"; exit 1; }
             if pm2 describe "$PM2_APP_NAME" >/dev/null 2>&1; then
               PORT=3000 NODE_ENV=production pm2 reload "$PM2_APP_NAME" --update-env --time
             else
               PORT=3000 NODE_ENV=production pm2 start dist/main.js --name "$PM2_APP_NAME" --time
             fi
-
             pm2 save
             pm2 list
 
-            echo "⏳ 안정화 대기..."
-            sleep 5
-
             echo "🔍 로컬 헬스체크"
-            curl -fsS "$HEALTH_LOCAL" || exit 1
+            curl -fsS --max-time 3 "$HEALTH_LOCAL" >/dev/null
 
       - name: External Health Check
         shell: bash
@@ -92,4 +109,4 @@ jobs:
           HEALTH_EXTERNAL: ${{ env.HEALTH_EXTERNAL }}
         run: |
           echo "🔍 외부 헬스체크"
-          curl -fsS "$HEALTH_EXTERNAL"
+          curl -fsS --max-time 5 "$HEALTH_EXTERNAL" >/dev/null
