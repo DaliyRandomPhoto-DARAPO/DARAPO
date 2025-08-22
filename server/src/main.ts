@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { join } from 'path';
 import * as express from 'express';
@@ -24,6 +25,9 @@ async function bootstrap() {
     origin: allowedOrigins,
     credentials: true,
   });
+
+  // 기본 보안 헤더 적용
+  app.use(helmet());
 
   // 전역 Validation Pipe/Filter/Interceptor 설정
   app.useGlobalPipes(
@@ -55,7 +59,6 @@ async function bootstrap() {
 
   // 정적 파일 서빙: 업로드 이미지 제공
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
-
 
   // 모든 네트워크 인터페이스에서 수신하도록 설정 (안드로이드 접근 허용)
   const port = process.env.PORT || 3000;

@@ -1,4 +1,10 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+  Logger,
+} from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 
@@ -12,8 +18,7 @@ export class RequestTimingInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap(() => {
         const ms = Date.now() - start;
-        // use console.log so it appears in standard output
-        console.log(`[TIMER] ${method} ${url} - ${ms}ms`);
+        Logger.log(`[TIMER] ${method} ${url} - ${ms}ms`, 'RequestTiming');
       }),
     );
   }

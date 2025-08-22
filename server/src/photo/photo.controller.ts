@@ -12,6 +12,7 @@ import {
   BadRequestException,
   UseGuards,
   Request,
+  Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -27,7 +28,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ParseObjectIdPipe } from '../common/pipes/parse-objectid.pipe';
 import { UploadPhotoDto } from './dto/upload-photo.dto';
 import { S3Service } from '../common/s3.service';
-import sharp from 'sharp';
+import { normalizeImage } from '../common/utils/image.util';
+import { resolveMaybeSignedUrl } from '../common/utils/s3.util';
 
 @ApiTags('photos')
 @Controller('photo')
@@ -44,9 +46,12 @@ export class PhotoController {
       try {
         imageUrl = await this.s3.getSignedUrl(base.objectKey);
       } catch (e) {
-        // 서명 실패 시 로그만 남기고 계속
-
-        console.warn('sign image failed', base.objectKey, e);
+        // 서버명 실패 시 로그만 남기고 계속
+        Logger.warn(
+          `sign image failed ${base.objectKey}`,
+          e?.stack || e,
+          'PhotoController',
+        );
       }
     }
     // sign user avatar if it's an S3 key (not http and not starting with /)
@@ -63,7 +68,11 @@ export class PhotoController {
             profileImage: await this.s3.getSignedUrl(pi),
           };
         } catch (e) {
-          console.warn('sign avatar failed', pi, e);
+          Logger.warn(
+            `sign avatar failed ${pi}`,
+            e?.stack || e,
+            'PhotoController',
+          );
         }
       }
     }
@@ -86,13 +95,11 @@ export class PhotoController {
       throw new BadRequestException('파일이 업로드되지 않았습니다.');
     }
 
-    // EXIF 제거 및 회전 보정
-    const processed = await sharp(file.buffer)
-      .rotate()
-      .toFormat('jpeg', { mozjpeg: true })
-      .toBuffer();
-
-    const ext = (file.originalname.split('.').pop() || 'jpg').toLowerCase();
+    // 이미지 정규화(회전, 포맷) 및 메타 추출
+    const norm = await normalizeImage(file.buffer);
+    const processed = norm.buffer;
+    const ext =
+      norm.ext || (file.originalname.split('.').pop() || 'jpg').toLowerCase();
     const key = this.s3.buildObjectKey({
       userId: req.user.sub,
       originalName: file.originalname,
@@ -104,17 +111,8 @@ export class PhotoController {
       contentType: file.mimetype,
     });
 
-    // 이미지 크기 추출(옵션)
-    let width: number | undefined;
-    let height: number | undefined;
-    try {
-      const meta = await sharp(processed).metadata();
-      width = meta.width;
-      height = meta.height;
-    } catch (e) {
-      // 이미지 메타데이터 추출 실패: 선택 정보이므로 무시
-      console.warn('failed to read image metadata', e);
-    }
+    const width = norm.width;
+    const height = norm.height;
 
     const { photo, replaced } = await this.photoService.upsertUserMissionPhoto({
       ...photoData,
@@ -126,7 +124,7 @@ export class PhotoController {
       height,
     });
 
-    const signedUrl = await this.s3.getSignedUrl(key);
+    const signedUrl = await resolveMaybeSignedUrl(this.s3, key);
     return {
       photo: {
         ...((photo as any).toJSON ? (photo as any).toJSON() : photo),

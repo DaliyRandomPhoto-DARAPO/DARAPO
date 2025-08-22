@@ -18,8 +18,10 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
       isGlobal: true,
       validate: validateEnv,
     }),
-    // v6 스타일: 배열 형태, ttl은 ms 단위
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    // ThrottlerModule expects an object { ttl: seconds, limit: number }
+    // (previous array with ms-style value would misconfigure the module)
+    // Use `any` here to avoid strict type mismatch with installed @nestjs/throttler types
+    ThrottlerModule.forRoot({ ttl: 60, limit: 120 } as any),
     MongooseModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (cs: ConfigService) => ({

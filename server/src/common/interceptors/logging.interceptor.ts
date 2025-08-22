@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   Injectable,
   NestInterceptor,
+  Logger,
 } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
 
@@ -17,7 +18,7 @@ export class LoggingInterceptor implements NestInterceptor {
       tap(() => {
         const ms = Date.now() - now;
 
-        console.log(`[${method}] ${url} - ${ms}ms`);
+        Logger.log(`[${method}] ${url} - ${ms}ms`, 'Http');
       }),
     );
   }

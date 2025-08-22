@@ -1,61 +1,116 @@
-name: Deploy Backend to EC2
+name: Deploy Server (EC2)
 
 on:
   push:
     branches: [ main ]
-    paths: [ 'backend/**' ]
+    paths: [ 'server/**' ]
   workflow_dispatch:
+
+concurrency:
+  group: deploy-server
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  SERVICE_DIR: /home/ec2-user/DARAPO/server
+  HEALTH_LOCAL: http://localhost:3000/api
+  HEALTH_EXTERNAL: https://api.darapo.site/api
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 15
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Deploy to EC2
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_PRIVATE_KEY }}
-        script: |
-          cd ~/DARAPO/backend
-          git pull origin main
-          npm ci
-          npm run build
-          pm2 reload ecosystem.config.js
-          
-          # 서비스 안정화 대기
-          echo "⏳ 서비스 안정화 대기 중..."
-          sleep 15
-          
-          # 로컬 헬스체크
-          for i in {1..5}; do
-            if curl -f http://localhost:3000/api > /dev/null 2>&1; then
-              echo "✅ 로컬 헬스체크 성공 ($i/5)"
-              break
+      - uses: actions/checkout@v4
+
+      # (안전장치) 대상 디렉토리 보장
+      - name: Ensure target dir on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          script: |
+            mkdir -p "${{ env.SERVICE_DIR }}"
+
+      # server/ 폴더만 복사
+      - name: Sync server/ to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          source: "server/*"
+          target: "${{ env.SERVICE_DIR }}"
+          rm: true  # 삭제된 파일도 반영
+
+      # 빌드 + PM2 재시작 (+에러시 로그 덤프)
+      - name: SSH Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          script_stop: true
+          envs: SERVICE_DIR,HEALTH_LOCAL
+          script: |
+            set -Eeuo pipefail
+            trap 'echo "💥 배포 실패! 최근 PM2 로그👇"; pm2 logs --lines 120 || true' ERR
+
+            cd "$SERVICE_DIR"
+
+            echo "🔎 Node 버전:"
+            node -v
+
+            echo "📦 npm install..."
+            if [ -f package-lock.json ]; then
+              npm ci --omit=dev
             else
-              echo "⚠️ 로컬 헬스체크 실패, 재시도 ($i/5)..."
-              sleep 3
+              npm i --omit=dev
             fi
-          done
-          
-          pm2 status
-          echo "✅ 백엔드 배포 완료!"
-          
-    - name: External Health Check
-      run: |
-        echo "🔍 외부 헬스체크 시작..."
-        for i in {1..10}; do
-          if curl -f https://api.darapo.site/api > /dev/null 2>&1; then
-            echo "✅ 외부 헬스체크 성공! ($i/10)"
-            exit 0
-          else
-            echo "⚠️ 외부 헬스체크 실패, 재시도 ($i/10)..."
-            sleep 5
-          fi
-        done
-        echo "❌ 외부 헬스체크 최종 실패"
-        exit 1
+
+            echo "⚒️ build..."
+            npm run build
+
+            echo "🚀 pm2 reload..."
+            command -v pm2 >/dev/null || npm i -g pm2
+            pm2 startOrReload ecosystem.config.js --update-env
+            pm2 save
+
+            echo "⏳ 안정화 대기..."
+            sleep 10
+
+            echo "🔍 로컬 헬스체크"
+            for i in $(seq 1 8); do
+              if curl -fsS --max-time 2 "$HEALTH_LOCAL" >/dev/null; then
+                echo "✅ 로컬 OK ($i/8)"
+                exit 0
+              else
+                echo "⚠️ 실패, 재시도 ($i/8)"
+                sleep 3
+              fi
+            done
+            echo "❌ 로컬 헬스체크 실패"
+            exit 1
+
+      # 외부 헬스체크
+      - name: External Health Check
+        shell: bash
+        env:
+          HEALTH_EXTERNAL: ${{ env.HEALTH_EXTERNAL }}
+        run: |
+          echo "🔍 외부 헬스체크 시작..."
+          for i in $(seq 1 12); do
+            if curl -fsS --max-time 3 "$HEALTH_EXTERNAL" >/dev/null; then
+              echo "✅ 외부 OK ($i/12)"
+              exit 0
+            else
+              echo "⚠️ 실패, 재시도 ($i/12)"
+              sleep 5
+            fi
+          end
+          echo "❌ 외부 헬스체크 최종 실패"
+          exit 1

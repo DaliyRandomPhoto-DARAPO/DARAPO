@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
@@ -64,7 +65,7 @@ export class AuthService {
         profileImage: userInfo.kakao_account?.profile?.profile_image_url,
       };
     } catch (error) {
-      console.error('OAuth 콜백 처리 실패:', error);
+      Logger.error('OAuth 콜백 처리 실패:', error?.stack || error);
       throw new UnauthorizedException('카카오 로그인 처리 실패');
     }
   }
@@ -84,7 +85,10 @@ export class AuthService {
       });
       return response.data;
     } catch (error) {
-      console.error('액세스 토큰 교환 실패:', error.response?.data || error);
+      Logger.error(
+        '액세스 토큰 교환 실패:',
+        error?.response?.data || error?.stack || error,
+      );
       throw new UnauthorizedException('카카오 토큰 교환 실패');
     }
   }

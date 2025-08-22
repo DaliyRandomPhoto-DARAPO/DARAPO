@@ -10,6 +10,7 @@ import {
   UploadedFile,
   Delete,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -24,6 +25,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig } from '../config/multer.config';
 import { S3Service } from '../common/s3.service';
+import { resolveMaybeSignedUrl } from '../common/utils/s3.util';
 import { PhotoService } from '../photo/photo.service';
 import sharp from 'sharp';
 
@@ -42,15 +44,10 @@ export class UserController {
   @ApiOperation({ summary: '내 프로필 조회' })
   async getMe(@Request() req: any) {
     const user: any = await this.userService.findById(req.user.sub);
-    let profileUrl: string | null = user?.profileImage ?? null;
-    if (
-      profileUrl &&
-      !/^https?:\/\//.test(profileUrl) &&
-      !profileUrl.startsWith('/')
-    ) {
-      // S3 object key로 판단 → 프리사인드 URL 발급
-      profileUrl = await this.s3.getSignedUrl(profileUrl);
-    }
+    const profileUrl = await resolveMaybeSignedUrl(
+      this.s3,
+      user?.profileImage ?? null,
+    );
     return {
       id: user?._id?.toString(),
       kakaoId: user?.kakaoId,
@@ -70,14 +67,10 @@ export class UserController {
       req.user.sub,
       body as any,
     );
-    let profileUrl: string | null = updated?.profileImage ?? null;
-    if (
-      profileUrl &&
-      !/^https?:\/\//.test(profileUrl) &&
-      !profileUrl.startsWith('/')
-    ) {
-      profileUrl = await this.s3.getSignedUrl(profileUrl);
-    }
+    const profileUrl = await resolveMaybeSignedUrl(
+      this.s3,
+      updated?.profileImage ?? null,
+    );
     return {
       id: updated?._id?.toString(),
       kakaoId: updated?.kakaoId,
@@ -120,7 +113,7 @@ export class UserController {
     const updated: any = await this.userService.updateProfile(req.user.sub, {
       profileImage: key,
     } as any);
-    const signed = await this.s3.getSignedUrl(key);
+    const signed = await resolveMaybeSignedUrl(this.s3, key);
     return {
       imageUrl: signed,
       user: {
@@ -172,17 +165,29 @@ export class UserController {
       if (p && p.objectKey) {
         s3DeletePromises.push(
           this.s3.deleteObject(p.objectKey).catch((err) => {
-            // S3 삭제 실패는 무시하되 로깅
-            console.warn('s3 delete failed for', p.objectKey, err);
+            // S3 삭제 실패는 무시하도록 로그
+            Logger.warn(
+              `s3 delete failed for ${String(p.objectKey)}`,
+              err?.stack || err,
+              'UserController',
+            );
           }),
         );
       }
       if (p && p._id) {
-        // p._id may be a mongoose ObjectId - allow base-to-string conversion here
-        // eslint-disable-next-line @typescript-eslint/no-base-to-string
+        // p._id may be a mongoose ObjectId - explicitly convert to string first
+        const idForLog =
+          (p as any)._id && typeof (p as any)._id.toString === 'function'
+            ? (p as any)._id.toString()
+            : String((p as any)._id);
+
         photoDeletePromises.push(
-          this.photoService.deletePhoto(String(p._id)).catch((err) => {
-            console.warn('photo db delete failed for', p._id, err);
+          this.photoService.deletePhoto(String((p as any)._id)).catch((err) => {
+            Logger.warn(
+              `photo db delete failed for ${idForLog}`,
+              err?.stack || err,
+              'UserController',
+            );
           }),
         );
       }

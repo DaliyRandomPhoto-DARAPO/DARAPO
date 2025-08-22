@@ -9,6 +9,7 @@ import {
   Request,
   Query,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -44,7 +45,11 @@ export class AuthController {
         }
       } catch (e) {
         // invalid returnUrl — ignore
-        console.warn('invalid returnUrl in getKakaoAuthUrl', e?.message || e);
+        Logger.warn(
+          'invalid returnUrl in getKakaoAuthUrl',
+          e?.message || e,
+          'AuthController',
+        );
       }
     }
     return { authUrl };
@@ -92,7 +97,7 @@ export class AuthController {
 
       return res.redirect(successUrl);
     } catch (error) {
-      console.error('OAuth 처리 실패:', error.message);
+      Logger.error('OAuth 처리 실패:', error?.stack || error, 'AuthController');
       const base = 'darapo://auth/callback';
       const errorUrl = `${base}${base.includes('?') ? '&' : '?'}error=${encodeURIComponent('로그인 처리 중 오류가 발생했습니다.')}`;
       return res.redirect(errorUrl);
@@ -144,7 +149,7 @@ export class AuthController {
       await this.authService.logout(req.user.sub);
       return { message: '로그아웃되었습니다.' };
     } catch (err) {
-      console.error('로그아웃 실패:', err?.message || err);
+      Logger.error('로그아웃 실패:', err?.stack || err, 'AuthController');
       throw err;
     }
   }
@@ -178,7 +183,11 @@ export class AuthController {
         email: user.email,
       };
     } catch (error) {
-      console.error('사용자 정보 조회 실패:', error.message);
+      Logger.error(
+        '사용자 정보 조회 실패:',
+        error?.stack || error,
+        'AuthController',
+      );
       throw error;
     }
   }

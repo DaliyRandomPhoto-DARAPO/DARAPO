@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import Header from '../components/Header'
 import Hero from '../components/Hero'
+import Features from '../components/Features'
 
 export default function Home() {
   const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://api.darapo.site'
@@ -16,7 +17,8 @@ export default function Home() {
 
       <Header />
       <main style={{ maxWidth: 960, margin: '0 auto', padding: 24 }}>
-        <Hero apiBase={apiBase} />
+  <Hero apiBase={apiBase} />
+  <Features />
 
         <section style={{ marginTop: 40 }}>
           <h2>How it works</h2>
