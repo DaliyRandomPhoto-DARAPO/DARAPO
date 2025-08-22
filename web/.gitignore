@@ -1,0 +1,7 @@
+#next.js gitignore 
+/.next
+/out
+/build
+
+
+
