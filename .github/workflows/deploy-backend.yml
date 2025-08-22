@@ -1,4 +1,4 @@
-name: Deploy Server (EC2)
+name: Deploy Backend to EC2
 
 on:
   push:
@@ -7,18 +7,11 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-server
+  group: deploy-backend
   cancel-in-progress: true
 
 permissions:
   contents: read
-
-env:
-  REPO_DIR: /home/ec2-user/DARAPO
-  SERVICE_DIR: /home/ec2-user/DARAPO/server
-  HEALTH_LOCAL: http://localhost:3000/api/health/liveness
-  HEALTH_EXTERNAL: https://api.darapo.site/api/health/liveness
-  PM2_APP_NAME: server
 
 jobs:
   deploy:
@@ -26,87 +19,72 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Ensure base dir on EC2
+      - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
           script: |
-            mkdir -p "${{ env.REPO_DIR }}"
-
-      - name: Sync server folder (no nesting)
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_PRIVATE_KEY }}
-          source: "server"
-          target: ${{ env.REPO_DIR }}
-          overwrite: true
-
-      # 혹시 이전에 생긴 server/server 중첩 있으면 즉시 정리
-      - name: Flatten accidental nesting
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          key: ${{ secrets.EC2_PRIVATE_KEY }}
-          envs: SERVICE_DIR
-          script: |
-            set -Eeuo pipefail
-            if [ -d "$SERVICE_DIR/server" ]; then
-              echo "⚠️ nested server/server 발견 → 정리"
-              shopt -s dotglob
-              mv "$SERVICE_DIR/server/"* "$SERVICE_DIR/" || true
-              rmdir "$SERVICE_DIR/server" || true
-            fi
-            echo "📂 내용 확인"; ls -la "$SERVICE_DIR"
-
-      # 서버에 node/npm/pm2는 이미 깔려있다는 전제
-      - name: Build & PM2 reload (preinstalled node/pm2)
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_PRIVATE_KEY }}
-          script_stop: true
-          envs: SERVICE_DIR,PM2_APP_NAME,HEALTH_LOCAL
-          script: |
-            set -Eeuo pipefail
-            trap 'echo "💥 실패! PM2 최근 로그👇"; pm2 logs "$PM2_APP_NAME" --lines 120 || true' ERR
-
-            cd "$SERVICE_DIR"
-
-            echo "📦 deps"
-            if [ -f package-lock.json ]; then
-              npm ci || npm i
-            else
-              npm i
-
-            fi
-
-            echo "⚒️ build"
+            set -e
+            
+            echo "📂 서버 디렉터리로 이동..."
+            cd ~/DARAPO/server
+            
+            echo "🔄 Git 상태 정리..."
+            git clean -fd
+            git reset --hard HEAD
+            
+            echo "📥 최신 코드 가져오기..."
+            git pull origin main
+            
+            echo "📦 의존성 설치..."
+            npm ci
+            
+            echo "⚒️ 프로젝트 빌드..."
             npm run build
-
-            echo "🚀 pm2 start/reload"
-            command -v pm2 >/dev/null 2>&1 || { echo "❌ pm2 없음"; exit 1; }
-            if pm2 describe "$PM2_APP_NAME" >/dev/null 2>&1; then
-              PORT=3000 NODE_ENV=production pm2 reload "$PM2_APP_NAME" --update-env --time
-            else
-              PORT=3000 NODE_ENV=production pm2 start dist/main.js --name "$PM2_APP_NAME" --time
-            fi
-            pm2 save
-            pm2 list
-
-            echo "🔍 로컬 헬스체크"
-            curl -fsS --max-time 3 "$HEALTH_LOCAL" >/dev/null
+            
+            echo "🚀 PM2로 서버 재시작..."
+            pm2 reload ecosystem.config.js
+            
+            echo "⏳ 서비스 안정화 대기..."
+            sleep 20
+            
+            echo "🔍 로컬 헬스체크..."
+            for i in {1..8}; do
+              if curl -f http://localhost:3000/api/health > /dev/null 2>&1; then
+                echo "✅ 헬스체크 성공! ($i/8)"
+                break
+              elif curl -f http://localhost:3000/ > /dev/null 2>&1; then
+                echo "✅ 서버 응답 확인! ($i/8)"
+                break
+              else
+                echo "⚠️ 헬스체크 실패, 재시도... ($i/8)"
+                sleep 5
+              fi
+            done
+            
+            echo "📊 PM2 상태 확인:"
+            pm2 status
+            echo "✅ 서버 배포 완료!"
 
       - name: External Health Check
-        shell: bash
-        env:
-          HEALTH_EXTERNAL: ${{ env.HEALTH_EXTERNAL }}
         run: |
-          echo "🔍 외부 헬스체크"
-          curl -fsS --max-time 5 "$HEALTH_EXTERNAL" >/dev/null
+          echo "🌐 외부 헬스체크..."
+          for i in {1..12}; do
+            if curl -f https://api.darapo.site/api/health > /dev/null 2>&1; then
+              echo "✅ 외부 헬스체크 성공! ($i/12)"
+              exit 0
+            elif curl -f https://api.darapo.site/ > /dev/null 2>&1; then
+              echo "✅ 외부 서버 응답 확인! ($i/12)"
+              exit 0
+            else
+              echo "⚠️ 외부 헬스체크 실패, 재시도... ($i/12)"
+              sleep 8
+            fi
+          done
+          echo "❌ 외부 헬스체크 최종 실패"
+          exit 1
