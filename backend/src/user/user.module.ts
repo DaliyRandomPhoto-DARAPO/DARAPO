@@ -4,10 +4,12 @@ import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import { User, UserSchema } from './schemas/user.schema';
 import { S3Service } from '../common/s3.service';
+import { PhotoModule } from '../photo/photo.module';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+  MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+  PhotoModule,
   ],
   controllers: [UserController],
   providers: [UserService, S3Service],

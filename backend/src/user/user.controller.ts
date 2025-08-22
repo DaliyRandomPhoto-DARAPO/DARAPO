@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Post, Body, UseGuards, Request, UseInterceptors, UploadedFile, Delete } from '@nestjs/common';
+import { Controller, Get, Put, Post, Body, UseGuards, Request, UseInterceptors, UploadedFile, Delete, ForbiddenException } from '@nestjs/common';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UserService } from './user.service';
@@ -6,6 +6,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig } from '../config/multer.config';
 import { S3Service } from '../common/s3.service';
+import { PhotoService } from '../photo/photo.service';
 import sharp from 'sharp';
 
 @ApiTags('user')
@@ -14,6 +15,7 @@ export class UserController {
 	constructor(
 		private readonly userService: UserService,
 		private readonly s3: S3Service,
+		private readonly photoService: PhotoService,
 	) {}
 
 	@Get('me')
@@ -102,5 +104,38 @@ export class UserController {
 				email: (updated as any).email,
 			},
 		};
+	}
+
+	@Delete('me')
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth()
+	@ApiOperation({ summary: '내 계정 삭제' })
+	@ApiResponse({ status: 200, description: '계정 삭제 완료' })
+	async deleteMe(@Request() req: any) {
+		const userId: string = req.user.sub;
+		if (!userId) throw new ForbiddenException('invalid user');
+
+		// 사용자의 모든 사진 삭제 (S3 객체 포함)
+		const myPhotos: any[] = await this.photoService.findByUserId(userId);
+		for (const p of myPhotos) {
+			try {
+				if (p.objectKey) await this.s3.deleteObject(p.objectKey);
+			} catch {}
+			try {
+				await this.photoService.deletePhoto((p as any)._id?.toString());
+			} catch {}
+		}
+
+		// 사용자 프로필 이미지가 S3 key라면 함께 삭제(베스트 에포트)
+		try {
+			const me: any = await this.userService.findById(userId);
+			const pi: string | undefined = me?.profileImage;
+			if (pi && !/^https?:\/\//.test(pi) && !pi.startsWith('/')) {
+				await this.s3.deleteObject(pi);
+			}
+		} catch {}
+
+		await this.userService.deleteUser(userId);
+		return { message: '계정이 삭제되었습니다.' };
 	}
 }
