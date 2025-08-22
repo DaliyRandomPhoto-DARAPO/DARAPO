@@ -18,7 +18,12 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
       isGlobal: true,
       validate: validateEnv,
     }),
-    ThrottlerModule.forRoot({ ttl: 60, limit: 120 } as any),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // milliseconds
+        limit: 120,
+      },
+    ]),
     MongooseModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (cs: ConfigService) => ({
