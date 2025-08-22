@@ -14,89 +14,110 @@ permissions:
   contents: read
 
 env:
+  REPO_DIR: /home/ec2-user/DARAPO
   SERVICE_DIR: /home/ec2-user/DARAPO/server
-  HEALTH_LOCAL: http://localhost:3000/api
-  HEALTH_EXTERNAL: https://api.darapo.site/api
+  HEALTH_LOCAL: http://localhost:3000/api/health/liveness
+  HEALTH_EXTERNAL: https://api.darapo.site/api/health/liveness
+  PM2_APP_NAME: server
+  NODE_VERSION: 24  # LTS 맞출 거면 22로 바꿔
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
 
-      # (안전장치) 대상 디렉토리 보장
-      - name: Ensure target dir on EC2
+      - name: Ensure target dirs on EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
           script: |
-            mkdir -p "${{ env.SERVICE_DIR }}"
+            mkdir -p "${{ env.REPO_DIR }}" "${{ env.SERVICE_DIR }}"
 
-      # server/ 폴더만 복사
+      # server 내용만 덮기. 상위 폴더 안 지움.
       - name: Sync server/ to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
-          source: "server/*"
-          target: "${{ env.SERVICE_DIR }}"
-          rm: true  # 삭제된 파일도 반영
+          source: "server/**"
+          target: ${{ env.SERVICE_DIR }}
+          overwrite: true
 
-      # 빌드 + PM2 재시작 (+에러시 로그 덤프)
-      - name: SSH Deploy
+      - name: SSH Build & Reload (no heredoc)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
           script_stop: true
-          envs: SERVICE_DIR,HEALTH_LOCAL
+          envs: SERVICE_DIR,PM2_APP_NAME,NODE_VERSION,HEALTH_LOCAL
           script: |
             set -Eeuo pipefail
-            trap 'echo "💥 배포 실패! 최근 PM2 로그👇"; pm2 logs --lines 120 || true' ERR
+            dump_logs() { echo "💥 실패! PM2 최근 로그👇"; pm2 logs "$PM2_APP_NAME" --lines 120 || true; }
+            trap dump_logs ERR
 
-            cd "$SERVICE_DIR"
+            cd "$SERVICE_DIR" || { echo "❌ $SERVICE_DIR 없음"; exit 1; }
 
-            echo "🔎 Node 버전:"
-            node -v
-
-            echo "📦 npm install..."
-            if [ -f package-lock.json ]; then
-              npm ci --omit=dev
-            else
-              npm i --omit=dev
+            echo "🔧 toolchain"
+            if command -v yum >/dev/null 2>&1; then
+              sudo yum -y install gcc-c++ make python3 || true
+            elif command -v apt-get >/dev/null 2>&1; then
+              sudo apt-get update -y || true
+              sudo apt-get install -y build-essential python3 || true
             fi
 
-            echo "⚒️ build..."
+            echo "🔁 Node $NODE_VERSION (nvm)"
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] || (curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.9/install.sh | bash)
+            . "$NVM_DIR/nvm.sh"
+            nvm install "$NODE_VERSION"
+            nvm use "$NODE_VERSION"
+            node -v
+            npm -v
+
+            echo "📦 deps"
+            if [ -f package-lock.json ]; then
+              npm ci || npm i
+            else
+              npm i
+            fi
+
+            echo "⚒️ build"
             npm run build
 
-            echo "🚀 pm2 reload..."
+            echo "🚀 pm2 start/reload (ecosystem 파일없이)"
             command -v pm2 >/dev/null || npm i -g pm2
-            pm2 startOrReload ecosystem.config.js --update-env
+
+            if pm2 describe "$PM2_APP_NAME" >/dev/null 2>&1; then
+              # 이미 돌고 있으면 환경만 갱신하며 reload
+              PORT=3000 NODE_ENV=production pm2 reload "$PM2_APP_NAME" --update-env --time
+            else
+              # 최초 기동
+              PORT=3000 NODE_ENV=production pm2 start dist/main.js --name "$PM2_APP_NAME" --time
+            fi
+
             pm2 save
+            pm2 list
 
             echo "⏳ 안정화 대기..."
-            sleep 10
+            sleep 8
 
             echo "🔍 로컬 헬스체크"
             for i in $(seq 1 8); do
               if curl -fsS --max-time 2 "$HEALTH_LOCAL" >/dev/null; then
-                echo "✅ 로컬 OK ($i/8)"
-                exit 0
+                echo "✅ 로컬 OK ($i/8)"; exit 0
               else
-                echo "⚠️ 실패, 재시도 ($i/8)"
-                sleep 3
+                echo "⚠️ 실패, 재시도 ($i/8)"; sleep 3
               fi
             done
-            echo "❌ 로컬 헬스체크 실패"
-            exit 1
+            echo "❌ 로컬 헬스체크 실패"; exit 1
 
-      # 외부 헬스체크
       - name: External Health Check
         shell: bash
         env:
@@ -105,12 +126,9 @@ jobs:
           echo "🔍 외부 헬스체크 시작..."
           for i in $(seq 1 12); do
             if curl -fsS --max-time 3 "$HEALTH_EXTERNAL" >/dev/null; then
-              echo "✅ 외부 OK ($i/12)"
-              exit 0
+              echo "✅ 외부 OK ($i/12)"; exit 0
             else
-              echo "⚠️ 실패, 재시도 ($i/12)"
-              sleep 5
+              echo "⚠️ 실패, 재시도 ($i/12)"; sleep 5
             fi
-          end
-          echo "❌ 외부 헬스체크 최종 실패"
-          exit 1
+          done
+          echo "❌ 외부 헬스체크 최종 실패"; exit 1
