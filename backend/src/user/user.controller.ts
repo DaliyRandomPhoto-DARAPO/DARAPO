@@ -163,26 +163,34 @@ export class UserController {
     const userId: string = req.user.sub;
     if (!userId) throw new ForbiddenException('invalid user');
 
-    // 사용자의 모든 사진 삭제 (S3 객체 포함)
+    // 사용자의 모든 사진 삭제 (S3 객체 포함) - 병렬화하여 성능 개선
     const myPhotos = await this.photoService.findByUserId(userId);
+    const s3DeletePromises: Array<Promise<any>> = [];
+    const photoDeletePromises: Array<Promise<any>> = [];
+
     for (const p of myPhotos) {
       if (p && p.objectKey) {
-        try {
-          await this.s3.deleteObject(p.objectKey);
-        } catch {
-          // S3 삭제 실패 무시
-        }
+        s3DeletePromises.push(
+          this.s3.deleteObject(p.objectKey).catch((err) => {
+            // S3 삭제 실패는 무시하되 로깅
+            console.warn('s3 delete failed for', p.objectKey, err);
+          }),
+        );
       }
       if (p && p._id) {
-        try {
-          // p._id may be a mongoose ObjectId - allow base-to-string conversion here
-          // eslint-disable-next-line @typescript-eslint/no-base-to-string
-          await this.photoService.deletePhoto(String(p._id));
-        } catch {
-          // DB 삭제 실패 무시
-        }
+        // p._id may be a mongoose ObjectId - allow base-to-string conversion here
+        // eslint-disable-next-line @typescript-eslint/no-base-to-string
+        photoDeletePromises.push(
+          this.photoService.deletePhoto(String(p._id)).catch((err) => {
+            console.warn('photo db delete failed for', p._id, err);
+          }),
+        );
       }
     }
+
+    // 병렬로 실행하고 완료를 기다림
+    await Promise.allSettled(s3DeletePromises);
+    await Promise.allSettled(photoDeletePromises);
 
     // 사용자 프로필 이미지가 S3 key라면 함께 삭제(베스트 에포트)
     try {
