@@ -1,12 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../ui/Header';
 import { Image } from 'react-native';
 import { BASE_URL, photoAPI } from '../services/api';
 import Card from '../ui/Card';
-import Button from '../ui/Button';
 import { theme } from '../ui/theme';
 
 // Use shared theme for consistency
@@ -18,7 +17,7 @@ import { RootStackParamList } from '../types/navigation';
 import { useIsFocused } from '@react-navigation/native';
 
 const ProfileScreen = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [uploadedCount, setUploadedCount] = useState<number>(0);
   const [completedCount, setCompletedCount] = useState<number>(0);
   const [loadingStats, setLoadingStats] = useState<boolean>(false);
@@ -59,26 +58,7 @@ const ProfileScreen = () => {
     }
   }, [isFocused, loadStats]);
 
-  const handleLogout = async () => {
-    Alert.alert(
-      '로그아웃',
-      '정말 로그아웃하시겠습니까?',
-      [
-        { text: '취소', style: 'cancel' },
-        { 
-          text: '로그아웃', 
-          onPress: async () => {
-            try {
-              await logout();
-            } catch (error) {
-              console.error('로그아웃 에러:', error);
-              Alert.alert('로그아웃 오류', '로그아웃 중 오류가 발생했습니다.');
-            }
-          }
-        }
-      ]
-    );
-  };
+  // 로그아웃/탈퇴 로직은 설정 화면으로 이동
 
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
@@ -138,7 +118,7 @@ const ProfileScreen = () => {
           </TouchableOpacity>
         </Card>
 
-        <Button title="로그아웃" onPress={handleLogout} variant="danger" size="lg" fullWidth style={{ marginTop: spacing.md }} />
+  {/* 프로필 화면에서는 로그아웃/탈퇴 버튼을 노출하지 않습니다. 설정 화면에서만 사용 */}
       </ScrollView>
     </SafeAreaView>
   );
@@ -216,19 +196,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#bdc3c7',
   },
-  logoutButton: {
-    backgroundColor: colors.danger,
-    marginHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  logoutText: {
-    color: '#ffffff',
-    fontSize: typography.body,
-    fontWeight: 'bold',
-  },
+  // 로그아웃 버튼 스타일 제거됨
 });
 
 export default ProfileScreen;

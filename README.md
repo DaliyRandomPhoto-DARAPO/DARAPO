@@ -3,9 +3,6 @@
 # DARAPO — Daily Random Photo
 
 하루 한 번, 같은 미션, 다른 시선. 매일의 순간을 사진으로 기록하세요.
-
-[App Store](https://apps.apple.com/app/id0000000000) · [Google Play](https://play.google.com/store/apps/details?id=app.darapo) · [Privacy](https://darapo.app/privacy)
-
 </div>
 
 ---
@@ -31,16 +28,7 @@
 
 ## 스크린샷
 
-| 홈(오늘의 미션) | 카메라 촬영 | 업로드 | 피드 |
-| --- | --- | --- | --- |
-| ![Home](./docs/screenshots/home.png) | ![Camera](./docs/screenshots/camera.png) | ![Upload](./docs/screenshots/upload.png) | ![Feed](./docs/screenshots/feed.png) |
-
 ## 다운로드
-
-- Android: Google Play에서 “DARAPO” 검색 또는 아래 링크 이용
-  - https://play.google.com/store/apps/details?id=app.darapo
-
-
 
 
 ## 개인정보 및 약관
@@ -57,3 +45,7 @@
 ---
 
 © DARAPO. All rights reserved.
+
+
+
+2차 면접 11시30분 8월 25일 

@@ -1,4 +1,3 @@
-// src/navigation/TabNavigator.tsx
 import React, { useMemo, useCallback } from 'react';
 import { Platform, useWindowDimensions, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
