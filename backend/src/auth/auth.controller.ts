@@ -1,9 +1,25 @@
-import { Controller, Post, Body, BadRequestException, Get, Res, Delete, UseGuards, Request, Query, ForbiddenException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Body,
+  BadRequestException,
+  Get,
+  Res,
+  UseGuards,
+  Request,
+  Query,
+  ForbiddenException,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { NativeLoginDto, WebCallbackDto } from './dto/kakao.dto';
+// import { NativeLoginDto, WebCallbackDto } from './dto/kakao.dto'; // 미사용
 
 @ApiTags('auth')
 @Controller('auth')
@@ -26,7 +42,10 @@ export class AuthController {
           const sep = authUrl.includes('?') ? '&' : '?';
           authUrl = `${authUrl}${sep}state=${encodeURIComponent(returnUrl)}`;
         }
-      } catch {}
+      } catch (e) {
+        // invalid returnUrl — ignore
+        console.warn('invalid returnUrl in getKakaoAuthUrl', e?.message || e);
+      }
     }
     return { authUrl };
   }
@@ -34,7 +53,10 @@ export class AuthController {
   @Get('kakao/callback')
   @ApiOperation({ summary: '카카오 OAuth 완전한 콜백 처리 (브라우저용)' })
   @ApiResponse({ status: 302, description: '앱으로 리다이렉트' })
-  async kakaoWebCallback(@Query() query: { code?: string; error?: string; state?: string }, @Res() res: Response) {
+  async kakaoWebCallback(
+    @Query() query: { code?: string; error?: string; state?: string },
+    @Res() res: Response,
+  ) {
     try {
       // state로 전달된 returnUrl 사용(Expo Go 등)
       const getRedirectBase = () => {
@@ -60,13 +82,15 @@ export class AuthController {
         return res.redirect(errorUrl);
       }
 
-      const kakaoUserInfo = await this.authService.handleKakaoCallback(query.code);
-      const authResult = await this.authService.loginOrCreateUser(kakaoUserInfo);
-      
+      const kakaoUserInfo = await this.authService.handleKakaoCallback(
+        query.code,
+      );
+      const authResult =
+        await this.authService.loginOrCreateUser(kakaoUserInfo);
+
       const successUrl = `${base}${base.includes('?') ? '&' : '?'}success=true&token=${encodeURIComponent(authResult.accessToken)}&refresh=${encodeURIComponent(authResult.refreshToken)}&user=${encodeURIComponent(JSON.stringify(authResult.user))}`;
-      
+
       return res.redirect(successUrl);
-      
     } catch (error) {
       console.error('OAuth 처리 실패:', error.message);
       const base = 'darapo://auth/callback';
@@ -80,8 +104,9 @@ export class AuthController {
   @ApiResponse({ status: 200, description: '로그인 성공' })
   @ApiResponse({ status: 400, description: '잘못된 요청' })
   @ApiResponse({ status: 401, description: '인증 실패' })
-  async kakaoCallback(@Body() body: { code: string; state?: string }) {
-  throw new BadRequestException('deprecated endpoint');
+  async kakaoCallback(@Body() _body: { code: string; state?: string }) {
+    // deprecated endpoint
+    throw new BadRequestException('deprecated endpoint');
   }
 
   /**
@@ -118,9 +143,9 @@ export class AuthController {
     try {
       await this.authService.logout(req.user.sub);
       return { message: '로그아웃되었습니다.' };
-    } catch (error) {
-      console.error('로그아웃 실패:', error.message);
-      throw error;
+    } catch (err) {
+      console.error('로그아웃 실패:', err?.message || err);
+      throw err;
     }
   }
 
@@ -143,11 +168,11 @@ export class AuthController {
   async getCurrentUser(@Request() req) {
     try {
       const user = await this.authService.findUserById(req.user.sub);
-      
+
       return {
         id: (user as any)._id.toString(),
         kakaoId: user.kakaoId,
-  name: (user as any).name,
+        name: (user as any).name,
         nickname: user.nickname,
         profileImage: user.profileImage,
         email: user.email,

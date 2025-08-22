@@ -18,12 +18,13 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
       isGlobal: true,
       validate: validateEnv,
     }),
-  // v6 스타일: 배열 형태, ttl은 ms 단위
-  ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    // v6 스타일: 배열 형태, ttl은 ms 단위
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     MongooseModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (cs: ConfigService) => ({
-        uri: cs.get<string>('MONGODB_URI') || 'mongodb://localhost:27017/darapo',
+        uri:
+          cs.get<string>('MONGODB_URI') || 'mongodb://localhost:27017/darapo',
         dbName: cs.get<string>('MONGODB_DB') ?? undefined,
       }),
     }),
@@ -34,9 +35,6 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     HealthModule,
   ],
   controllers: [AppController],
-  providers: [
-    AppService,
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
-  ],
+  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

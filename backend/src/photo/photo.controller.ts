@@ -1,11 +1,11 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Put, 
-  Delete, 
-  Body, 
-  Param, 
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
   Query,
   UseInterceptors,
   UploadedFile,
@@ -14,7 +14,13 @@ import {
   Request,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiConsumes,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { PhotoService } from './photo.service';
 import { Photo } from './schemas/photo.schema';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -39,16 +45,23 @@ export class PhotoController {
         imageUrl = await this.s3.getSignedUrl(base.objectKey);
       } catch (e) {
         // 서명 실패 시 로그만 남기고 계속
-        // eslint-disable-next-line no-console
+
         console.warn('sign image failed', base.objectKey, e);
       }
     }
     // sign user avatar if it's an S3 key (not http and not starting with /)
-    if (base.userId && typeof base.userId === 'object' && base.userId.profileImage) {
+    if (
+      base.userId &&
+      typeof base.userId === 'object' &&
+      base.userId.profileImage
+    ) {
       const pi = base.userId.profileImage as string;
       if (!/^https?:\/\//.test(pi) && !pi.startsWith('/')) {
         try {
-          base.userId = { ...base.userId, profileImage: await this.s3.getSignedUrl(pi) };
+          base.userId = {
+            ...base.userId,
+            profileImage: await this.s3.getSignedUrl(pi),
+          };
         } catch (e) {
           console.warn('sign avatar failed', pi, e);
         }
@@ -66,19 +79,30 @@ export class PhotoController {
   @UseInterceptors(FileInterceptor('file'))
   async uploadPhoto(
     @UploadedFile() file: Express.Multer.File,
-  @Body() photoData: UploadPhotoDto,
+    @Body() photoData: UploadPhotoDto,
     @Request() req: any,
   ) {
     if (!file) {
       throw new BadRequestException('파일이 업로드되지 않았습니다.');
     }
 
-  // EXIF 제거 및 회전 보정
-  const processed = await sharp(file.buffer).rotate().toFormat('jpeg', { mozjpeg: true }).toBuffer();
+    // EXIF 제거 및 회전 보정
+    const processed = await sharp(file.buffer)
+      .rotate()
+      .toFormat('jpeg', { mozjpeg: true })
+      .toBuffer();
 
     const ext = (file.originalname.split('.').pop() || 'jpg').toLowerCase();
-    const key = this.s3.buildObjectKey({ userId: req.user.sub, originalName: file.originalname, ext });
-    await this.s3.uploadObject({ key, body: processed, contentType: file.mimetype });
+    const key = this.s3.buildObjectKey({
+      userId: req.user.sub,
+      originalName: file.originalname,
+      ext,
+    });
+    await this.s3.uploadObject({
+      key,
+      body: processed,
+      contentType: file.mimetype,
+    });
 
     // 이미지 크기 추출(옵션)
     let width: number | undefined;
@@ -87,9 +111,12 @@ export class PhotoController {
       const meta = await sharp(processed).metadata();
       width = meta.width;
       height = meta.height;
-    } catch {}
+    } catch (e) {
+      // 이미지 메타데이터 추출 실패: 선택 정보이므로 무시
+      console.warn('failed to read image metadata', e);
+    }
 
-  const { photo, replaced } = await this.photoService.upsertUserMissionPhoto({
+    const { photo, replaced } = await this.photoService.upsertUserMissionPhoto({
       ...photoData,
       userId: req.user.sub,
       objectKey: key,
@@ -99,8 +126,14 @@ export class PhotoController {
       height,
     });
 
-  const signedUrl = await this.s3.getSignedUrl(key);
-  return { photo: { ...(photo as any).toJSON ? (photo as any).toJSON() : photo, imageUrl: signedUrl }, replaced };
+    const signedUrl = await this.s3.getSignedUrl(key);
+    return {
+      photo: {
+        ...((photo as any).toJSON ? (photo as any).toJSON() : photo),
+        imageUrl: signedUrl,
+      },
+      replaced,
+    };
   }
 
   @Get('mine')
@@ -109,8 +142,8 @@ export class PhotoController {
   @ApiOperation({ summary: '내 사진 목록 조회' })
   @ApiResponse({ status: 200, description: '사진 목록 반환' })
   async getMyPhotos(@Request() req: any) {
-  const list = await this.photoService.findByUserId(req.user.sub);
-  return await Promise.all(list.map((p: any) => this.withSignedImageUrl(p)));
+    const list = await this.photoService.findByUserId(req.user.sub);
+    return await Promise.all(list.map((p: any) => this.withSignedImageUrl(p)));
   }
 
   @Get('mine/recent')
@@ -118,9 +151,15 @@ export class PhotoController {
   @ApiBearerAuth()
   @ApiOperation({ summary: '내 최근 사진 조회' })
   @ApiResponse({ status: 200, description: '최근 사진 목록 반환' })
-  async getMyRecentPhotos(@Request() req: any, @Query('limit') limit: string = '3') {
-  const list = await this.photoService.findRecentByUserId(req.user.sub, parseInt(limit));
-  return await Promise.all(list.map((p: any) => this.withSignedImageUrl(p)));
+  async getMyRecentPhotos(
+    @Request() req: any,
+    @Query('limit') limit: string = '3',
+  ) {
+    const list = await this.photoService.findRecentByUserId(
+      req.user.sub,
+      parseInt(limit),
+    );
+    return await Promise.all(list.map((p: any) => this.withSignedImageUrl(p)));
   }
 
   @Get('public')
@@ -130,26 +169,31 @@ export class PhotoController {
     @Query('limit') limit: string = '20',
     @Query('skip') skip: string = '0',
   ) {
-  const list = await this.photoService.findPublicPhotos(parseInt(limit), parseInt(skip));
-  return await Promise.all(list.map((p: any) => this.withSignedImageUrl(p)));
+    const list = await this.photoService.findPublicPhotos(
+      parseInt(limit),
+      parseInt(skip),
+    );
+    return await Promise.all(list.map((p: any) => this.withSignedImageUrl(p)));
   }
 
   @Get('mission/:missionId')
   @ApiOperation({ summary: '특정 미션의 사진 목록 조회' })
   @ApiResponse({ status: 200, description: '미션 사진 목록 반환' })
-  async getPhotosByMission(@Param('missionId', new ParseObjectIdPipe()) missionId: string) {
-  const list = await this.photoService.findByMissionId(missionId);
-  // lean() 결과에 toJSON이 없어 500이 발생하던 문제를 공통 헬퍼로 해결
-  return await Promise.all(list.map((p: any) => this.withSignedImageUrl(p)));
+  async getPhotosByMission(
+    @Param('missionId', new ParseObjectIdPipe()) missionId: string,
+  ) {
+    const list = await this.photoService.findByMissionId(missionId);
+    // lean() 결과에 toJSON이 없어 500이 발생하던 문제를 공통 헬퍼로 해결
+    return await Promise.all(list.map((p: any) => this.withSignedImageUrl(p)));
   }
 
   @Get(':id')
   @ApiOperation({ summary: '특정 사진 조회' })
   @ApiResponse({ status: 200, description: '사진 정보 반환' })
   async findOne(@Param('id', new ParseObjectIdPipe()) id: string) {
-  const p: any = await this.photoService.findById(id);
-  if (!p) return p;
-  return this.withSignedImageUrl(p);
+    const p: any = await this.photoService.findById(id);
+    if (!p) return p;
+    return this.withSignedImageUrl(p);
   }
 
   @Put(':id')
@@ -157,7 +201,10 @@ export class PhotoController {
   @ApiResponse({ status: 200, description: '사진 정보 수정 완료' })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  async update(@Param('id', new ParseObjectIdPipe()) id: string, @Body() updateData: Partial<Photo>) {
+  async update(
+    @Param('id', new ParseObjectIdPipe()) id: string,
+    @Body() updateData: Partial<Photo>,
+  ) {
     return this.photoService.updatePhoto(id, updateData);
   }
 

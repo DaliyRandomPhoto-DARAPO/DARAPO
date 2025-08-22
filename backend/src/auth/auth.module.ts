@@ -16,7 +16,8 @@ import { KakaoClient } from './clients/kakao.client';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
         const secret = configService.get<string>('JWT_SECRET');
-        if (!secret) throw new Error('JWT_SECRET 환경변수가 설정되어야 합니다.');
+        if (!secret)
+          throw new Error('JWT_SECRET 환경변수가 설정되어야 합니다.');
         return {
           secret,
           signOptions: {

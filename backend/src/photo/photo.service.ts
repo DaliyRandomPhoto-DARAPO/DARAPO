@@ -39,11 +39,15 @@ export class PhotoService {
    * 동일 사용자+미션(=하루) 사진이 있으면 새 파일로 교체, 없으면 생성
    * 반환: { photo, replaced }
    */
-  async upsertUserMissionPhoto(photoData: CreatePhotoInput): Promise<{ photo: Photo; replaced: boolean }>{
+  async upsertUserMissionPhoto(
+    photoData: CreatePhotoInput,
+  ): Promise<{ photo: Photo; replaced: boolean }> {
     const userId = new Types.ObjectId(photoData.userId);
     const missionId = new Types.ObjectId(photoData.missionId);
 
-    const existing = await this.photoModel.findOne({ userId, missionId }).exec();
+    const existing = await this.photoModel
+      .findOne({ userId, missionId })
+      .exec();
     if (!existing) {
       const created = await this.createPhoto(photoData);
       return { photo: created, replaced: false };
@@ -56,12 +60,18 @@ export class PhotoService {
     }
 
     (existing as any).objectKey = photoData.objectKey;
-    if (typeof photoData.comment !== 'undefined') existing.comment = photoData.comment;
-    if (typeof photoData.isPublic !== 'undefined') (existing as any).isPublic = photoData.isPublic;
-    if (typeof photoData.fileSize !== 'undefined') (existing as any).fileSize = photoData.fileSize;
-    if (typeof photoData.mimeType !== 'undefined') (existing as any).mimeType = photoData.mimeType;
-    if (typeof photoData.width !== 'undefined') (existing as any).width = photoData.width;
-    if (typeof photoData.height !== 'undefined') (existing as any).height = photoData.height;
+    if (typeof photoData.comment !== 'undefined')
+      existing.comment = photoData.comment;
+    if (typeof photoData.isPublic !== 'undefined')
+      (existing as any).isPublic = photoData.isPublic;
+    if (typeof photoData.fileSize !== 'undefined')
+      (existing as any).fileSize = photoData.fileSize;
+    if (typeof photoData.mimeType !== 'undefined')
+      (existing as any).mimeType = photoData.mimeType;
+    if (typeof photoData.width !== 'undefined')
+      (existing as any).width = photoData.width;
+    if (typeof photoData.height !== 'undefined')
+      (existing as any).height = photoData.height;
 
     const saved = await existing.save();
     return { photo: saved, replaced: true };
@@ -72,7 +82,7 @@ export class PhotoService {
       .find({ userId: new Types.ObjectId(userId) })
       .populate('missionId', 'title description date')
       .sort({ createdAt: -1 })
-  .lean()
+      .lean()
       .exec();
   }
 
@@ -82,7 +92,7 @@ export class PhotoService {
       .populate('missionId', 'title description date')
       .sort({ createdAt: -1 })
       .limit(limit)
-  .lean()
+      .lean()
       .exec();
   }
 
@@ -90,9 +100,9 @@ export class PhotoService {
     return this.photoModel
       .find({ missionId: new Types.ObjectId(missionId), isPublic: true })
       .populate('userId', 'nickname profileImage')
-  .populate('missionId', 'title description date')
+      .populate('missionId', 'title description date')
       .sort({ createdAt: -1 })
-  .lean()
+      .lean()
       .exec();
   }
 
@@ -101,7 +111,7 @@ export class PhotoService {
       .findById(new Types.ObjectId(photoId))
       .populate('userId', 'nickname profileImage')
       .populate('missionId', 'title description date')
-  .lean()
+      .lean()
       .exec();
   }
 
@@ -110,7 +120,10 @@ export class PhotoService {
     if (updateData.userId && typeof (updateData as any).userId === 'string') {
       normalized.userId = new Types.ObjectId((updateData as any).userId);
     }
-    if (updateData.missionId && typeof (updateData as any).missionId === 'string') {
+    if (
+      updateData.missionId &&
+      typeof (updateData as any).missionId === 'string'
+    ) {
       normalized.missionId = new Types.ObjectId((updateData as any).missionId);
     }
     return this.photoModel
@@ -119,11 +132,15 @@ export class PhotoService {
   }
 
   async deletePhoto(photoId: string) {
-    const doc = await this.photoModel.findById(new Types.ObjectId(photoId)).exec();
+    const doc = await this.photoModel
+      .findById(new Types.ObjectId(photoId))
+      .exec();
     if (doc?.objectKey) {
       this.s3.deleteObject(doc.objectKey).catch(() => {});
     }
-    return this.photoModel.findByIdAndDelete(new Types.ObjectId(photoId)).exec();
+    return this.photoModel
+      .findByIdAndDelete(new Types.ObjectId(photoId))
+      .exec();
   }
 
   async findPublicPhotos(limit: number = 20, skip: number = 0) {
@@ -134,13 +151,17 @@ export class PhotoService {
       .sort({ createdAt: -1 })
       .limit(limit)
       .skip(skip)
-  .lean()
+      .lean()
       .exec();
   }
 
   async markAsShared(photoId: string) {
     return this.photoModel
-      .findByIdAndUpdate(new Types.ObjectId(photoId), { isShared: true }, { new: true })
+      .findByIdAndUpdate(
+        new Types.ObjectId(photoId),
+        { isShared: true },
+        { new: true },
+      )
       .exec();
   }
 }

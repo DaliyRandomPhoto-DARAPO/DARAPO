@@ -42,7 +42,8 @@ export class KakaoClient {
         validateStatus: (s) => s < 500,
       },
     );
-    if (status >= 400) throw new UnauthorizedException('kakao token exchange failed');
+    if (status >= 400)
+      throw new UnauthorizedException('kakao token exchange failed');
     return data as { access_token: string };
   }
 }

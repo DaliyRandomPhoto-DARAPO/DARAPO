@@ -8,8 +8,8 @@ import { PhotoModule } from '../photo/photo.module';
 
 @Module({
   imports: [
-  MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
-  PhotoModule,
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    PhotoModule,
   ],
   controllers: [UserController],
   providers: [UserService, S3Service],

@@ -10,7 +10,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
+
   // 글로벌 prefix 설정
   app.setGlobalPrefix('api');
 
@@ -34,7 +34,10 @@ async function bootstrap() {
     }),
   );
   app.useGlobalFilters(new HttpExceptionFilter());
-  app.useGlobalInterceptors(new LoggingInterceptor(), new TransformInterceptor());
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+    new TransformInterceptor(),
+  );
 
   // Swagger 운영 환경 비활성화
   if (!isProd) {
@@ -58,6 +61,5 @@ async function bootstrap() {
   // 모든 네트워크 인터페이스에서 수신하도록 설정 (안드로이드 접근 허용)
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');
-
 }
-bootstrap();
+void bootstrap();

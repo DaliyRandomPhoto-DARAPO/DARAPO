@@ -1,4 +1,10 @@
-import { IsBoolean, IsMongoId, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsMongoId,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class UploadPhotoDto {
   @IsMongoId()

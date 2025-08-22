@@ -5,9 +5,7 @@ import { User, UserDocument } from './schemas/user.schema';
 
 @Injectable()
 export class UserService {
-  constructor(
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
-  ) {}
+  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
   async findByKakaoId(kakaoId: string): Promise<User | null> {
     return this.userModel.findOne({ kakaoId }).exec();
@@ -36,7 +34,10 @@ export class UserService {
     await this.userModel.findByIdAndDelete(userId).exec();
   }
 
-  async updateProfile(userId: string, updateData: Partial<User>): Promise<User | null> {
+  async updateProfile(
+    userId: string,
+    updateData: Partial<User>,
+  ): Promise<User | null> {
     return this.userModel
       .findByIdAndUpdate(userId, updateData, { new: true })
       .exec();
