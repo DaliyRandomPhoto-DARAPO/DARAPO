@@ -19,7 +19,7 @@ env:
   HEALTH_LOCAL: http://localhost:3000/api/health/liveness
   HEALTH_EXTERNAL: https://api.darapo.site/api/health/liveness
   PM2_APP_NAME: server
-  NODE_VERSION: 24  # LTS 맞출 거면 22로 바꿔
+  NODE_VERSION: 22 
 
 jobs:
   deploy:
@@ -45,7 +45,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
-          source: "server/**"
+          source: "server/*"
           target: ${{ env.SERVICE_DIR }}
           overwrite: true
 
