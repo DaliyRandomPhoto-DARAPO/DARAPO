@@ -235,9 +235,9 @@ const styles = StyleSheet.create({
   missionBox: {
     backgroundColor: '#F5F3FF',
     marginHorizontal: spacing.md,
-    marginTop: spacing.sm,        // spacing.md → spacing.sm
-    borderRadius: 12,             // 16 → 12 (조금 더 컴팩트)
-    padding: spacing.sm,          // spacing.md → spacing.sm
+    marginTop: spacing.sm,
+    borderRadius: 12,          
+    padding: spacing.sm,
   },
   missionRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 }, // 4 → 2
   missionDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginRight: 4 }, // 조금 작게
@@ -247,10 +247,10 @@ const styles = StyleSheet.create({
   moodBox: {
       backgroundColor: '#FEF2F2',
       marginHorizontal: spacing.md,
-      marginTop: spacing.sm,       // spacing.md → spacing.sm
-      borderRadius: 12,            // 16 → 12
-      padding: spacing.sm,         // spacing.md → spacing.sm
-      marginBottom: spacing.sm,    // spacing.md → spacing.sm
+      marginTop: spacing.sm,
+      borderRadius: 12,
+      padding: spacing.sm,
+      marginBottom: spacing.sm,
     },
     moodRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 }, // 4 → 2
     moodDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primaryAlt, marginRight: 4 },

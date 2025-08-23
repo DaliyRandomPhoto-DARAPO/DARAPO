@@ -357,24 +357,23 @@ const styles = StyleSheet.create({
   recentTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
   recentDate: { fontSize: typography.small, color: baseColors.subText },
   recentDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#C4B5FD' },
-  recentImageWrap: { borderRadius: radii.md, overflow: 'hidden', marginBottom: spacing.md, backgroundColor: '#F9FAFB' },
+  recentImageWrap: { borderRadius: radii.md, overflow: 'hidden', marginBottom: spacing.sm, backgroundColor: '#F9FAFB' },
   recentImage: { width: '100%', aspectRatio: 4 / 3 },
 
   recentText: { fontSize: 14, color: baseColors.subText },
   centerText: { textAlign: 'center' },
 
-  // purple/pink boxes (라이트 고정) — MyPhotos/PhotoSettings와 유사하게 컴팩트하게 조정
-  recentMissionBox: { backgroundColor: '#F5F3FF', marginTop: spacing.sm, marginBottom: spacing.sm, borderRadius: 12, padding: spacing.sm, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E9E5FF' },
-  missionRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
+  recentMissionBox: { backgroundColor: '#F5F3FF', marginTop: spacing.xs, marginBottom: spacing.sm, borderRadius: 12, padding: spacing.sm, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E9E5FF' },
+  missionRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
   missionDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: baseColors.primary, marginRight: 6 },
   missionLabel: { fontSize: 11, color: baseColors.primary, fontWeight: '600' },
-  missionText: { fontSize: 13, color: baseColors.text, fontWeight: '700' },
+  missionText: { fontSize: 13, color: baseColors.text, fontWeight: '700', marginLeft: 3 },
 
-  recentMoodBox: { backgroundColor: '#FEF2F2', marginTop: spacing.sm, borderRadius: 12, padding: spacing.sm, borderWidth: StyleSheet.hairlineWidth, borderColor: '#FCE2E2', marginBottom: spacing.sm },
-  moodRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
+  recentMoodBox: { backgroundColor: '#FEF2F2', marginTop: spacing.xs, borderRadius: 12, padding: spacing.sm, borderWidth: StyleSheet.hairlineWidth, borderColor: '#FCE2E2', marginBottom: spacing.xs },
+  moodRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
   moodDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: baseColors.primaryAlt, marginRight: 6 },
   moodLabel: { fontSize: 11, color: baseColors.primaryAlt, fontWeight: '600' },
-  moodText: { fontSize: 13, color: baseColors.text },
+  moodText: { fontSize: 13, color: baseColors.text, marginLeft: 3 },
 
   // skeleton
   skeleton: {

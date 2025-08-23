@@ -9,6 +9,7 @@ const RAW_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.darapo.site'
 
 export default {
   expo: {
+    owner: "hhee4455",
     name: APP_NAME,
     slug: APP_NAME,
     version: '1.0.7',
