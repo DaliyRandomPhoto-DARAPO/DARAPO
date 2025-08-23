@@ -296,7 +296,7 @@ const PhotoUploadScreen = () => {
                 <Text style={styles.missionTextLoading}>불러오는 중…</Text>
               </View>
             ) : (
-              <View style={{ paddingTop: 6 }}>
+              <View style={styles.missionWrap}>
                 <MissionInfo mission={mission as Mission | null} />
               </View>
             )}
@@ -331,14 +331,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
   },
 
   // Preview
-  previewCard: { marginBottom: spacing.lg },
-  previewImageWrap: { borderRadius: radii.lg, overflow: 'hidden' },
-  previewImage: { width: '100%', height: PREVIEW_HEIGHT, backgroundColor: colors.surface },
+  previewCard: { marginBottom: spacing.md, padding: 0, overflow: 'hidden' },
+  previewImageWrap: { borderRadius: radii.lg, overflow: 'hidden', backgroundColor: colors.surface },
+  previewImage: { width: '100%', height: PREVIEW_HEIGHT, backgroundColor: colors.surface, borderRadius: radii.lg },
   previewEmpty: {
     width: '100%',
     height: PREVIEW_HEIGHT,
@@ -347,39 +347,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  previewEmptyText: { color: colors.subText },
+  previewEmptyText: { color: colors.subText, fontSize: Math.max(12, (Number(typography.small) || 14) - 2) },
 
   // Info
   infoCard: { marginBottom: spacing.lg },
 
   missionRowTop: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs },
-  missionDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, marginRight: 6 },
-  missionBadge: { fontSize: typography.small, color: colors.primary, fontWeight: '700' },
-  missionLoadingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  missionDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.primary, marginRight: 6 },
+  missionBadge: { fontSize: Math.max(11, (Number(typography.small) || 14) - 2), color: colors.primary, fontWeight: '700' },
+  missionLoadingRow: { flexDirection: 'row', alignItems: 'center' },
   missionTextLoading: { marginLeft: spacing.sm, color: colors.text },
-  missionText: { fontSize: typography.h2, fontWeight: '800', color: colors.text },
+  missionText: { fontSize: Math.max(16, (Number(typography.h2) || 20) - 2), fontWeight: '800', color: colors.text },
 
   moodHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs },
-  moodDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primaryAlt, marginRight: 6 },
-  moodBadge: { fontSize: typography.small, color: colors.primaryAlt, fontWeight: '700' },
+  moodDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.primaryAlt, marginRight: 6 },
+  moodBadge: { fontSize: Math.max(11, (Number(typography.small) || 14) - 2), color: colors.primaryAlt, fontWeight: '700' },
 
   commentInput: {
     backgroundColor: colors.surface,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
-    minHeight: 80,
+    minHeight: 72,
     textAlignVertical: 'top',
     color: colors.text,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.md,
-    fontSize: typography.body,
+    fontSize: Math.max(14, (Number(typography.body) || 16) - 1),
   },
 
   publicRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  publicLabel: { fontSize: typography.body, color: colors.text },
+  publicLabel: { fontSize: Math.max(14, (Number(typography.body) || 16) - 1), color: colors.text },
 
-  buttonContainer: { gap: spacing.md },
+  buttonContainer: { marginTop: spacing.sm },
+
+  // Mission
+  missionWrap: { paddingTop: spacing.sm },
 
   // Overlay
   overlay: {
@@ -393,7 +396,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     padding: spacing.lg,
     borderRadius: radii.lg,
-    minWidth: 200,
+    minWidth: 240,
     alignItems: 'center',
   },
   overlayText: { marginTop: 8, color: colors.text, fontWeight: '600' },

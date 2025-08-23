@@ -5,6 +5,7 @@ import Header from '../ui/Header';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
 import MissionInfo from '../ui/MissionInfo';
+import { normalizeMission } from '../utils/mission';
 import { theme } from '../ui/theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
@@ -84,7 +85,7 @@ const Controls = memo(function Controls({
 });
 
 const PhotoSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
-  const { photoId, isPublic: initialPublic, imageUrl, missionTitle, comment } = route.params;
+  const { photoId, isPublic: initialPublic, imageUrl, missionTitle, mission, comment } = route.params as any;
   const [isPublic, setIsPublic] = useState<boolean>(!!initialPublic);
   const [busy, setBusy] = useState<boolean>(false);
   const insets = useSafeAreaInsets();
@@ -163,7 +164,27 @@ const PhotoSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
           <View style={styles.centered}>
             <Card style={styles.card}>
               <Preview uri={resolvedUri} />
-              <MissionInfo mission={missionTitle ? ({ title: missionTitle } as any) : undefined} compact />
+              {/* 미션 박스: 미션 라벨 + MissionInfo (compact) */}
+              <View style={styles.missionBox}>
+                <View style={styles.missionRow}>
+                  <View style={styles.missionDot} />
+                  <Text style={styles.missionLabel}>오늘의 미션</Text>
+                </View>
+                <View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <MissionInfo
+                      mission={
+                        mission
+                          ? normalizeMission(mission as any)
+                          : missionTitle
+                          ? normalizeMission({ title: missionTitle } as any)
+                          : undefined
+                      }
+                      compact
+                    />
+                  </View>
+                </View>
+              </View>
               <MoodInfo comment={comment} />
               <Controls
                 isPublic={isPublic}

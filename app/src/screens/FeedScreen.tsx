@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   missionLabel: { fontSize: 12, color: colors.primary, fontWeight: '700' },
   missionText: { fontSize: 14, color: colors.text, fontWeight: '700' },
 
-  imageWrap: { width: '100%', aspectRatio: 1, marginTop: spacing.sm, paddingHorizontal: spacing.sm },
+  imageWrap: { width: '100%', aspectRatio: 1, marginTop: spacing.xs, paddingHorizontal: spacing.sm },
   image: { width: '100%', height: '100%', borderRadius: radii.lg },
 
   actions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
