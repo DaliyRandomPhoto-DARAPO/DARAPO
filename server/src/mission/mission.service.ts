@@ -36,7 +36,23 @@ export class MissionService {
   }
 
   async createMission(missionData: Partial<Mission>) {
-    const mission = new this.missionModel(missionData);
+    // Normalize incoming data: ensure subtitle and description exist where possible
+    const data = { ...missionData } as Partial<Mission>;
+    // If subtitle missing but title contains a separator, try to extract
+    if ((!data.subtitle || data.subtitle === null) && typeof data.title === 'string' && data.title.includes(' - ')) {
+      const parts = data.title.split(' - ');
+      // assume legacy format: "Title - Subtitle"
+      data.subtitle = parts.slice(1).join(' - ').trim();
+    }
+
+    // Ensure description exists
+    if (!data.description && typeof data.title === 'string') {
+      // remove leading emoji/markers like '✨ '
+      const base = String(data.title).replace(/^✨\s*/, '');
+      data.description = `${base}를 주제로 사진을 찍어보세요!`;
+    }
+
+    const mission = new this.missionModel(data);
     return mission.save();
   }
 

@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // SecureStore는 선택적 사용(설치 안 된 환경 대비)
 // 동적 require로 타입 에러 및 번들 이슈 회피
 import Constants from 'expo-constants';
+import type { Mission } from '../types/mission';
 
 // 환경에서 받은 값의 트레일링 슬래시 제거 + 안전한 기본값 적용
 const configuredApi = (Constants.expoConfig?.extra?.apiUrl as string | undefined) || '';
@@ -160,9 +161,9 @@ export const authAPI = {
 };
 
 export const missionAPI = {
-  getTodayMission: async () => {
+  getTodayMission: async (): Promise<Mission | undefined> => {
     const response = await apiClient.get('/mission/today');
-    return response.data;
+    return response.data as Mission | undefined;
   },
 };
 

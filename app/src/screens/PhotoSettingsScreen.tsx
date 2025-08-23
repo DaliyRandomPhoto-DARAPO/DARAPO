@@ -4,6 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Header from '../ui/Header';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
+import MissionInfo from '../ui/MissionInfo';
 import { theme } from '../ui/theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
@@ -34,18 +35,6 @@ const Preview = memo(function Preview({ uri }: { uri?: string }) {
   );
 });
 
-const MissionInfo = memo(function MissionInfo({ title }: { title?: string }) {
-  if (!title) return null;
-  return (
-    <View style={styles.missionBox}>
-      <View style={styles.missionRow}>
-        <View style={styles.missionDot} />
-        <Text style={styles.missionLabel}>오늘의 미션</Text>
-      </View>
-      <Text style={styles.missionText}>{title}</Text>
-    </View>
-  );
-});
 
 const MoodInfo = memo(function MoodInfo({ comment }: { comment?: string }) {
   if (!comment) return null;
@@ -174,7 +163,7 @@ const PhotoSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
           <View style={styles.centered}>
             <Card style={styles.card}>
               <Preview uri={resolvedUri} />
-              <MissionInfo title={missionTitle} />
+              <MissionInfo mission={missionTitle ? ({ title: missionTitle } as any) : undefined} compact />
               <MoodInfo comment={comment} />
               <Controls
                 isPublic={isPublic}

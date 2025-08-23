@@ -4,11 +4,14 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Header from '../ui/Header';
 import EmptyState from '../ui/EmptyState';
 import Card from '../ui/Card';
+import MissionInfo from '../ui/MissionInfo';
+import type { Mission } from '../types/mission';
 import { theme } from '../ui/theme';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { photoAPI, BASE_URL } from '../services/api';
+import { normalizeMission } from '../utils/mission';
 import { formatKstMMDD } from '../utils/date';
 
 const colors = { ...theme.colors, primary: '#7C3AED', primaryAlt: '#EC4899' } as const;
@@ -20,7 +23,7 @@ type PhotoItem = {
   comment?: string;
   isPublic?: boolean;
   createdAt?: string;
-  missionId?: { title?: string } | null;
+  missionId?: Mission | { title?: string } | null;
 };
 
 const CONTENT_MAX_WIDTH = 720 as const;
@@ -74,15 +77,8 @@ const PhotoCard = memo(function PhotoCard({
           </View>
           <View>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={styles.missionText}>{missionTitle}</Text>
+              <MissionInfo mission={typeof item.missionId === 'object' ? (item.missionId as Mission) : undefined} compact />
             </View>
-            {/* subtitle/isRare could be present if missionId is an object */}
-            {typeof item.missionId === 'object' && item.missionId ? (
-              <>
-                {!!(item.missionId as any).subtitle && <Text style={{ color: colors.subText, marginTop: 4 }}>{(item.missionId as any).subtitle}</Text>}
-                {!!(item.missionId as any).isRare && <Text style={{ color: '#F59E0B', marginTop: 4 }}>✨ 희귀</Text>}
-              </>
-            ) : null}
           </View>
         </View>
 
@@ -125,8 +121,11 @@ const MyPhotosScreen = () => {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const list = await photoAPI.getMyPhotos();
-      setPhotos(Array.isArray(list) ? list : []);
+  const list = await photoAPI.getMyPhotos();
+  const arr = Array.isArray(list) ? list : [];
+  // normalize missionId inside items
+  const normalized = arr.map((it: any) => ({ ...it, missionId: normalizeMission(it.missionId) ?? it.missionId }));
+  setPhotos(normalized);
     } finally {
       setLoading(false);
     }

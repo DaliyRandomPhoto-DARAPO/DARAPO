@@ -18,11 +18,14 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
 import { photoAPI, missionAPI } from '../services/api';
+import { normalizeMission } from '../utils/mission';
 import * as ImageManipulator from 'expo-image-manipulator';
 import Card from '../ui/Card';
 import Header from '../ui/Header';
 import { theme } from '../ui/theme';
 import Button from '../ui/Button';
+import MissionInfo from '../ui/MissionInfo';
+import type { Mission } from '../types/mission';
 
 type PhotoUploadScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PhotoUpload'>;
 type PhotoUploadScreenRouteProp = RouteProp<RootStackParamList, 'PhotoUpload'>;
@@ -42,47 +45,7 @@ function pickMime(uri: string): { name: string; type: string } {
   return { name: 'upload.jpg', type: 'image/jpeg' };
 }
 
-// ===== Subcomponents (memo)
-const MissionCard = memo(function MissionCard({
-  loading,
-  mission,
-}: {
-  loading: boolean;
-  mission?: any | null;
-}) {
-  return (
-    <Card style={styles.infoCard}>
-      <View style={styles.missionRowTop}>
-        <View style={styles.missionDot} />
-        <Text style={styles.missionBadge}>오늘의 미션</Text>
-      </View>
-      {loading ? (
-        <View style={styles.missionLoadingRow}>
-          <ActivityIndicator color={colors.primary} />
-          <Text style={styles.missionTextLoading}>불러오는 중…</Text>
-        </View>
-      ) : (
-        <View>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={styles.missionText}>{mission?.title ?? '미션 없음'}</Text>
-            {mission?.isRare ? <Text style={{ color: '#F59E0B', fontWeight: '800', marginLeft: 8 }}>✨ 희귀</Text> : null}
-          </View>
-          {!!mission?.subtitle && <Text style={{ color: colors.subText, marginTop: 6 }}>{mission.subtitle}</Text>}
-          {!!mission?.twist && <Text style={{ color: colors.primaryAlt, marginTop: 6 }}>힌트: {mission.twist}</Text>}
-          {!!mission?.tags?.length && (
-            <View style={{ flexDirection: 'row', marginTop: 8, flexWrap: 'wrap' }}>
-              {mission.tags.map((t: string) => (
-                <View key={t} style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginRight: 6, marginTop: 4 }}>
-                  <Text style={{ color: '#4F46E5', fontSize: 12 }}>{t}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-      )}
-    </Card>
-  );
-});
+// ...existing code...
 
 const PreviewCard = memo(function PreviewCard({
   uri,
@@ -179,7 +142,7 @@ const PhotoUploadScreen = () => {
 
   const [comment, setComment] = useState('');
   const [isUploading, setIsUploading] = useState(false);
-  const [mission, setMission] = useState<any | null>(null);
+  const [mission, setMission] = useState<Mission | null>(null);
   const [loadingMission, setLoadingMission] = useState(true);
   const [isPublic, setIsPublic] = useState(true);
   const [progress, setProgress] = useState<number | undefined>(undefined);
@@ -201,9 +164,10 @@ const PhotoUploadScreen = () => {
   const loadMission = useCallback(async () => {
     try {
       setLoadingMission(true);
-      const m = await missionAPI.getTodayMission();
-      if (!mountedRef.current) return;
-  if (m && m._id) setMission(m);
+    const m = await missionAPI.getTodayMission();
+    if (!mountedRef.current) return;
+  const norm = normalizeMission(m);
+  if (norm && norm._id) setMission(norm);
   else setMission(null);
     } catch (e) {
       console.warn('오늘의 미션 조회 실패:', e);
@@ -286,10 +250,7 @@ const PhotoUploadScreen = () => {
         Alert.alert('업로드 완료', '오늘의 사진이 등록됐어요.');
       }
 
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainTabs', params: { screen: 'Home' } } as any],
-      });
+  navigation.reset({ index: 0, routes: [{ name: 'MainTabs', params: { screen: 'Home' } }] as any });
     } catch (error: any) {
       if (error?.name === 'AbortError') {
         // 취소면 조용히
@@ -324,7 +285,22 @@ const PhotoUploadScreen = () => {
         >
           <PreviewCard uri={photoUri} />
 
-          <MissionCard loading={loadingMission} mission={mission} />
+          <Card style={styles.infoCard}>
+            <View style={styles.missionRowTop}>
+              <View style={styles.missionDot} />
+              <Text style={styles.missionBadge}>오늘의 미션</Text>
+            </View>
+            {loadingMission ? (
+              <View style={styles.missionLoadingRow}>
+                <ActivityIndicator color={colors.primary} />
+                <Text style={styles.missionTextLoading}>불러오는 중…</Text>
+              </View>
+            ) : (
+              <View style={{ paddingTop: 6 }}>
+                <MissionInfo mission={mission as Mission | null} />
+              </View>
+            )}
+          </Card>
 
           <CommentCard value={comment} onChangeText={setComment} />
 

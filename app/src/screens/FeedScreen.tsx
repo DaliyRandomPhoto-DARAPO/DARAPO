@@ -3,7 +3,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, StyleSheet, Pressable, Image, ActivityIndicator, FlatList } from 'react-native';
 import Header from '../ui/Header';
 import Card from '../ui/Card';
+import MissionInfo from '../ui/MissionInfo';
+import type { Mission } from '../types/mission';
 import { photoAPI, missionAPI, BASE_URL } from '../services/api';
+import { normalizeMission } from '../utils/mission';
 import { theme } from '../ui/theme';
 import { formatKstMMDD } from '../utils/date';
 
@@ -28,7 +31,7 @@ type FeedItem = {
   user: { name: string; avatar?: string | null };
   date: string;
   mission: string;
-  missionObj?: any;
+  missionObj?: Mission | undefined;
   image: string;
   likes: number;
   mood?: string;
@@ -73,7 +76,7 @@ const FeedScreen = memo(() => {
     const rawAvatar: string | null = p?.userId?.profileImage || null;
     const avatar = rawAvatar ? (rawAvatar.startsWith('http') ? rawAvatar : `${BASE_URL}${rawAvatar}`) : null;
     const missionTitle: string = p?.missionId?.title || '오늘의 미션';
-    const missionObj: any = p?.missionId || undefined;
+  const missionObj: Mission | undefined = normalizeMission(p?.missionId) as Mission | undefined;
     const mood: string | undefined = p?.comment || undefined;
     return {
       id: String(p?._id || ''),
@@ -91,9 +94,11 @@ const FeedScreen = memo(() => {
   const loadInitial = async () => {
     try {
       setLoading(true);
-      if (active === '오늘의 미션') {
-        const mission = await missionAPI.getTodayMission();
-        const photos = mission?._id ? await photoAPI.getPhotosByMission?.(mission._id) : [];
+  if (active === '오늘의 미션') {
+  const mission = await missionAPI.getTodayMission();
+  const photos = mission?._id ? await photoAPI.getPhotosByMission?.(mission._id) : [];
+  // normalize mission for later use
+  const normMission = normalizeMission(mission);
         const mapped = (photos || []).map(mapPhotoToItem);
         setItems(mapped);
         setPage(0);
@@ -199,21 +204,7 @@ const FeedScreen = memo(() => {
           <View>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.missionText}>{p.mission}</Text>
-                {/* subtitle */}
-                {p.missionObj?.subtitle ? <Text style={{ color: colors.subText, marginTop: 4, fontSize: 13 }}>{p.missionObj.subtitle}</Text> : null}
-                {/* twist hint */}
-                {p.missionObj?.twist ? <Text style={{ color: colors.primaryAlt, marginTop: 6, fontSize: 12, fontWeight: '700' }}>힌트: {p.missionObj.twist}</Text> : null}
-                {/* tags */}
-                {Array.isArray(p.missionObj?.tags) && p.missionObj.tags.length > 0 ? (
-                  <View style={{ flexDirection: 'row', marginTop: 6, flexWrap: 'wrap' }}>
-                    {p.missionObj.tags.slice(0, 5).map((t: string) => (
-                      <View key={t} style={{ backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginRight: 6, marginTop: 4 }}>
-                        <Text style={{ fontSize: 12, color: '#374151' }}>{t}</Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
+                <MissionInfo mission={p.missionObj} compact />
               </View>
               {/* rare badge */}
               {p.missionObj?.isRare ? (

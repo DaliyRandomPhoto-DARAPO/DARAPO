@@ -5,11 +5,14 @@ import { useNavigation, useIsFocused } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { missionAPI, photoAPI, BASE_URL } from '../services/api';
+import { normalizeMission } from '../utils/mission';
 import { formatKstMMDD, kstDateKey } from '../utils/date';
 import { useAuth } from '../contexts/AuthContext';
 
 import Header from '../ui/Header';
 import Card from '../ui/Card';
+import MissionInfo from '../ui/MissionInfo';
+import type { Mission } from '../types/mission';
 import Button from '../ui/Button';
 import { theme } from '../ui/theme';
 
@@ -52,7 +55,7 @@ const HomeScreen = memo(() => {
   const [loading, setLoading] = useState(true);
   const [todayMission, setTodayMission] = useState<string>('');
   const [todayDate, setTodayDate] = useState<string>('');
-  const [todayMissionObj, setTodayMissionObj] = useState<any | null>(null);
+  const [todayMissionObj, setTodayMissionObj] = useState<Mission | null>(null);
   const [streak, setStreak] = useState<number>(0);
   const [totalPhotos, setTotalPhotos] = useState<number>(0);
   const [recents, setRecents] = useState<RecentItem[]>([]);
@@ -69,8 +72,9 @@ const HomeScreen = memo(() => {
         photoAPI.getMyRecentPhotos(RECENT_LIMIT),
       ]);
 
-      setTodayMission(mission?.title || '오늘의 미션');
-      setTodayMissionObj(mission || null);
+  const norm = normalizeMission(mission);
+  setTodayMission(norm?.title || '오늘의 미션');
+  setTodayMissionObj(norm || null);
       const md = mission?.date ? new Date(mission.date) : new Date();
       setTodayDate(formatKstMMDD(md));
 
@@ -159,40 +163,20 @@ const HomeScreen = memo(() => {
         {/* 이 블록으로 묶어서 가운데 정렬 */}
         <View style={styles.cardBodyCenter}>
           {loading ? (
-            <Skeleton lines={1} height={28} radius={8} />
-          ) : (
-            <View style={{ alignItems: 'center' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={styles.missionTitle}>{todayMission}</Text>
-                {(todayMissionObj as any)?.isRare ? (
-                  <Text style={{ color: '#F59E0B', fontWeight: '800', marginLeft: 8 }}>✨ 희귀</Text>
-                ) : null}
-              </View>
-              {!!(todayMissionObj as any)?.subtitle && (
-                <Text style={{ color: colors.subText, marginTop: 6 }}>{(todayMissionObj as any).subtitle}</Text>
-              )}
-              {!!(todayMissionObj as any)?.twist && (
-                <Text style={{ color: colors.primaryAlt, marginTop: 6 }}>힌트: {(todayMissionObj as any).twist}</Text>
-              )}
-              {!!(todayMissionObj as any)?.tags?.length && (
-                <View style={{ flexDirection: 'row', marginTop: 8, flexWrap: 'wrap' }}>
-                  {(todayMissionObj as any).tags.map((t: string) => (
-                    <View key={t} style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginRight: 6, marginTop: 4 }}>
-                      <Text style={{ color: '#4F46E5', fontSize: 12 }}>{t}</Text>
-                    </View>
-                  ))}
+                <Skeleton lines={1} height={28} radius={8} />
+              ) : (
+                <View style={{ alignItems: 'center' }}>
+                  <MissionInfo mission={todayMissionObj} center showDescription />
                 </View>
               )}
-            </View>
-          )}
 
-          {!!(todayMissionObj as any)?.imageUrl && (
+          {!!todayMissionObj?.imageUrl && (
             <View style={styles.heroWrap}>
               <Image
                 source={{
-                  uri: String((todayMissionObj as any).imageUrl).startsWith('http')
-                    ? (todayMissionObj as any).imageUrl
-                    : `${BASE_URL}${(todayMissionObj as any).imageUrl}`,
+                  uri: String(todayMissionObj.imageUrl).startsWith('http')
+                    ? todayMissionObj.imageUrl as string
+                    : `${BASE_URL}${String(todayMissionObj.imageUrl)}`,
                 }}
                 style={styles.hero}
                 resizeMode="cover"
