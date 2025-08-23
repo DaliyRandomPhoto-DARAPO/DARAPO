@@ -161,7 +161,29 @@ const HomeScreen = memo(() => {
           {loading ? (
             <Skeleton lines={1} height={28} radius={8} />
           ) : (
-            <Text style={styles.missionTitle}>{todayMission}</Text>
+            <View style={{ alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={styles.missionTitle}>{todayMission}</Text>
+                {(todayMissionObj as any)?.isRare ? (
+                  <Text style={{ color: '#F59E0B', fontWeight: '800', marginLeft: 8 }}>✨ 희귀</Text>
+                ) : null}
+              </View>
+              {!!(todayMissionObj as any)?.subtitle && (
+                <Text style={{ color: colors.subText, marginTop: 6 }}>{(todayMissionObj as any).subtitle}</Text>
+              )}
+              {!!(todayMissionObj as any)?.twist && (
+                <Text style={{ color: colors.primaryAlt, marginTop: 6 }}>힌트: {(todayMissionObj as any).twist}</Text>
+              )}
+              {!!(todayMissionObj as any)?.tags?.length && (
+                <View style={{ flexDirection: 'row', marginTop: 8, flexWrap: 'wrap' }}>
+                  {(todayMissionObj as any).tags.map((t: string) => (
+                    <View key={t} style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginRight: 6, marginTop: 4 }}>
+                      <Text style={{ color: '#4F46E5', fontSize: 12 }}>{t}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
           )}
 
           {!!(todayMissionObj as any)?.imageUrl && (

@@ -44,6 +44,9 @@ export class MissionController {
       isActive: missionData.isActive ?? true,
       imageUrl: missionData.imageUrl,
       tags: missionData.tags,
+  subtitle: missionData.subtitle,
+  isRare: missionData.isRare,
+  twist: missionData.twist,
     };
     return this.missionService.createMission(payload);
   }

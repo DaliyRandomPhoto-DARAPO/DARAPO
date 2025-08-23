@@ -28,6 +28,7 @@ type FeedItem = {
   user: { name: string; avatar?: string | null };
   date: string;
   mission: string;
+  missionObj?: any;
   image: string;
   likes: number;
   mood?: string;
@@ -72,12 +73,14 @@ const FeedScreen = memo(() => {
     const rawAvatar: string | null = p?.userId?.profileImage || null;
     const avatar = rawAvatar ? (rawAvatar.startsWith('http') ? rawAvatar : `${BASE_URL}${rawAvatar}`) : null;
     const missionTitle: string = p?.missionId?.title || '오늘의 미션';
+    const missionObj: any = p?.missionId || undefined;
     const mood: string | undefined = p?.comment || undefined;
     return {
       id: String(p?._id || ''),
       user: { name: userName, avatar },
   date: formatKstMMDD(d),
       mission: missionTitle,
+      missionObj,
       image,
       likes: 0,
       mood,
@@ -193,7 +196,33 @@ const FeedScreen = memo(() => {
             <View style={styles.missionDot} />
             <Text style={styles.missionLabel}>오늘의 미션</Text>
           </View>
-          <Text style={styles.missionText}>{p.mission}</Text>
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.missionText}>{p.mission}</Text>
+                {/* subtitle */}
+                {p.missionObj?.subtitle ? <Text style={{ color: colors.subText, marginTop: 4, fontSize: 13 }}>{p.missionObj.subtitle}</Text> : null}
+                {/* twist hint */}
+                {p.missionObj?.twist ? <Text style={{ color: colors.primaryAlt, marginTop: 6, fontSize: 12, fontWeight: '700' }}>힌트: {p.missionObj.twist}</Text> : null}
+                {/* tags */}
+                {Array.isArray(p.missionObj?.tags) && p.missionObj.tags.length > 0 ? (
+                  <View style={{ flexDirection: 'row', marginTop: 6, flexWrap: 'wrap' }}>
+                    {p.missionObj.tags.slice(0, 5).map((t: string) => (
+                      <View key={t} style={{ backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginRight: 6, marginTop: 4 }}>
+                        <Text style={{ fontSize: 12, color: '#374151' }}>{t}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+              {/* rare badge */}
+              {p.missionObj?.isRare ? (
+                <View style={{ marginLeft: 8, backgroundColor: '#FDE68A', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 12 }}>
+                  <Text style={{ fontSize: 12, color: '#92400E', fontWeight: '800' }}>Rare</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
         </View>
 
         {/* 사진 */}

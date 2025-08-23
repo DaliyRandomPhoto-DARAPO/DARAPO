@@ -8,6 +8,9 @@ export class Mission {
   @Prop({ required: true })
   title: string;
 
+  @Prop()
+  subtitle?: string;
+
   @Prop({ required: true })
   description: string;
 
@@ -22,6 +25,12 @@ export class Mission {
 
   @Prop()
   tags: string[];
+
+  @Prop({ default: false })
+  isRare?: boolean;
+
+  @Prop()
+  twist?: string;
 }
 
 export const MissionSchema = SchemaFactory.createForClass(Mission);

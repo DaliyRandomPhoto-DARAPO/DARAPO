@@ -25,15 +25,21 @@ const COLORS = Object.freeze({
 const TAKE_OPTIONS = Object.freeze({ quality: 0.85, skipProcessing: true } as const);
 const CAMERA_STATIC_PROPS = Object.freeze({ enableShutterSound: false } as any);
 
-const TopBar = memo(({ loading, title }: { loading: boolean; title: string }) => (
+const TopBar = memo(({ loading, mission }: { loading: boolean; mission?: any | null }) => (
   <View style={styles.topBar}>
     <View style={styles.missionContainer}>
       {loading ? (
         <ActivityIndicator size="small" color={COLORS.white} />
       ) : (
-        <Text style={styles.missionText} numberOfLines={1}>
-          {title}
-        </Text>
+        <View>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={styles.missionText} numberOfLines={1}>
+              {mission?.title ?? '오늘의 미션'}
+            </Text>
+            {mission?.isRare ? <Text style={{ color: '#FBBF24', marginLeft: 8 }}>✨</Text> : null}
+          </View>
+          {!!mission?.subtitle && <Text style={{ color: '#FFFFFFAA', fontSize: 12 }}>{mission.subtitle}</Text>}
+        </View>
       )}
     </View>
   </View>
@@ -62,7 +68,7 @@ const CameraScreen = () => {
   // --------- 모든 훅은 여기(조건부 X) ----------
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
-  const [todayMission, setTodayMission] = useState<string>('오늘의 미션');
+  const [todayMission, setTodayMission] = useState<any | string>('오늘의 미션');
   const [loading, setLoading] = useState(true);
 
   const navigation = useNavigation<CameraScreenNavigationProp>();
@@ -74,8 +80,8 @@ const CameraScreen = () => {
   const loadTodayMission = useCallback(async () => {
     try {
       setLoading(true);
-      const mission = await missionAPI.getTodayMission();
-      setTodayMission(mission?.title || '오늘의 미션');
+  const mission = await missionAPI.getTodayMission();
+  setTodayMission(mission || '오늘의 미션');
     } catch (e) {
       console.error('미션 로드 실패:', e);
       setTodayMission('오늘의 미션');
@@ -137,7 +143,7 @@ const CameraScreen = () => {
       <CameraView style={styles.camera} facing={facing} ref={cameraRef} {...CAMERA_STATIC_PROPS} />
 
       <View style={styles.overlay} pointerEvents="box-none">
-        <TopBar loading={loading} title={todayMission} />
+  <TopBar loading={loading} mission={typeof todayMission === 'string' ? undefined : (todayMission as any)} />
 
         {/* 필요하면 토글 버튼 노출 */}
         {/* <TouchableOpacity style={styles.flipButton} onPress={toggleCameraFacing} /> */}

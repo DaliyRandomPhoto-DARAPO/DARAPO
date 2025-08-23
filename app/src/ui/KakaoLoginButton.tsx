@@ -28,6 +28,8 @@ type Props = {
   testID?: string;
   /** 아이콘 커스텀(공식 심볼 png 추천) */
   iconSource?: any; // require(...) | { uri }
+  /** true이면 내부 네이티브 로그인 호출을 완전히 비활성화합니다 (백엔드 OAuth 흐름 사용 시) */
+  disableNative?: boolean;
 };
 
 const KAKAO_YELLOW = '#FEE500';
@@ -48,14 +50,21 @@ const KakaoLoginButton: React.FC<Props> = ({
   accessibilityLabel,
   testID,
   iconSource = DEFAULT_ICON,
+  disableNative = false,
 }) => {
   const [innerLoading, setInnerLoading] = useState(false);
   const isBusy = loading ?? innerLoading;
 
   const handleLogin = useCallback(
     async (e: GestureResponderEvent) => {
+      // 항상 외부 핸들러를 먼저 호출
       onPress?.(e);
       if (disabled || isBusy) return;
+
+  // 명시적으로 내부 native 흐름을 비활성화한 경우 즉시 반환
+  if (disableNative) {
+        return;
+      }
 
       try {
         setInnerLoading(true);

@@ -19,8 +19,8 @@ import type { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
 import { photoAPI, missionAPI } from '../services/api';
 import * as ImageManipulator from 'expo-image-manipulator';
-import Header from '../ui/Header';
 import Card from '../ui/Card';
+import Header from '../ui/Header';
 import { theme } from '../ui/theme';
 import Button from '../ui/Button';
 
@@ -45,10 +45,10 @@ function pickMime(uri: string): { name: string; type: string } {
 // ===== Subcomponents (memo)
 const MissionCard = memo(function MissionCard({
   loading,
-  title,
+  mission,
 }: {
   loading: boolean;
-  title: string;
+  mission?: any | null;
 }) {
   return (
     <Card style={styles.infoCard}>
@@ -62,7 +62,23 @@ const MissionCard = memo(function MissionCard({
           <Text style={styles.missionTextLoading}>불러오는 중…</Text>
         </View>
       ) : (
-        <Text style={styles.missionText}>{title}</Text>
+        <View>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={styles.missionText}>{mission?.title ?? '미션 없음'}</Text>
+            {mission?.isRare ? <Text style={{ color: '#F59E0B', fontWeight: '800', marginLeft: 8 }}>✨ 희귀</Text> : null}
+          </View>
+          {!!mission?.subtitle && <Text style={{ color: colors.subText, marginTop: 6 }}>{mission.subtitle}</Text>}
+          {!!mission?.twist && <Text style={{ color: colors.primaryAlt, marginTop: 6 }}>힌트: {mission.twist}</Text>}
+          {!!mission?.tags?.length && (
+            <View style={{ flexDirection: 'row', marginTop: 8, flexWrap: 'wrap' }}>
+              {mission.tags.map((t: string) => (
+                <View key={t} style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginRight: 6, marginTop: 4 }}>
+                  <Text style={{ color: '#4F46E5', fontSize: 12 }}>{t}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
       )}
     </Card>
   );
@@ -163,7 +179,7 @@ const PhotoUploadScreen = () => {
 
   const [comment, setComment] = useState('');
   const [isUploading, setIsUploading] = useState(false);
-  const [mission, setMission] = useState<{ _id: string; title: string } | null>(null);
+  const [mission, setMission] = useState<any | null>(null);
   const [loadingMission, setLoadingMission] = useState(true);
   const [isPublic, setIsPublic] = useState(true);
   const [progress, setProgress] = useState<number | undefined>(undefined);
@@ -187,8 +203,8 @@ const PhotoUploadScreen = () => {
       setLoadingMission(true);
       const m = await missionAPI.getTodayMission();
       if (!mountedRef.current) return;
-      if (m && m._id) setMission({ _id: m._id, title: m.title });
-      else setMission(null);
+  if (m && m._id) setMission(m);
+  else setMission(null);
     } catch (e) {
       console.warn('오늘의 미션 조회 실패:', e);
       if (mountedRef.current) setMission(null);
@@ -308,7 +324,7 @@ const PhotoUploadScreen = () => {
         >
           <PreviewCard uri={photoUri} />
 
-          <MissionCard loading={loadingMission} title={mission?.title || '미션 없음'} />
+          <MissionCard loading={loadingMission} mission={mission} />
 
           <CommentCard value={comment} onChangeText={setComment} />
 

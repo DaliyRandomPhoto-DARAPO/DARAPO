@@ -72,7 +72,18 @@ const PhotoCard = memo(function PhotoCard({
             <View style={styles.missionDot} />
             <Text style={styles.missionLabel}>오늘의 미션</Text>
           </View>
-          <Text style={styles.missionText}>{missionTitle}</Text>
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={styles.missionText}>{missionTitle}</Text>
+            </View>
+            {/* subtitle/isRare could be present if missionId is an object */}
+            {typeof item.missionId === 'object' && item.missionId ? (
+              <>
+                {!!(item.missionId as any).subtitle && <Text style={{ color: colors.subText, marginTop: 4 }}>{(item.missionId as any).subtitle}</Text>}
+                {!!(item.missionId as any).isRare && <Text style={{ color: '#F59E0B', marginTop: 4 }}>✨ 희귀</Text>}
+              </>
+            ) : null}
+          </View>
         </View>
 
         {/* 감정 박스 */}

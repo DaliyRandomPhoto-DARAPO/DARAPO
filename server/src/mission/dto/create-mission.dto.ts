@@ -33,4 +33,16 @@ export class CreateMissionDto {
   @IsOptional()
   @IsArray()
   tags?: string[];
+
+  @IsOptional()
+  @IsString()
+  subtitle?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isRare?: boolean;
+
+  @IsOptional()
+  @IsString()
+  twist?: string;
 }

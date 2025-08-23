@@ -133,8 +133,18 @@ export const authAPI = {
 
 
   logout: async () => {
-    const response = await apiClient.post('/auth/logout');
-    return response.data;
+    try {
+      const response = await apiClient.post('/auth/logout');
+      return response.data;
+    } catch (err: any) {
+      // 서버에서 이미 토큰이 만료되어 401을 반환할 수 있음. 이 경우 로그아웃은 성공한 것으로 간주.
+      if (err?.response?.status === 401) {
+        // eslint-disable-next-line no-console
+        if (__DEV__) console.info('logout returned 401 - treated as success');
+        return { ok: true };
+      }
+      throw err;
+    }
   },
 
   refreshToken: async () => {

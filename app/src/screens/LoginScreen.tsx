@@ -194,6 +194,7 @@ const LoginScreen: React.FC = React.memo(() => {
               }}
               onError={(e) => __DEV__ && console.warn('kakao error:', e)}
               onPress={handleKakaoLogin}
+              disableNative={true}
               loading={loading}
               fullWidth
               accessibilityLabel="카카오톡으로 로그인"
