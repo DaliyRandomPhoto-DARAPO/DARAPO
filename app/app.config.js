@@ -11,7 +11,7 @@ export default {
   expo: {
     name: APP_NAME,
     slug: APP_NAME,
-    version: '1.0.6',
+    version: '1.0.7',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
