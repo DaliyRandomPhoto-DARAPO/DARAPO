@@ -1,3 +1,4 @@
+// 미션 도메인 비즈니스 로직을 담당하는 서비스
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -10,7 +11,6 @@ export class MissionService {
   ) {}
 
   async getTodayMission() {
-    // Compute KST day range (Asia/Seoul)
     const now = new Date();
     const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
     const kstNow = new Date(utcMs + 9 * 60 * 60000);
@@ -83,21 +83,16 @@ export class MissionService {
       { title: '아름다운 그림자', subtitle: '그림자를 활용한 사진' },
     ];
 
-  // legacy tagging/metadata removed from structured payload
-
-    // Weighted selection helper
     function pickRandom<T>(arr: T[]) {
       return arr[Math.floor(Math.random() * arr.length)];
     }
 
-    // Compute KST midnight as mission date (stored in UTC)
     const now = new Date();
     const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
     const kstMidnight = new Date(utcMs + 9 * 60 * 60000);
     kstMidnight.setHours(0, 0, 0, 0);
     const missionDate = new Date(kstMidnight.getTime() - 9 * 60 * 60000);
 
-    // Avoid recent duplicates: check last 7 days
     const sevenDaysBefore = new Date(missionDate.getTime() - 7 * 24 * 60 * 60000);
     const recentMissions = await this.missionModel
       .find({ date: { $gte: sevenDaysBefore, $lt: missionDate }, isActive: true })
@@ -105,7 +100,6 @@ export class MissionService {
 
     const recentTitles = new Set(recentMissions.map((m) => m.title));
 
-    // Try to pick a mission not used in the last 7 days, fallback after few tries
   let chosen: { title: string; subtitle?: string } | null = null;
     for (let i = 0; i < 6; i++) {
       const candidate = pickRandom(missionPool);
@@ -115,26 +109,21 @@ export class MissionService {
       }
     }
 
-    // At this point chosen should not be null; ensure fallback
     if (!chosen) {
       chosen = missionPool[0];
     }
 
-    // Build display title and description while preserving legacy `title`/`description`
     let displayTitle = chosen.title;
     if (chosen.subtitle) displayTitle = `${chosen.title} - ${chosen.subtitle}`;
   let description = `${chosen.title}를 주제로 사진을 찍어보세요!`;
 
 
     return this.createMission({
-      // legacy fields kept for backward compatibility
       title: displayTitle,
       description,
       date: missionDate,
       isActive: true,
-      // new structured fields
-  subtitle: chosen.subtitle,
-      // twist/tags removed from payload
+      subtitle: chosen.subtitle,
     });
   }
 }

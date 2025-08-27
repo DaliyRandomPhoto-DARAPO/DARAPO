@@ -1,3 +1,4 @@
+// 요청 경로나 파라미터에서 전달된 문자열 ObjectId의 유효성을 검사하는 파이프
 import { BadRequestException, Injectable, PipeTransform } from '@nestjs/common';
 import { Types } from 'mongoose';
 

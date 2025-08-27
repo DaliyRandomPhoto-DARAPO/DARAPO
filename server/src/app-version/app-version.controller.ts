@@ -1,3 +1,4 @@
+// 앱 버전 정보 제공 및 (관리자 인증 시) 업데이트 엔드포인트
 import { Controller, Get, Put, Body, Headers, ForbiddenException } from '@nestjs/common';
 import { AppVersionService, AppVersionRecord } from './app-version.service';
 

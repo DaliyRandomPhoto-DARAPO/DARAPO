@@ -1,3 +1,4 @@
+// 카카오 API 호출을 담당하는 클라이언트
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import axios from 'axios';
 

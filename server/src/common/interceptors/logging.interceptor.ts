@@ -1,3 +1,4 @@
+// HTTP 요청/응답의 실행 시간을 로깅하는 인터셉터
 import {
   CallHandler,
   ExecutionContext,

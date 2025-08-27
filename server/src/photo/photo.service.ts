@@ -1,3 +1,4 @@
+// 사진 데이터의 생성/수정/삭제 및 조회 로직을 담당하는 서비스
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';

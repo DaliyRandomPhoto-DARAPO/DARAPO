@@ -1,3 +1,4 @@
+// 사진 생성 관련 DTO 정의
 import {
   IsBoolean,
   IsMongoId,

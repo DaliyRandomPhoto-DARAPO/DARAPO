@@ -1,3 +1,4 @@
+// 전역 응답을 { success: true, data } 형태로 래핑하는 인터셉터
 import {
   CallHandler,
   ExecutionContext,

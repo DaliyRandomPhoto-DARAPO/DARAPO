@@ -1,3 +1,4 @@
+// 이미지 포맷 변환 및 메타데이터 추출 유틸
 import sharp from 'sharp';
 
 export async function normalizeImage(

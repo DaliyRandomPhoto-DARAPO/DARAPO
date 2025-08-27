@@ -1,3 +1,4 @@
+// 인증 관련 엔드포인트 정의 (카카오 OAuth, 토큰 갱신, 로그아웃 등)
 import {
   Controller,
   Post,

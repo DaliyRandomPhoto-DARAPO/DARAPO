@@ -1,3 +1,4 @@
+// AWS S3 업로드/삭제/사인드 URL 생성을 담당하는 유틸 서비스
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {

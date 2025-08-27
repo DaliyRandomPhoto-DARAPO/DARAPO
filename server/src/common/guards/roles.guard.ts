@@ -1,3 +1,4 @@
+// 역할 기반 접근 제어(간단 구현)
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 
 @Injectable()

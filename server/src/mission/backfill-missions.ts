@@ -1,3 +1,5 @@
+// 개발용 백필 스크립트: DB에 누락된 미션 데이터(설명/부제)를 채웁니다.
+// 주의: 개발 DB에서만 실행하세요.
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
 import { MissionService } from './mission.service';

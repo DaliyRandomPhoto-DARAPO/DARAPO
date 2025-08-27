@@ -1,3 +1,4 @@
+// 전역 예외 처리를 일관된 JSON 응답 형태로 반환하는 필터
 import {
   ArgumentsHost,
   Catch,

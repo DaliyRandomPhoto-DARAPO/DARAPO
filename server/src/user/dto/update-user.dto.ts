@@ -1,3 +1,4 @@
+// 사용자 프로필 업데이트에 사용되는 DTO
 import {
   IsOptional,
   IsString,

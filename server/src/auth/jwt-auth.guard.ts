@@ -1,3 +1,4 @@
+// JWT 기반 인증 가드
 import { Injectable, ExecutionContext } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 

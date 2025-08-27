@@ -23,6 +23,7 @@ interface KakaoUserInfo {
 
 @Injectable()
 export class AuthService {
+  // 카카오 OAuth 관련 설정값
   private readonly KAKAO_CLIENT_ID: string;
   private readonly KAKAO_CLIENT_SECRET: string;
   private readonly KAKAO_REDIRECT_URI: string;
@@ -33,13 +34,9 @@ export class AuthService {
     private readonly kakaoClient: KakaoClient,
     private readonly configService: ConfigService,
   ) {
-    this.KAKAO_CLIENT_ID =
-      this.configService.get<string>('KAKAO_REST_API_KEY')!;
-    this.KAKAO_CLIENT_SECRET = this.configService.get<string>(
-      'KAKAO_CLIENT_SECRET',
-    )!;
-    this.KAKAO_REDIRECT_URI =
-      this.configService.get<string>('KAKAO_REDIRECT_URI')!;
+    this.KAKAO_CLIENT_ID = this.configService.get<string>('KAKAO_REST_API_KEY')!;
+    this.KAKAO_CLIENT_SECRET = this.configService.get<string>('KAKAO_CLIENT_SECRET')!;
+    this.KAKAO_REDIRECT_URI = this.configService.get<string>('KAKAO_REDIRECT_URI')!;
   }
 
   async getKakaoAuthUrl(): Promise<string> {
@@ -65,8 +62,9 @@ export class AuthService {
         profileImage: userInfo.kakao_account?.profile?.profile_image_url,
       };
     } catch (error) {
-      Logger.error('OAuth 콜백 처리 실패:', error?.stack || error);
-      throw new UnauthorizedException('카카오 로그인 처리 실패');
+  // 외부 API 호출 실패 또는 토큰 처리 중 에러 발생
+  Logger.error('OAuth 콜백 처리 실패:', error?.stack || error);
+  throw new UnauthorizedException('카카오 로그인 처리 실패');
     }
   }
 
@@ -172,17 +170,16 @@ export class AuthService {
   }
 
   async logout(_userId: string): Promise<void> {
-    // 실제로는 Redis 등에 토큰을 블랙리스트로 관리해야 함
-    // 현재는 클라이언트에서 토큰 삭제로 처리
+  // 실제로는 Redis 등에서 토큰을 블랙리스트로 관리하거나 세션을 만료시켜야 함
+  // 현재 구현은 클라이언트에서 액세스/리프레시 토큰을 삭제하는 방식으로 처리
     return;
   }
 
   async deleteAccount(_userId: string): Promise<void> {
-    // if needed, implement unlinking kakao here. currently we just delete user
-    // const user = await this.findUserById(_userId);
-    // 카카오 연결 해제 필요시 구현
+    // 계정 삭제 처리
+    // (참고) 카카오 연결 해제 필요시 해당 로직을 추가 구현
     await this.userService.deleteUser(_userId);
   }
 
-  // 블랙리스트 관련 로직은 Redis 세션 전략 도입 시 재설계 예정
+  // 블랙리스트 관련 로직은 Redis 기반 세션/토큰 관리 전략 도입 시 재설계 예정
 }

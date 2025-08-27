@@ -1,3 +1,4 @@
+// 사진 도메인 스키마 정의 (Mongoose)
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 

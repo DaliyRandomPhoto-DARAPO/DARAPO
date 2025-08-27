@@ -1,3 +1,4 @@
+// 사진 업로드/조회/삭제 관련 API 엔드포인트
 import {
   Controller,
   Get,

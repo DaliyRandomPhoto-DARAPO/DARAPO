@@ -1,3 +1,4 @@
+// 서비스 헬스체크 엔드포인트 (liveness, readiness)
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { InjectConnection } from '@nestjs/mongoose';

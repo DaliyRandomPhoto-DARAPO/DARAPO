@@ -14,6 +14,8 @@ import { HealthModule } from './health/health.module';
 import { validateEnv } from './config/env.validation';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
+// 애플리케이션의 루트 모듈
+// - 환경설정, DB 연결, 주요 하위 모듈을 초기화합니다.
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -22,8 +24,9 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     }),
     ThrottlerModule.forRoot([
       {
-        ttl: 60000, // milliseconds
-        limit: 120,
+  // ttl: 제한 기간 (밀리초 단위), limit: 해당 기간 내 허용 요청 수
+  ttl: 60000, // 밀리초
+  limit: 120,
       },
     ]),
     MongooseModule.forRootAsync({
@@ -31,7 +34,8 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
       useFactory: (cs: ConfigService) => ({
         uri:
           cs.get<string>('MONGODB_URI') || 'mongodb://localhost:27017/darapo',
-        dbName: cs.get<string>('MONGODB_DB') ?? undefined,
+  // 필요시 환경 변수로 DB 이름 지정
+  dbName: cs.get<string>('MONGODB_DB') ?? undefined,
       }),
     }),
     AuthModule,

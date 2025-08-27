@@ -1,3 +1,4 @@
+// 인증 모듈: JWT 설정, Passport 전략, 카카오 클라이언트 등록
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';

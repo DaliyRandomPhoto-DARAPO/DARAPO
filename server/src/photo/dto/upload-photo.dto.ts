@@ -1,3 +1,4 @@
+// 사진 업로드 요청에서 사용되는 DTO
 import {
   IsBoolean,
   IsMongoId,

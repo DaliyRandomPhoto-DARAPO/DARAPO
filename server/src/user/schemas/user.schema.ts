@@ -1,3 +1,4 @@
+// 사용자 도메인 스키마 (Mongoose)
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 

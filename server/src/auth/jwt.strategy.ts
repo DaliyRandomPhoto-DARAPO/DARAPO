@@ -1,3 +1,4 @@
+// JWT 검증 전략: 토큰에서 사용자 정보를 추출하고 유효성 검사
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
