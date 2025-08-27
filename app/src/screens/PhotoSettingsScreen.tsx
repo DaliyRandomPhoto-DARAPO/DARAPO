@@ -231,9 +231,9 @@ const styles = StyleSheet.create({
   // 감정 박스 (컴팩트)
   moodBox: {
     backgroundColor: '#FEF2F2',
-    borderRadius: 12,            // 16 → 12
-    padding: spacing.sm,         // md → sm
-    marginBottom: spacing.md,    // lg → md
+    borderRadius: 12,            
+    padding: spacing.sm,         
+    marginBottom: spacing.md,   
   },
   moodRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 }, // 4 → 2
   moodDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primaryAlt, marginRight: 4 }, // 8 → 6
@@ -241,21 +241,19 @@ const styles = StyleSheet.create({
   moodText: { fontSize: 13, color: '#374151', lineHeight: 17 },                              // 14→13
 
   // 컨트롤 영역 전반 축소
-  controls: { gap: spacing.sm }, // md → sm
+  controls: { gap: spacing.sm }, 
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.md, // lg → md
-    paddingVertical: spacing.sm,   // md → sm
-    borderRadius: 12,              // 16 → 12
+    paddingHorizontal: spacing.md, 
+    paddingVertical: spacing.sm,   
+    borderRadius: 12,              
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: '#FFFFFF',
   },
   label: {
-    // 기존 typography.body 그대로면 큰 편이면 살짝 다운
-    fontSize: Math.max(14, (Number(typography.body) || 16) - 2), // 16→14 근처
+    fontSize: Math.max(14, (Number(typography.body) || 16) - 2),
     color: colors.text,
     fontWeight: '600',
   },
