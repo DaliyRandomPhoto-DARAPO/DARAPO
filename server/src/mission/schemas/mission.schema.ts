@@ -22,15 +22,6 @@ export class Mission {
 
   @Prop()
   imageUrl: string;
-
-  @Prop()
-  tags: string[];
-
-  @Prop({ default: false })
-  isRare?: boolean;
-
-  @Prop()
-  twist?: string;
 }
 
 export const MissionSchema = SchemaFactory.createForClass(Mission);

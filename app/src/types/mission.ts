@@ -8,9 +8,7 @@ export interface Mission {
   description?: string | null;
   // Stored as ISO string from server or Date
   date?: string | Date;
-  isRare?: boolean;
-  twist?: string | null;
-  tags?: string[];
+  // isRare/twist/tags removed
   imageUrl?: string | null;
 }
 

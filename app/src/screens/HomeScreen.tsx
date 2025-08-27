@@ -166,7 +166,7 @@ const HomeScreen = memo(() => {
                 <Skeleton lines={1} height={28} radius={8} />
               ) : (
                 <View style={{ alignItems: 'center' }}>
-                  <MissionInfo mission={todayMissionObj} center showDescription />
+                  <MissionInfo mission={todayMissionObj} center showDescription hideMeta />
                 </View>
               )}
 

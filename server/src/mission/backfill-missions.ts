@@ -16,7 +16,7 @@ async function main() {
       if ((!subtitle || subtitle === null) && title.includes(' - ')) {
         subtitle = title.split(' - ').slice(1).join(' - ').trim();
       }
-      const description = m.description || `${title.replace(/^✨\s*/, '')}를 주제로 사진을 찍어보세요!`;
+      const description = m.description || `${title.replace(/^\s*/, '')}를 주제로 사진을 찍어보세요!`;
       await (svc as any).missionModel.updateOne({ _id: m._id }, { $set: { subtitle, description } }).exec();
       console.info(`Backfilled mission ${m._id}`);
     }

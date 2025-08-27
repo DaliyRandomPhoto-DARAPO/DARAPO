@@ -11,12 +11,14 @@ export default memo(function MissionInfo({
   inverted = false,
   center = false,
   showDescription = false,
+  hideMeta = false,
 }: {
   mission?: Mission | null;
   compact?: boolean;
   inverted?: boolean;
   center?: boolean;
   showDescription?: boolean;
+  hideMeta?: boolean;
 }) {
   if (!mission) return null;
   const colors = inverted
@@ -34,43 +36,30 @@ export default memo(function MissionInfo({
     { color: colors.subText, textAlign: center ? 'center' : 'left' },
   ]) as TextStyle;
 
-  const twistStyle = StyleSheet.flatten([
-    styles.twist,
-    { color: colors.primaryAlt, textAlign: center ? 'center' : 'left' },
-  ]) as TextStyle;
+  // hint/tags styles removed
 
-  const tagsWrapStyle = StyleSheet.flatten([
-    styles.tagsWrap,
-    { justifyContent: center ? 'center' : 'flex-start' } as ViewStyle,
-  ]) as ViewStyle;
+  const processNewlines = (s?: string) => (s ? s.replace(/\\n/g, '\n') : s);
 
   return (
     <View style={[styles.container, center ? styles.containerFull : undefined]}>
       <View style={[styles.titleRow, center ? styles.centerRow : undefined]}>
         <Text style={titleStyle}>{mission.title || '오늘의 미션'}</Text>
-        {mission.isRare ? <Text style={styles.rare}>{compact ? '✨' : '✨ 희귀'}</Text> : null}
+  {/* rare badge removed */}
       </View>
       {(() => {
         // Show description only when explicitly allowed (Home). Otherwise show structured subtitle only.
         const desc = showDescription ? ((mission as any).description as string | undefined) : undefined;
         if (desc && desc.trim().length > 0) {
-          const short = desc.length > 140 ? desc.slice(0, 140).trim() + '...' : desc;
+          const processed = processNewlines(desc) as string;
+          const short = processed.length > 140 ? processed.slice(0, 140).trim() + '...' : processed;
           return <Text style={subtitleStyle}>{short}</Text>;
         }
 
-        const subtitle = mission.subtitle;
+        const subtitleRaw = mission.subtitle;
+        const subtitle = subtitleRaw ? processNewlines(subtitleRaw) : undefined;
         return subtitle ? <Text style={subtitleStyle}>{subtitle}</Text> : null;
       })()}
-      {!!mission.twist && <Text style={twistStyle}>힌트: {mission.twist}</Text>}
-      {!!mission.tags?.length && (
-        <View style={tagsWrapStyle}>
-          {mission.tags.map((t) => (
-            <View key={t} style={styles.tagChip}>
-              <Text style={styles.tagText}>{t}</Text>
-            </View>
-          ))}
-        </View>
-      )}
+  {/* hint/tags removed from UI */}
     </View>
   );
 });
@@ -83,9 +72,5 @@ const styles = StyleSheet.create({
   title: { fontWeight: '800' as TextStyle['fontWeight'], fontSize: 18 },
   titleCompact: { fontSize: 14 },
   subtitle: { marginTop: 6 },
-  twist: { marginTop: 6, fontWeight: '700' as TextStyle['fontWeight'] },
-  tagsWrap: { flexDirection: 'row', marginTop: 8, flexWrap: 'wrap' as ViewStyle['flexWrap'] },
-  tagChip: { backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginRight: 6, marginTop: 4 },
-  tagText: { color: '#4F46E5', fontSize: 12 },
-  rare: { color: '#F59E0B', marginLeft: 8 },
+  // hint/tags/rare styles removed
 });

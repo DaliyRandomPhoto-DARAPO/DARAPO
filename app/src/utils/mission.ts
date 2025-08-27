@@ -7,9 +7,6 @@ export function normalizeMission(raw: any): Mission | undefined {
   const title = (raw.title || raw.name || '오늘의 미션') as string;
   const subtitle = raw.subtitle ?? null;
   const description = raw.description ?? null;
-  const isRare = !!raw.isRare;
-  const twist = raw.twist ?? null;
-  const tags = Array.isArray(raw.tags) ? raw.tags : [];
   const imageUrlRaw = raw.imageUrl ?? raw.image?.url ?? null;
   const imageUrl = imageUrlRaw ? (String(imageUrlRaw).startsWith('http') ? String(imageUrlRaw) : `${BASE_URL.replace(/\/$/, '')}/${String(imageUrlRaw).replace(/^\//, '')}`) : null;
   const date = raw.date ? (typeof raw.date === 'string' ? raw.date : (raw.date as Date).toISOString()) : undefined;
@@ -17,12 +14,9 @@ export function normalizeMission(raw: any): Mission | undefined {
   return {
     _id: String(id),
     title: String(title),
-    subtitle: subtitle === null ? undefined : subtitle,
-    description: description === null ? undefined : description,
-    date,
-    isRare,
-    twist,
-    tags,
-    imageUrl,
+  subtitle: subtitle === null ? undefined : subtitle,
+  description: description === null ? undefined : description,
+  date,
+  imageUrl,
   } as Mission;
 }

@@ -204,14 +204,9 @@ const FeedScreen = memo(() => {
           <View>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flex: 1 }}>
-                <MissionInfo mission={p.missionObj} compact />
+                <MissionInfo mission={p.missionObj} compact hideMeta />
               </View>
-              {/* rare badge */}
-              {p.missionObj?.isRare ? (
-                <View style={{ marginLeft: 8, backgroundColor: '#FDE68A', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 12 }}>
-                  <Text style={{ fontSize: 12, color: '#92400E', fontWeight: '800' }}>Rare</Text>
-                </View>
-              ) : null}
+              {/* rare badge removed */}
             </View>
           </View>
         </View>
