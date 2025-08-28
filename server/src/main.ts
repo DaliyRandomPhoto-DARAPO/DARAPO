@@ -44,7 +44,7 @@ async function bootstrap() {
   });
 
   // 프록시 신뢰 설정 (X-Forwarded-For 헤더 사용을 위해)
-  app.getHttpAdapter().getInstance().set('trust proxy', true);
+  app.getHttpAdapter().getInstance().set('trust proxy', 2);
 
   // 보안 및 모니터링 미들웨어 적용
   setupSecurity(app);

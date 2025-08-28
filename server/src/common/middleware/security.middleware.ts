@@ -40,7 +40,7 @@ export const setupSecurity = (app: INestApplication): void => {
       },
       standardHeaders: true,
       legacyHeaders: false,
-      trustProxy: true, // 프록시 신뢰 설정 허용
+      // trustProxy: true, // 프록시 신뢰 설정 허용 - app 설정에 따름
       // Redis 스토어 사용 (추후)
       // store: Redis 사용 시 설정
     }),
