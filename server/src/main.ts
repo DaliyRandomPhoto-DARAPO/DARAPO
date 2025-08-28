@@ -1,16 +1,33 @@
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
-import helmet from 'helmet';
-import { AppModule } from './app.module';
+import { AppModule } from './app/app.module';
 import { join } from 'path';
 import * as express from 'express';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { RequestTimingInterceptor } from './common/interceptors/request-timing.interceptor';
+import { SSMConfigService } from './config/ssm.config';
+import { setupSecurity, setupMonitoring } from './common/middleware/security.middleware';
+import { MemoryOptimizer, memoryOptimizationMiddleware } from './common/utils/memoryOptimizer';
 
 async function bootstrap() {
+  // SSM에서 환경 변수 로드
+  const ssmConfig = new SSMConfigService();
+  const ssmParams = await ssmConfig.getParameters([
+    '/darapo/JWT_SECRET',
+    '/darapo/MONGODB_URI',
+    '/darapo/KAKAO_REST_API_KEY',
+    '/darapo/KAKAO_CLIENT_SECRET',
+    // 필요한 파라미터들 추가
+  ]);
+
+  // 환경 변수 설정
+  Object.entries(ssmParams).forEach(([key, value]) => {
+    process.env[key] = value;
+  });
+
   const app = await NestFactory.create(AppModule);
 
   // 글로벌 prefix 설정
@@ -26,8 +43,16 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // 기본 보안 헤더 적용
-  app.use(helmet());
+  // 보안 및 모니터링 미들웨어 적용
+  setupSecurity(app);
+  setupMonitoring(app);
+
+  // 메모리 최적화 미들웨어 적용
+  app.use(memoryOptimizationMiddleware);
+
+  // 메모리 모니터링 시작
+  const memoryOptimizer = MemoryOptimizer.getInstance();
+  memoryOptimizer.startMonitoring();
 
   // 전역 Validation Pipe/Filter/Interceptor 설정
   app.useGlobalPipes(

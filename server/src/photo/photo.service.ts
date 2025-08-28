@@ -4,6 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Photo, PhotoDocument } from './schemas/photo.schema';
 import { S3Service } from '../common/s3.service';
+import { toObjectId } from '../common/utils/objectid.util';
 
 type CreatePhotoInput = {
   userId: string;
@@ -24,13 +25,13 @@ export class PhotoService {
     private readonly s3: S3Service,
   ) {}
 
-  async createPhoto(photoData: CreatePhotoInput) {
+  async createPhoto(photoData: CreatePhotoInput): Promise<PhotoDocument> {
     const normalized: any = { ...photoData };
     if (photoData.userId && typeof photoData.userId === 'string') {
-      normalized.userId = new Types.ObjectId(photoData.userId);
+      normalized.userId = toObjectId(photoData.userId);
     }
     if (photoData.missionId && typeof photoData.missionId === 'string') {
-      normalized.missionId = new Types.ObjectId(photoData.missionId);
+      normalized.missionId = toObjectId(photoData.missionId);
     }
     const photo = new this.photoModel(normalized);
     return photo.save();
@@ -42,9 +43,9 @@ export class PhotoService {
    */
   async upsertUserMissionPhoto(
     photoData: CreatePhotoInput,
-  ): Promise<{ photo: Photo; replaced: boolean }> {
-    const userId = new Types.ObjectId(photoData.userId);
-    const missionId = new Types.ObjectId(photoData.missionId);
+  ): Promise<{ photo: PhotoDocument; replaced: boolean }> {
+    const userId = toObjectId(photoData.userId);
+    const missionId = toObjectId(photoData.missionId);
 
     const existing = await this.photoModel
       .findOne({ userId, missionId })
@@ -55,24 +56,24 @@ export class PhotoService {
     }
 
     // 기존 S3 오브젝트 삭제(베스트 에포트)
-    const prevKey = (existing as any).objectKey as string | undefined;
+    const prevKey = existing.objectKey;
     if (prevKey) {
       this.s3.deleteObject(prevKey).catch(() => {});
     }
 
-    (existing as any).objectKey = photoData.objectKey;
+    existing.objectKey = photoData.objectKey;
     if (typeof photoData.comment !== 'undefined')
       existing.comment = photoData.comment;
     if (typeof photoData.isPublic !== 'undefined')
-      (existing as any).isPublic = photoData.isPublic;
+      existing.isPublic = photoData.isPublic;
     if (typeof photoData.fileSize !== 'undefined')
-      (existing as any).fileSize = photoData.fileSize;
+      existing.fileSize = photoData.fileSize;
     if (typeof photoData.mimeType !== 'undefined')
-      (existing as any).mimeType = photoData.mimeType;
+      existing.mimeType = photoData.mimeType;
     if (typeof photoData.width !== 'undefined')
-      (existing as any).width = photoData.width;
+      existing.width = photoData.width;
     if (typeof photoData.height !== 'undefined')
-      (existing as any).height = photoData.height;
+      existing.height = photoData.height;
 
     const saved = await existing.save();
     return { photo: saved, replaced: true };
@@ -80,7 +81,7 @@ export class PhotoService {
 
   async findByUserId(userId: string) {
     return this.photoModel
-      .find({ userId: new Types.ObjectId(userId) })
+      .find({ userId: toObjectId(userId) })
       .populate('missionId', 'title description date')
       .sort({ createdAt: -1 })
       .lean()
@@ -89,7 +90,7 @@ export class PhotoService {
 
   async findRecentByUserId(userId: string, limit: number = 3) {
     return this.photoModel
-      .find({ userId: new Types.ObjectId(userId) })
+      .find({ userId: toObjectId(userId) })
       .populate('missionId', 'title description date')
       .sort({ createdAt: -1 })
       .limit(limit)
@@ -99,7 +100,7 @@ export class PhotoService {
 
   async findByMissionId(missionId: string) {
     return this.photoModel
-      .find({ missionId: new Types.ObjectId(missionId), isPublic: true })
+      .find({ missionId: toObjectId(missionId), isPublic: true })
       .populate('userId', 'nickname profileImage')
       .populate('missionId', 'title description date')
       .sort({ createdAt: -1 })
@@ -109,7 +110,7 @@ export class PhotoService {
 
   async findById(photoId: string) {
     return this.photoModel
-      .findById(new Types.ObjectId(photoId))
+      .findById(toObjectId(photoId))
       .populate('userId', 'nickname profileImage')
       .populate('missionId', 'title description date')
       .lean()
@@ -118,17 +119,14 @@ export class PhotoService {
 
   async updatePhoto(photoId: string, updateData: Partial<Photo>) {
     const normalized: any = { ...updateData };
-    if (updateData.userId && typeof (updateData as any).userId === 'string') {
-      normalized.userId = new Types.ObjectId((updateData as any).userId);
+    if (updateData.userId && typeof updateData.userId === 'string') {
+      normalized.userId = toObjectId(updateData.userId);
     }
-    if (
-      updateData.missionId &&
-      typeof (updateData as any).missionId === 'string'
-    ) {
-      normalized.missionId = new Types.ObjectId((updateData as any).missionId);
+    if (updateData.missionId && typeof updateData.missionId === 'string') {
+      normalized.missionId = toObjectId(updateData.missionId);
     }
     return this.photoModel
-      .findByIdAndUpdate(new Types.ObjectId(photoId), normalized, { new: true })
+      .findByIdAndUpdate(toObjectId(photoId), normalized, { new: true })
       .exec();
   }
 
@@ -140,7 +138,7 @@ export class PhotoService {
       this.s3.deleteObject(doc.objectKey).catch(() => {});
     }
     return this.photoModel
-      .findByIdAndDelete(new Types.ObjectId(photoId))
+      .findByIdAndDelete(toObjectId(photoId))
       .exec();
   }
 
@@ -159,7 +157,7 @@ export class PhotoService {
   async markAsShared(photoId: string) {
     return this.photoModel
       .findByIdAndUpdate(
-        new Types.ObjectId(photoId),
+        toObjectId(photoId),
         { isShared: true },
         { new: true },
       )

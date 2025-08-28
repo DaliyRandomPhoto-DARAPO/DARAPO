@@ -1,11 +1,12 @@
 // 미션 관련 API 엔드포인트 정의 (오늘의 미션 조회, 목록, 생성 등)
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { MissionService } from './mission.service';
 import { Mission } from './schemas/mission.schema';
 import { ParseObjectIdPipe } from '../common/pipes/parse-objectid.pipe';
 import { CreateMissionDto } from './dto/create-mission.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 
 @ApiTags('missions')
 @Controller('mission')
@@ -13,6 +14,7 @@ export class MissionController {
   constructor(private readonly missionService: MissionService) {}
 
   @Get('today')
+  @UseInterceptors(CacheInterceptor)
   @ApiOperation({ summary: '오늘의 미션 조회' })
   @ApiResponse({ status: 200, description: '오늘의 미션 반환' })
   async getTodayMission() {
@@ -20,6 +22,7 @@ export class MissionController {
   }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
   @ApiOperation({ summary: '전체 미션 목록 조회' })
   @ApiResponse({ status: 200, description: '미션 목록 반환' })
   async findAll() {
@@ -27,6 +30,7 @@ export class MissionController {
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
   @ApiOperation({ summary: '특정 미션 조회' })
   @ApiResponse({ status: 200, description: '미션 정보 반환' })
   async findOne(@Param('id', new ParseObjectIdPipe()) id: string) {

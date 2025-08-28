@@ -75,4 +75,17 @@ export class S3Service {
     ).toLowerCase();
     return `users/${parts.userId}/${yyyy}/${mm}/${dd}/${id}.${pathExt}`;
   }
+
+  buildProfileObjectKey(parts: {
+    userId: string;
+    originalName: string;
+    ext?: string;
+  }) {
+    const pathExt = (
+      parts.ext ||
+      parts.originalName.split('.').pop() ||
+      'jpg'
+    ).toLowerCase();
+    return `users/${parts.userId}/profile.${pathExt}`;
+  }
 }

@@ -8,12 +8,16 @@ import { NavigationContainer, useNavigationContainerRef } from '@react-navigatio
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Toast from 'react-native-toast-message';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Types
 import { RootStackParamList } from './src/types/navigation';
 
 // Context
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+
+// Components
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 
 // Services (none used here)
 
@@ -149,6 +153,31 @@ SplashScreen.preventAutoHideAsync();
 
 export default function App() {
   const [forceUpdateData, setForceUpdateData] = useState<{ updateUrl?: string; message?: string } | null>(null);
+
+  // React Query 클라이언트 생성 - 최적화된 설정
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 5 * 60 * 1000, // 5분
+        gcTime: 10 * 60 * 1000, // 10분 (이전 cacheTime)
+        retry: (failureCount, error: any) => {
+          // 401 에러는 재시도하지 않음
+          if (error?.response?.status === 401) return false;
+          // 네트워크 에러는 2번까지 재시도
+          return failureCount < 2;
+        },
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: true,
+        refetchOnMount: true,
+        // 네트워크가 느릴 때 로딩 상태 유지
+        networkMode: 'online',
+      },
+      mutations: {
+        retry: 1,
+        networkMode: 'online',
+      },
+    },
+  });
   useEffect(() => {
     // 3초간 스플래시 유지
     const timer = setTimeout(() => {
@@ -204,31 +233,35 @@ export default function App() {
   }, []);
 
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <AppNavigator />
-        {/* 강제 업데이트 모달 */}
-        <Modal visible={!!forceUpdateData} transparent={false} animationType="slide">
-          <View style={styles.modalContainer}>
-            <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>앱 업데이트 필요</Text>
-              <Text style={styles.modalMessage}>{forceUpdateData?.message ?? '업데이트가 필요합니다.'}</Text>
-              <Text style={styles.modalSubMessage}>최신 버전으로 업데이트하지 않으면 앱의 일부 기능이 작동하지 않을 수 있습니다.</Text>
-              <Pressable
-                style={styles.updateButton}
-                onPress={() => {
-                  if (forceUpdateData?.updateUrl) Linking.openURL(forceUpdateData.updateUrl);
-                }}
-              >
-                <Text style={styles.updateButtonText}>지금 업데이트</Text>
-              </Pressable>
-            </View>
-          </View>
-        </Modal>
-        <Toast />
-        <StatusBar style="auto" />
-      </AuthProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider>
+          <AuthProvider>
+            <AppNavigator />
+            {/* 강제 업데이트 모달 */}
+            <Modal visible={!!forceUpdateData} transparent={false} animationType="slide">
+              <View style={styles.modalContainer}>
+                <View style={styles.modalCard}>
+                  <Text style={styles.modalTitle}>앱 업데이트 필요</Text>
+                  <Text style={styles.modalMessage}>{forceUpdateData?.message ?? '업데이트가 필요합니다.'}</Text>
+                  <Text style={styles.modalSubMessage}>최신 버전으로 업데이트하지 않으면 앱의 일부 기능이 작동하지 않을 수 있습니다.</Text>
+                  <Pressable
+                    style={styles.updateButton}
+                    onPress={() => {
+                      if (forceUpdateData?.updateUrl) Linking.openURL(forceUpdateData.updateUrl);
+                    }}
+                  >
+                    <Text style={styles.updateButtonText}>지금 업데이트</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </Modal>
+            <Toast />
+            <StatusBar style="auto" />
+          </AuthProvider>
+        </SafeAreaProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

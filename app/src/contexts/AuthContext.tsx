@@ -14,7 +14,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
-  login: (token: string, user: User) => Promise<void>;
+  login: (token: string, user: User, refreshToken?: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   updateProfile: (partial: Partial<User>) => Promise<void>;
@@ -115,12 +115,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const login = useCallback(async (newToken: string, newUser: User) => {
+  const login = useCallback(async (newToken: string, newUser: User, refreshToken?: string) => {
     try {
-      await Promise.all([
+      const promises = [
         AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, newToken),
         AsyncStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(newUser))
-      ]).catch((e) => console.warn('partial persistence failure on login', e));
+      ];
+      
+      if (refreshToken) {
+        promises.push(AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken));
+      }
+      
+      await Promise.all(promises).catch((e) => console.warn('partial persistence failure on login', e));
       
       setToken(newToken);
       setUser(newUser);

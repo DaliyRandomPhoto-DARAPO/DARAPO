@@ -117,7 +117,7 @@ const LoginScreen: React.FC = React.memo(() => {
         }
 
         if (resolvedUser) {
-          await login(result.accessToken, resolvedUser);
+          await login(result.accessToken, resolvedUser, result.refreshToken);
           // 루트 네비는 isAuthenticated에 따라 전환(App.tsx)
           Alert.alert(
             LOGIN_MESSAGES.LOGIN_SUCCESS_TITLE,

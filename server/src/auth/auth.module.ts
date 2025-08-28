@@ -6,23 +6,23 @@ import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UserModule } from '../user/user.module';
-import { JwtStrategy } from './jwt.strategy';
+import { JwtStrategy } from './strategies/jwt.strategy';
 import { KakaoClient } from './clients/kakao.client';
+import { CommonModule } from '../common/common.module';
 
 @Module({
   imports: [
     UserModule,
+    CommonModule,
     PassportModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const secret = configService.get<string>('JWT_SECRET');
-        if (!secret)
-          throw new Error('JWT_SECRET 환경변수가 설정되어야 합니다.');
+        const secret = configService.getOrThrow<string>('JWT_SECRET');
         return {
           secret,
           signOptions: {
-            expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '7d',
+            expiresIn: configService.getOrThrow<string>('JWT_EXPIRES_IN'),
           },
         };
       },

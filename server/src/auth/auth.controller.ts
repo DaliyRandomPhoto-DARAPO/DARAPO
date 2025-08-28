@@ -20,12 +20,15 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
-import { JwtAuthGuard } from './jwt-auth.guard';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 // import { NativeLoginDto, WebCallbackDto } from './dto/kakao.dto'; // 미사용
+import { logError } from '../common/utils/logger.util';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(private readonly authService: AuthService) {}
 
   @Get('kakao')
@@ -98,7 +101,7 @@ export class AuthController {
 
       return res.redirect(successUrl);
     } catch (error) {
-      Logger.error('OAuth 처리 실패:', error?.stack || error, 'AuthController');
+      logError(this.logger, 'OAuth 처리 실패', error, 'AuthController');
       const base = 'darapo://auth/callback';
       const errorUrl = `${base}${base.includes('?') ? '&' : '?'}error=${encodeURIComponent('로그인 처리 중 오류가 발생했습니다.')}`;
       return res.redirect(errorUrl);
@@ -150,7 +153,7 @@ export class AuthController {
       await this.authService.logout(req.user.sub);
       return { message: '로그아웃되었습니다.' };
     } catch (err) {
-      Logger.error('로그아웃 실패:', err?.stack || err, 'AuthController');
+      logError(this.logger, '로그아웃 실패', err, 'AuthController');
       throw err;
     }
   }
@@ -184,11 +187,7 @@ export class AuthController {
         email: user.email,
       };
     } catch (error) {
-      Logger.error(
-        '사용자 정보 조회 실패:',
-        error?.stack || error,
-        'AuthController',
-      );
+      logError(this.logger, '사용자 정보 조회 실패', error, 'AuthController');
       throw error;
     }
   }

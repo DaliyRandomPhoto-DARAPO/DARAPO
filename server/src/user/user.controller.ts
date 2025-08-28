@@ -20,7 +20,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -29,6 +29,7 @@ import { S3Service } from '../common/s3.service';
 import { resolveMaybeSignedUrl } from '../common/utils/s3.util';
 import { PhotoService } from '../photo/photo.service';
 import sharp from 'sharp';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 
 @ApiTags('user')
 @Controller('user')
@@ -99,7 +100,7 @@ export class UserController {
       .withMetadata({ exif: undefined })
       .toBuffer();
     const ext = (file.originalname.split('.').pop() || 'jpg').toLowerCase();
-    const key = this.s3.buildObjectKey({
+    const key = this.s3.buildProfileObjectKey({
       userId: req.user.sub,
       originalName: file.originalname,
       ext,

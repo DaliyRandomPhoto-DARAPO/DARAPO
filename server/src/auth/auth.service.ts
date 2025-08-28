@@ -1,3 +1,4 @@
+// 인증 관련 비즈니스 로직을 담당하는 서비스
 import {
   Injectable,
   UnauthorizedException,
@@ -9,6 +10,9 @@ import { UserService } from '../user/user.service';
 import axios from 'axios';
 import { KakaoClient } from './clients/kakao.client';
 import { ConfigService } from '@nestjs/config';
+import { logError } from '../common/utils/logger.util';
+import { UserDocument } from '../user/schemas/user.schema';
+import { CacheService } from '../common/cache.service';
 
 interface KakaoUserInfo {
   id: number;
@@ -23,6 +27,8 @@ interface KakaoUserInfo {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   // 카카오 OAuth 관련 설정값
   private readonly KAKAO_CLIENT_ID: string;
   private readonly KAKAO_CLIENT_SECRET: string;
@@ -33,10 +39,11 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly kakaoClient: KakaoClient,
     private readonly configService: ConfigService,
+    private readonly cacheService: CacheService,
   ) {
-    this.KAKAO_CLIENT_ID = this.configService.get<string>('KAKAO_REST_API_KEY')!;
-    this.KAKAO_CLIENT_SECRET = this.configService.get<string>('KAKAO_CLIENT_SECRET')!;
-    this.KAKAO_REDIRECT_URI = this.configService.get<string>('KAKAO_REDIRECT_URI')!;
+    this.KAKAO_CLIENT_ID = this.configService.getOrThrow<string>('KAKAO_REST_API_KEY');
+    this.KAKAO_CLIENT_SECRET = this.configService.getOrThrow<string>('KAKAO_CLIENT_SECRET');
+    this.KAKAO_REDIRECT_URI = this.configService.getOrThrow<string>('KAKAO_REDIRECT_URI');
   }
 
   async getKakaoAuthUrl(): Promise<string> {
@@ -62,9 +69,8 @@ export class AuthService {
         profileImage: userInfo.kakao_account?.profile?.profile_image_url,
       };
     } catch (error) {
-  // 외부 API 호출 실패 또는 토큰 처리 중 에러 발생
-  Logger.error('OAuth 콜백 처리 실패:', error?.stack || error);
-  throw new UnauthorizedException('카카오 로그인 처리 실패');
+      logError(this.logger, 'OAuth 콜백 처리 실패', error);
+      throw new UnauthorizedException('카카오 로그인 처리 실패');
     }
   }
 
@@ -83,10 +89,7 @@ export class AuthService {
       });
       return response.data;
     } catch (error) {
-      Logger.error(
-        '액세스 토큰 교환 실패:',
-        error?.response?.data || error?.stack || error,
-      );
+      logError(this.logger, '액세스 토큰 교환 실패', error);
       throw new UnauthorizedException('카카오 토큰 교환 실패');
     }
   }
@@ -100,7 +103,7 @@ export class AuthService {
     nickname: string;
     email?: string;
     profileImage?: string;
-  }) {
+  }): Promise<{ accessToken: string; refreshToken: string; user: UserDocument }> {
     let user = await this.userService.findByKakaoId(kakaoUserInfo.kakaoId);
     if (!user) {
       user = await this.userService.create({
@@ -112,15 +115,15 @@ export class AuthService {
       });
     } else if (!user.name) {
       user = await this.userService.updateProfile(
-        (user as any)._id?.toString(),
+        user._id!.toString(),
         { name: user.nickname },
       );
     }
-    return this.generateJWT(user);
+    return this.generateJWT(user!);
   }
 
-  async generateJWT(user: any) {
-    const userId = user._id?.toString();
+  async generateJWT(user: UserDocument) {
+    const userId = user._id!.toString();
     if (!userId) throw new Error('사용자 ID를 찾을 수 없습니다.');
     const payload = {
       sub: userId,
@@ -132,28 +135,36 @@ export class AuthService {
       { sub: userId, typ: 'refresh' },
       { expiresIn: '14d' },
     );
+
+    // 토큰 정보를 Redis에 저장
+    const tokenData = {
+      accessToken,
+      refreshToken,
+      expiresAt: Date.now() + (14 * 24 * 60 * 60 * 1000), // 14일 후 만료
+    };
+    await this.cacheService.storeUserToken(userId, tokenData);
+
     return {
       accessToken,
       refreshToken,
-      user: {
-        id: userId,
-        kakaoId: user.kakaoId,
-        name: user.name,
-        nickname: user.nickname,
-        profileImage: user.profileImage,
-        email: user.email,
-      },
+      user,
     };
   }
 
   async refreshAccessToken(refreshToken: string) {
     try {
+      // 리프레시 토큰이 블랙리스트에 있는지 확인
+      const isBlacklisted = await this.cacheService.isTokenBlacklisted(refreshToken);
+      if (isBlacklisted) {
+        throw new UnauthorizedException('토큰이 블랙리스트에 있습니다.');
+      }
+
       const payload: any = this.jwtService.verify(refreshToken);
       if (payload.typ !== 'refresh')
         throw new UnauthorizedException('invalid refresh token');
       const user = await this.findUserById(payload.sub);
       const newAccess = this.jwtService.sign({
-        sub: (user as any)._id?.toString(),
+        sub: user._id!.toString(),
         kakaoId: user.kakaoId,
         nickname: user.nickname,
       });
@@ -169,10 +180,15 @@ export class AuthService {
     return user;
   }
 
-  async logout(_userId: string): Promise<void> {
-  // 실제로는 Redis 등에서 토큰을 블랙리스트로 관리하거나 세션을 만료시켜야 함
-  // 현재 구현은 클라이언트에서 액세스/리프레시 토큰을 삭제하는 방식으로 처리
-    return;
+  async logout(userId: string): Promise<void> {
+    try {
+      // 사용자의 모든 토큰을 블랙리스트에 추가
+      await this.cacheService.revokeUserTokens(userId);
+      this.logger.log(`사용자 ${userId}의 모든 토큰이 블랙리스트에 추가되었습니다.`);
+    } catch (error) {
+      logError(this.logger, '로그아웃 처리 실패', error);
+      throw error;
+    }
   }
 
   async deleteAccount(_userId: string): Promise<void> {

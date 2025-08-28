@@ -23,14 +23,18 @@ import {
   ApiConsumes,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { InjectQueue } from '@nestjs/bull';
+import type { Queue } from 'bull';
 import { PhotoService } from './photo.service';
 import { Photo } from './schemas/photo.schema';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ParseObjectIdPipe } from '../common/pipes/parse-objectid.pipe';
 import { UploadPhotoDto } from './dto/upload-photo.dto';
 import { S3Service } from '../common/s3.service';
 import { normalizeImage } from '../common/utils/image.util';
 import { resolveMaybeSignedUrl } from '../common/utils/s3.util';
+import { CacheInterceptor } from '@nestjs/cache-manager';
+import type { ImageProcessData } from './processors/photo.processor';
 
 @ApiTags('photos')
 @Controller('photo')
@@ -38,6 +42,7 @@ export class PhotoController {
   constructor(
     private readonly photoService: PhotoService,
     private readonly s3: S3Service,
+    @InjectQueue('image-processing') private readonly imageQueue: Queue<ImageProcessData>,
   ) {}
 
   private async withSignedImageUrl(p: any) {
@@ -106,10 +111,14 @@ export class PhotoController {
       originalName: file.originalname,
       ext,
     });
-    await this.s3.uploadObject({
+
+    // 큐에 이미지 처리 작업 추가 (비동기)
+    await this.imageQueue.add({
       key,
-      body: processed,
+      buffer: processed,
       contentType: file.mimetype,
+      width: norm.width,
+      height: norm.height,
     });
 
     const width = norm.width;
@@ -128,7 +137,7 @@ export class PhotoController {
     const signedUrl = await resolveMaybeSignedUrl(this.s3, key);
     return {
       photo: {
-        ...((photo as any).toJSON ? (photo as any).toJSON() : photo),
+        ...(photo.toJSON ? photo.toJSON() : photo),
         imageUrl: signedUrl,
       },
       replaced,
@@ -162,6 +171,7 @@ export class PhotoController {
   }
 
   @Get('public')
+  @UseInterceptors(CacheInterceptor)
   @ApiOperation({ summary: '공개 사진 목록 조회' })
   @ApiResponse({ status: 200, description: '공개 사진 목록 반환' })
   async getPublicPhotos(
@@ -176,6 +186,7 @@ export class PhotoController {
   }
 
   @Get('mission/:missionId')
+  @UseInterceptors(CacheInterceptor)
   @ApiOperation({ summary: '특정 미션의 사진 목록 조회' })
   @ApiResponse({ status: 200, description: '미션 사진 목록 반환' })
   async getPhotosByMission(
@@ -187,6 +198,7 @@ export class PhotoController {
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
   @ApiOperation({ summary: '특정 사진 조회' })
   @ApiResponse({ status: 200, description: '사진 정보 반환' })
   async findOne(@Param('id', new ParseObjectIdPipe()) id: string) {

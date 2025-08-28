@@ -12,17 +12,25 @@ export class HealthController {
   @Get('liveness')
   @ApiOperation({ summary: '애플리케이션 생존 체크' })
   liveness() {
-    return { status: 'ok' };
+    return { 
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+    };
   }
 
   @Get('readiness')
-  @ApiOperation({ summary: '의존성(예: DB) 준비 상태 체크' })
+  @ApiOperation({ summary: '의존성 준비 상태 체크' })
   readiness() {
+    const dbStatus = this.connection.readyState === ConnectionStates.connected ? 'up' : 'down';
+    
     return {
-      db:
-        this.connection.readyState === ConnectionStates.connected
-          ? 'up'
-          : 'down',
+      status: dbStatus === 'up' ? 'ready' : 'not ready',
+      database: dbStatus,
+      timestamp: new Date().toISOString(),
+      // Valkey 상태도 체크할 수 있음
+      cache: 'unknown', // 추후 Redis/Valkey 클라이언트 주입해서 체크
     };
   }
 }
