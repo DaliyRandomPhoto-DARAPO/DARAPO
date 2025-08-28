@@ -31,7 +31,7 @@ export const setupSecurity = (app: INestApplication): void => {
 
   // Rate Limiting 강화
   app.use(
-    rateLimit({
+    (rateLimit as any)({
       windowMs: 15 * 60 * 1000, // 15분
       max: 100, // IP당 최대 요청 수
       message: {
@@ -40,6 +40,7 @@ export const setupSecurity = (app: INestApplication): void => {
       },
       standardHeaders: true,
       legacyHeaders: false,
+      trustProxy: true, // 프록시 신뢰 설정 허용
       // Redis 스토어 사용 (추후)
       // store: Redis 사용 시 설정
     }),
