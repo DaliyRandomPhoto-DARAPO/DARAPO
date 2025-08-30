@@ -83,8 +83,9 @@ apiClient.interceptors.response.use(
       try {
         // body로 refreshToken을 전달(쿠키 미사용 환경 대응)
         const refreshToken: string | null = (await AsyncStorage.getItem('refresh_token')) || null;
-  const response = await apiClient.post('/auth/refresh', refreshToken ? { refreshToken } : undefined);
-  const newToken = response.data.accessToken; // 위에서 언래핑되었으므로 그대로 접근 가능
+        // 서버는 전역 prefix로 '/api'를 사용하므로 경로를 '/api/auth/refresh'로 요청해야 함
+        const response = await apiClient.post('/api/auth/refresh', refreshToken ? { refreshToken } : undefined);
+        const newToken = response.data.accessToken; // 위에서 언래핑되었으므로 그대로 접근 가능
         
         await AsyncStorage.setItem('auth_token', newToken);
         
@@ -187,8 +188,17 @@ export const photoAPI = {
   },
 
   getMyRecentPhotos: async (limit = 3) => {
-    const response = await apiClient.get('/api/photo/mine/recent', { params: { limit } });
-    return response.data;
+    try {
+      const response = await apiClient.get('/api/photo/mine/recent', { params: { limit } });
+      return response.data || []; // null/undefined 방어
+    } catch (error: any) {
+      console.error('getMyRecentPhotos failed:', error?.response?.data || error?.message);
+      // 500 에러 시 빈 배열 반환하여 앱 크래시 방지
+      if (error?.response?.status === 500) {
+        return [];
+      }
+      throw error;
+    }
   },
 
   deletePhoto: async (id: string) => {

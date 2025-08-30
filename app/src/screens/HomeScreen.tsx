@@ -66,15 +66,14 @@ const HomeScreen = memo(() => {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [mission, myPhotos, myRecents] = await Promise.all([
+      const [mission, myPhotos] = await Promise.all([
         missionAPI.getTodayMission(),
         photoAPI.getMyPhotos(),
-        photoAPI.getMyRecentPhotos(RECENT_LIMIT),
       ]);
 
-  const norm = normalizeMission(mission);
-  setTodayMission(norm?.title || '오늘의 미션');
-  setTodayMissionObj(norm || null);
+      const norm = normalizeMission(mission);
+      setTodayMission(norm?.title || '오늘의 미션');
+      setTodayMissionObj(norm || null);
       const md = mission?.date ? new Date(mission.date) : new Date();
       setTodayDate(formatKstMMDD(md));
 
@@ -95,6 +94,16 @@ const HomeScreen = memo(() => {
       }
       setStreak(cnt);
 
+      // 최근 사진은 별도로 처리하여 실패해도 앱이 동작하도록
+      let myRecents = [];
+      try {
+        myRecents = await photoAPI.getMyRecentPhotos(RECENT_LIMIT);
+      } catch (recentError) {
+        console.warn('Recent photos load failed, using fallback:', recentError);
+        // 전체 사진에서 최신 3개 추출
+        myRecents = (myPhotos || []).slice(0, RECENT_LIMIT);
+      }
+
       const recentItems: RecentItem[] = (myRecents || []).map((p: any) => {
         const ds = p?.missionId?.date || p?.createdAt;
         const d = ds ? new Date(ds) : new Date();
@@ -107,9 +116,7 @@ const HomeScreen = memo(() => {
       });
       setRecents(recentItems);
     } catch (e) {
-      console.error('미션 로드 실패:', e);
-      setTodayMission('오늘의 미션');
-      setRecents([]);
+      console.warn('Data loading failed:', e);
     } finally {
       setLoading(false);
     }

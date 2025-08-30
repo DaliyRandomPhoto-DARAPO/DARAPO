@@ -46,43 +46,49 @@ export class PhotoController {
   ) {}
 
   private async withSignedImageUrl(p: any) {
-    const base = { ...p }; // lean object copy
-    let imageUrl: string | null = base.imageUrl ?? null;
-    if (base.objectKey) {
-      try {
-        imageUrl = await this.s3.getSignedUrl(base.objectKey);
-      } catch (e) {
-        // 서버명 실패 시 로그만 남기고 계속
-        Logger.warn(
-          `sign image failed ${base.objectKey}`,
-          e?.stack || e,
-          'PhotoController',
-        );
-      }
-    }
-    // sign user avatar if it's an S3 key (not http and not starting with /)
-    if (
-      base.userId &&
-      typeof base.userId === 'object' &&
-      base.userId.profileImage
-    ) {
-      const pi = base.userId.profileImage as string;
-      if (!/^https?:\/\//.test(pi) && !pi.startsWith('/')) {
+    try {
+      const base = { ...p }; // lean object copy
+      let imageUrl: string | null = base.imageUrl ?? null;
+
+      if (base.objectKey) {
         try {
-          base.userId = {
-            ...base.userId,
-            profileImage: await this.s3.getSignedUrl(pi),
-          };
+          imageUrl = await this.s3.getSignedUrl(base.objectKey);
         } catch (e) {
           Logger.warn(
-            `sign avatar failed ${pi}`,
-            e?.stack || e,
+            `S3 sign failed for ${base.objectKey}: ${e?.message}`,
             'PhotoController',
           );
+          // S3 실패 시에도 객체는 반환
+          imageUrl = null;
         }
       }
+
+      // sign user avatar if it's an S3 key (not http and not starting with /)
+      if (
+        base.userId &&
+        typeof base.userId === 'object' &&
+        base.userId.profileImage
+      ) {
+        const pi = base.userId.profileImage as string;
+        if (!/^https?:\/\//.test(pi) && !pi.startsWith('/')) {
+          try {
+            base.userId = {
+              ...base.userId,
+              profileImage: await this.s3.getSignedUrl(pi),
+            };
+          } catch (e) {
+            Logger.warn(`Avatar sign failed for ${pi}: ${e?.message}`);
+            // 실패 시 원본 유지
+          }
+        }
+      }
+
+      return { ...base, imageUrl };
+    } catch (error) {
+      Logger.error('withSignedImageUrl failed:', error?.stack || error);
+      // 최소한의 데이터라도 반환
+      return { ...p, imageUrl: null };
     }
-    return { ...base, imageUrl };
   }
 
   @Post('upload')
@@ -150,8 +156,25 @@ export class PhotoController {
   @ApiOperation({ summary: '내 사진 목록 조회' })
   @ApiResponse({ status: 200, description: '사진 목록 반환' })
   async getMyPhotos(@Request() req: any) {
-    const list = await this.photoService.findByUserId(req.user.sub);
-    return await Promise.all(list.map((p: any) => this.withSignedImageUrl(p)));
+    try {
+      console.log('=== DEBUG: getMyPhotos 시작 ===');
+      console.log('User ID:', req.user?.sub);
+      console.log('User Agent:', req.headers['user-agent']);
+
+      const list = await this.photoService.findByUserId(req.user.sub);
+      console.log('DB 조회 결과 개수:', list?.length || 0);
+
+      const results = await Promise.all(list.map((p: any) => this.withSignedImageUrl(p)));
+      console.log('서명 URL 처리 완료:', results.length);
+
+      return results;
+    } catch (error) {
+      console.error('=== getMyPhotos 에러 ===');
+      console.error('에러 타입:', error.constructor.name);
+      console.error('에러 메시지:', error.message);
+      console.error('스택트레이스:', error.stack);
+      throw error;
+    }
   }
 
   @Get('mine/recent')
@@ -163,11 +186,36 @@ export class PhotoController {
     @Request() req: any,
     @Query('limit') limit: string = '3',
   ) {
-    const list = await this.photoService.findRecentByUserId(
-      req.user.sub,
-      parseInt(limit),
-    );
-    return await Promise.all(list.map((p: any) => this.withSignedImageUrl(p)));
+    try {
+      console.log('=== DEBUG: getMyRecentPhotos 시작 ===');
+      console.log('User ID:', req.user?.sub);
+      console.log('Limit:', limit);
+
+      const list = await this.photoService.findRecentByUserId(
+        req.user.sub,
+        parseInt(limit),
+      );
+      console.log('DB 조회 결과:', list?.length || 0);
+
+      if (!list || list.length === 0) {
+        return [];
+      }
+
+      // withSignedImageUrl에서 에러 발생 시 개별 처리
+      const results = await Promise.allSettled(
+        list.map((p: any) => this.withSignedImageUrl(p))
+      );
+
+      return results
+        .filter(result => result.status === 'fulfilled')
+        .map(result => (result as any).value);
+    } catch (error) {
+      console.error('=== getMyRecentPhotos 에러 ===');
+      console.error('에러 타입:', error.constructor.name);
+      console.error('에러 메시지:', error.message);
+      console.error('스택트레이스:', error.stack);
+      throw error;
+    }
   }
 
   @Get('public')

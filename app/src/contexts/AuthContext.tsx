@@ -91,7 +91,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // 3) accessToken이 없고 refreshToken이 있으면 재발급 시도
       if (!storedToken && storedRefresh) {
         try {
-          const resp = await apiClient.post('/auth/refresh', { refreshToken: storedRefresh });
+          const resp = await apiClient.post('/api/auth/refresh', { refreshToken: storedRefresh });
           const newToken: string = resp.data.accessToken;
 
           // 토큰 저장 및 유저 정보 조회
