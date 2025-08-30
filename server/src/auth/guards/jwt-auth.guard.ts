@@ -19,11 +19,21 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     // 토큰 추출 및 블랙리스트 확인
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
+    const userId = request.user?.sub;
 
     if (token) {
+      // 1. 블랙리스트 확인
       const isBlacklisted = await this.cacheService.isTokenBlacklisted(token);
       if (isBlacklisted) {
-        throw new UnauthorizedException('토큰이 블랙리스트에 있습니다.');
+        throw new UnauthorizedException('토큰이 무효화되었습니다.');
+      }
+
+      // 2. Redis에 저장된 유효 토큰과 비교
+      if (userId) {
+        const storedTokens = await this.cacheService.getUserTokens(userId);
+        if (!storedTokens || storedTokens.accessToken !== token) {
+          throw new UnauthorizedException('유효하지 않은 토큰입니다.');
+        }
       }
     }
 

@@ -3,10 +3,14 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
+import { CacheService } from '../common/cache.service';
 
 @Injectable()
 export class UserService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly cacheService: CacheService,
+  ) {}
 
   async findByKakaoId(kakaoId: string): Promise<UserDocument | null> {
     return this.userModel.findOne({ kakaoId }).exec();
@@ -32,7 +36,12 @@ export class UserService {
   }
 
   async deleteUser(userId: string): Promise<void> {
+    // DB에서 사용자 삭제
     await this.userModel.findByIdAndDelete(userId).exec();
+
+    // Redis의 모든 토큰 무효화
+    await this.cacheService.revokeUserTokens(userId);
+    await this.cacheService.deleteUserSession(userId);
   }
 
   async updateProfile(

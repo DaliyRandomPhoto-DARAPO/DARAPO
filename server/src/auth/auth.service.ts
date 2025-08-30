@@ -136,7 +136,10 @@ export class AuthService {
       { expiresIn: '14d' },
     );
 
-    // 토큰 정보를 Redis에 저장
+    // 기존 토큰들을 먼저 무효화
+    await this.cacheService.revokeUserTokens(userId);
+
+    // 새 토큰만 저장
     const tokenData = {
       accessToken,
       refreshToken,
@@ -191,10 +194,18 @@ export class AuthService {
     }
   }
 
-  async deleteAccount(_userId: string): Promise<void> {
+  async deleteAccount(userId: string): Promise<void> {
+    // 계정 삭제 전 토큰 블랙리스트 처리
+    try {
+      await this.cacheService.revokeUserTokens(userId);
+      this.logger.log(`사용자 ${userId}의 모든 토큰이 블랙리스트에 추가되었습니다.`);
+    } catch (error) {
+      logError(this.logger, '토큰 블랙리스트 처리 실패', error);
+      // 토큰 처리 실패해도 계정 삭제 진행
+    }
+
     // 계정 삭제 처리
-    // (참고) 카카오 연결 해제 필요시 해당 로직을 추가 구현
-    await this.userService.deleteUser(_userId);
+    await this.userService.deleteUser(userId);
   }
 
   // 블랙리스트 관련 로직은 Redis 기반 세션/토큰 관리 전략 도입 시 재설계 예정

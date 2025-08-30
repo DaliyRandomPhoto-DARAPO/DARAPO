@@ -14,13 +14,11 @@ export const RAW_API_BASE_URL = (
     : DEFAULT_API
 ).replace(/\/+$/, '');
 
-// Nest 전역 prefix('api') 중복 방지: 이미 /api로 끝나면 그대로, 아니면 /api 추가
-const API_BASE_URL = /\/api$/.test(RAW_API_BASE_URL)
-  ? RAW_API_BASE_URL
-  : `${RAW_API_BASE_URL}/api`;
+// Nest 전역 prefix('api')가 백엔드에 설정되어 있으므로 프론트에서는 /api/를 추가해야 함
+const API_BASE_URL = RAW_API_BASE_URL;
 
-// 호스트 베이스 URL (필요 시 사용) - 만약 /api가 붙어있다면 제거
-export const BASE_URL = RAW_API_BASE_URL.replace(/\/api$/, '');
+// 호스트 베이스 URL (필요 시 사용)
+export const BASE_URL = RAW_API_BASE_URL;
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -121,14 +119,14 @@ apiClient.interceptors.response.use(
 export const authAPI = {
   // returnUrl을 state로 전달하기 위한 변형 API (Expo Go/Dev Client 복귀 보장)
   getKakaoAuthUrlWithReturn: async (returnUrl: string) => {
-    const response = await apiClient.get('/auth/kakao', { params: { returnUrl } });
+    const response = await apiClient.get('/api/auth/kakao', { params: { returnUrl } });
     return response.data;
   },
 
 
   logout: async () => {
     try {
-      const response = await apiClient.post('/auth/logout');
+      const response = await apiClient.post('/api/auth/logout');
       return response.data;
     } catch (err: any) {
       // 서버에서 이미 토큰이 만료되어 401을 반환할 수 있음. 이 경우 로그아웃은 성공한 것으로 간주.
@@ -140,12 +138,12 @@ export const authAPI = {
   },
 
   refreshToken: async () => {
-    const response = await apiClient.post('/auth/refresh');
+    const response = await apiClient.post('/api/auth/refresh');
     return response.data;
   },
 
   getCurrentUser: async () => {
-    const response = await apiClient.get('/auth/me');
+    const response = await apiClient.get('/api/auth/me');
     return response.data;
   },
 
@@ -153,7 +151,7 @@ export const authAPI = {
 
 export const missionAPI = {
   getTodayMission: async (): Promise<Mission | undefined> => {
-    const response = await apiClient.get('/mission/today');
+    const response = await apiClient.get('/api/mission/today');
     return response.data as Mission | undefined;
   },
 };
@@ -167,7 +165,7 @@ export const photoAPI = {
     if (opts?.signal) {
       opts.signal.addEventListener('abort', () => controller.abort());
     }
-    const response = await apiClient.post('/photo/upload', formData, {
+    const response = await apiClient.post('/api/photo/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -184,57 +182,57 @@ export const photoAPI = {
   },
 
   getMyPhotos: async () => {
-    const response = await apiClient.get('/photo/mine');
+    const response = await apiClient.get('/api/photo/mine');
     return response.data;
   },
 
   getMyRecentPhotos: async (limit = 3) => {
-    const response = await apiClient.get('/photo/mine/recent', { params: { limit } });
+    const response = await apiClient.get('/api/photo/mine/recent', { params: { limit } });
     return response.data;
   },
 
   deletePhoto: async (id: string) => {
-    const response = await apiClient.delete(`/photo/${id}`);
+    const response = await apiClient.delete(`/api/photo/${id}`);
     return response.data;
   },
 
   updatePhoto: async (id: string, data: any) => {
-    const response = await apiClient.put(`/photo/${id}`, data);
+    const response = await apiClient.put(`/api/photo/${id}`, data);
     return response.data;
   },
 
   markAsShared: async (id: string) => {
-    const response = await apiClient.put(`/photo/${id}/share`);
+    const response = await apiClient.put(`/api/photo/${id}/share`);
     return response.data;
   },
 
   getPublicPhotos: async (limit = 20, skip = 0) => {
-    const response = await apiClient.get(`/photo/public`, { params: { limit, skip } });
+    const response = await apiClient.get(`/api/photo/public`, { params: { limit, skip } });
     return response.data;
   },
 
   getPhotosByMission: async (missionId: string) => {
-    const response = await apiClient.get(`/photo/mission/${missionId}`);
+    const response = await apiClient.get(`/api/photo/mission/${missionId}`);
     return response.data;
   },
 };
 
 export const userAPI = {
   updateMe: async (data: { name?: string; nickname?: string; profileImage?: string; email?: string }) => {
-    const response = await apiClient.put('/user/me', data);
+    const response = await apiClient.put('/api/user/me', data);
     return response.data;
   },
   uploadAvatar: async (file: { uri: string; name: string; type: string }) => {
     const form = new FormData();
     // @ts-ignore - React Native FormData
     form.append('file', file);
-    const response = await apiClient.post('/user/me/avatar', form, {
+    const response = await apiClient.post('/api/user/me/avatar', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data as { imageUrl: string; user: any };
   },
   resetAvatar: async () => {
-    const response = await apiClient.delete('/user/me/avatar');
+    const response = await apiClient.delete('/api/user/me/avatar');
     return response.data as { imageUrl: string | null; user: any };
   },
 };
