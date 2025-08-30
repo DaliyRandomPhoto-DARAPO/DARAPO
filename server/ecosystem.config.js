@@ -17,14 +17,14 @@ module.exports = {
       NODE_ENV: 'production',
       PORT: 3000,
       UV_THREADPOOL_SIZE: '8',
-      // 로그만 끄기
       DISABLE_MEMORY_OPTIMIZER_LOGS: 'true',
+      // 민감 정보는 SSM에서 로드
     },
 
-    // 로그
-    error_file: './logs/err.log',
-    out_file: './logs/out.log',
-    log_file: './logs/combined.log',
+    // 로그 (절대 경로로 안정성 향상)
+    error_file: '/home/ec2-user/DARAPO/server/logs/err.log',
+    out_file: '/home/ec2-user/DARAPO/server/logs/out.log',
+    log_file: '/home/ec2-user/DARAPO/server/logs/combined.log',
     time: true,
     log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
     // merge_logs: true, // (선택) 클러스터 각 인스턴스 로그를 하나로 합치기
@@ -37,5 +37,8 @@ module.exports = {
     autorestart: true,
     watch: false,
     ignore_watch: ['node_modules', 'logs', '*.log'],
+    kill_timeout: 5000,  // graceful shutdown 타임아웃
+    wait_ready: true,    // 앱 준비 대기
+    listen_timeout: 10000, // 리스닝 타임아웃
   }]
 };

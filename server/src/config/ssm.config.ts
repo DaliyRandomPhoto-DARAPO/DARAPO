@@ -46,7 +46,6 @@ export class SSMConfigService {
 
     // .env 파일이 없으면 빈 객체 반환
     if (!fs.existsSync(envPath)) {
-      console.warn('.env file not found. Please create .env file with required environment variables.');
       return parameters;
     }
 
@@ -68,8 +67,6 @@ export class SSMConfigService {
       const key = path.split('/').pop() || '';
       if (envVars[key]) {
         parameters[key] = envVars[key];
-      } else {
-        console.warn(`Environment variable ${key} not found in .env file`);
       }
     });
 

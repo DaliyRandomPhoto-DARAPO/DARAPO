@@ -79,7 +79,6 @@ class BackendKakaoAuthService {
         this.resolveLogin = null;
       }
     } catch (urlError) {
-      console.error('딥링크 URL 파싱 실패:', urlError);
       if (this.resolveLogin) {
         this.resolveLogin({ success: false, error: 'URL 처리에 실패했습니다.' });
         this.resolveLogin = null;
@@ -142,7 +141,6 @@ class BackendKakaoAuthService {
       return result;
       
     } catch (error: any) {
-      console.error('카카오 로그인 실패:', error);
       throw this.formatError(error);
     }
   }
@@ -175,7 +173,6 @@ class BackendKakaoAuthService {
     try {
       await authAPI.logout();
     } catch (error: any) {
-      console.warn('로그아웃 중 오류:', error);
       throw error;
     }
   }
@@ -190,7 +187,6 @@ class BackendKakaoAuthService {
       const response = await authAPI.refreshToken();
       return response.accessToken;
     } catch (error: any) {
-      console.error('토큰 갱신 실패:', error);
       throw this.formatError(error);
     }
   }

@@ -84,8 +84,6 @@ export const setupMonitoring = (app: INestApplication): void => {
           ip: ip || req.connection.remoteAddress,
           userAgent: req.get('User-Agent'),
         }));
-      } else {
-        console.log(`${method} ${url} ${statusCode} ${duration}ms`);
       }
     });
 

@@ -64,11 +64,13 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
         uri: cs.get<string>('MONGODB_URI'), // Atlas 연결 문자열
         // Atlas 최적화 설정
         maxPoolSize: 10, // 연결 풀 크기
-        serverSelectionTimeoutMS: 5000, // 서버 선택 타임아웃
+        serverSelectionTimeoutMS: 30000, // 서버 선택 타임아웃 증가
         socketTimeoutMS: 45000, // 소켓 타임아웃
         bufferCommands: false, // 연결 실패 시 명령어 버퍼링 비활성화
         tls: true,
         tlsInsecure: false,
+        retryAttempts: 10, // 재시도 횟수 증가
+        retryDelay: 5000, // 재시도 간격 (5초)
       }),
     }),
     AuthModule,

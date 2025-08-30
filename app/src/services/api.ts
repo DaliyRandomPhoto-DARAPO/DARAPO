@@ -32,11 +32,8 @@ const apiClient = axios.create({
 
 // 런타임 로그로 실제 API 엔드포인트 확인(문제 상황 진단 용이)
 try {
-  // eslint-disable-next-line no-console
-  console.info(`API base: ${API_BASE_URL}`);
   if (!configuredApi || /localhost|127\.0\.0\.1/i.test(configuredApi)) {
-    // eslint-disable-next-line no-console
-    console.warn('EXPO_PUBLIC_API_URL 미설정 또는 localhost 감지 → 기본값으로 대체됨:', DEFAULT_API);
+    // EXPO_PUBLIC_API_URL 미설정 또는 localhost 감지 → 기본값으로 대체됨
   }
 } catch {}
 
@@ -48,10 +45,7 @@ export const setAuthFailureHandler = (fn: (() => void) | null) => {
 
 // 공통 에러 처리
 const logError = (operation: string, error: any) => {
-  console.error(`❌ ${operation}:`, {
-    status: error.response?.status,
-    message: error.response?.data?.message || error.message,
-  });
+  // 에러 로깅
 };
 
 // 요청 인터셉터 - JWT 토큰 자동 추가
@@ -63,7 +57,7 @@ apiClient.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (error) {
-      console.warn('토큰 로드 실패:', error);
+      // 토큰 로드 실패
     }
     return config;
   },
@@ -104,7 +98,6 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         await AsyncStorage.multiRemove(['auth_token', 'user_info']);
         await AsyncStorage.removeItem('refresh_token');
-        if (__DEV__) console.info('토큰 갱신 실패로 로그아웃');
         // 앱 전역에 인증 만료 알림 → AuthContext에서 자동 로그아웃 처리
         try { onAuthFailure?.(); } catch {}
       }
@@ -140,8 +133,6 @@ export const authAPI = {
     } catch (err: any) {
       // 서버에서 이미 토큰이 만료되어 401을 반환할 수 있음. 이 경우 로그아웃은 성공한 것으로 간주.
       if (err?.response?.status === 401) {
-        // eslint-disable-next-line no-console
-        if (__DEV__) console.info('logout returned 401 - treated as success');
         return { ok: true };
       }
       throw err;

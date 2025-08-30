@@ -98,21 +98,18 @@ const LoginScreen: React.FC = React.memo(() => {
 
     try {
       safeSetLoading(true);
-      if (__DEV__) console.log('🔄 카카오 로그인 플로우 시작');
 
       // 백엔드 연동 포함한 카카오 로그인
       const result: any = await backendKakaoAuthService.login();
 
       if (result?.success && result?.accessToken) {
-        if (__DEV__) console.log('✅ 카카오 로그인 성공, 토큰 수신');
-
         let resolvedUser = result.user;
         if (!resolvedUser) {
           try {
             await AsyncStorage.setItem('auth_token', result.accessToken);
             resolvedUser = await authAPI.getCurrentUser();
           } catch (e) {
-            __DEV__ && console.warn('유저 조회 실패:', e);
+            // 유저 조회 실패 시도
           }
         }
 
@@ -128,7 +125,6 @@ const LoginScreen: React.FC = React.memo(() => {
         }
       } else {
         const errMsg = result?.error || LOGIN_MESSAGES.DEFAULT_ERROR;
-        __DEV__ && console.error('❌ 로그인 실패:', errMsg);
         Alert.alert(LOGIN_MESSAGES.LOGIN_FAILED_TITLE, errMsg);
       }
     } catch (error: unknown) {
@@ -140,15 +136,13 @@ const LoginScreen: React.FC = React.memo(() => {
                 (error.message as string)
               : LOGIN_MESSAGES.DEFAULT_ERROR);
 
-      __DEV__ && console.error('❌ 카카오 로그인 오류:', message);
-
       // 사용자가 취소한 케이스는 조용히 무시
       if (!String(message).toLowerCase().includes(LOGIN_MESSAGES.CANCEL_KEYWORD)) {
         Alert.alert(LOGIN_MESSAGES.LOGIN_FAILED_TITLE, message);
       }
     } finally {
       safeSetLoading(false);
-    try { backendKakaoAuthService.stopDeepLinkHandling?.(); } catch (err) { console.warn('stopDeepLinkHandling error', err); }
+    try { backendKakaoAuthService.stopDeepLinkHandling?.(); } catch (err) {  }
     }
   }, [loading, login, navigation]);
 
@@ -190,9 +184,8 @@ const LoginScreen: React.FC = React.memo(() => {
               onSuccess={({ token, profile }) => {
                 // KakaoLoginButton을 직접 쓸 수도 있는데, 지금은 백엔드 통합 로직(handleKakaoLogin) 유지.
                 // 여기선 참고용 로그만.
-                __DEV__ && console.log('kakao(token):', token, 'kakao(profile):', profile);
               }}
-              onError={(e) => __DEV__ && console.warn('kakao error:', e)}
+              onError={(e) => {}}
               onPress={handleKakaoLogin}
               disableNative={true}
               loading={loading}

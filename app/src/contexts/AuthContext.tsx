@@ -51,7 +51,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             STORAGE_KEYS.REFRESH_TOKEN,
           ]);
         } catch (err) {
-          console.warn('failed to clear storage on auth failure', err);
+          // 스토리지 정리 실패
         }
         setToken(null);
         setUser(null);
@@ -81,11 +81,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const me = await authAPI.getCurrentUser();
           setToken(storedToken);
           setUser(me);
-          try { await AsyncStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(me)); } catch (err) { console.warn('failed to persist user info', err); }
+          try { await AsyncStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(me)); } catch (err) {  }
           return;
         } catch (e) {
           // accessToken 만료 가능성 → 아래 refresh 흐름으로 폴백
-          console.warn('failed to get current user with stored token', e);
         }
       }
 
@@ -96,20 +95,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const newToken: string = resp.data.accessToken;
 
           // 토큰 저장 및 유저 정보 조회
-          try { await AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, newToken); } catch (err) { console.warn('failed to persist new token', err); }
+          try { await AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, newToken); } catch (err) {  }
           setToken(newToken);
 
           const me = await authAPI.getCurrentUser();
           setUser(me);
-          try { await AsyncStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(me)); } catch (err) { console.warn('failed to persist user info', err); }
+          try { await AsyncStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(me)); } catch (err) {  }
           return;
         } catch (e) {
           // 재발급 실패 → 스토리지 정리
-          try { await AsyncStorage.multiRemove([STORAGE_KEYS.AUTH_TOKEN, STORAGE_KEYS.USER_INFO]); } catch (remErr) { console.warn('failed to clear storage after refresh failure', remErr); }
+          try { await AsyncStorage.multiRemove([STORAGE_KEYS.AUTH_TOKEN, STORAGE_KEYS.USER_INFO]); } catch (remErr) {  }
         }
       }
     } catch (error) {
-      console.warn('인증 정보 로드 실패:', error);
+      // 인증 정보 로드 실패
     } finally {
       setIsLoading(false);
     }
@@ -126,12 +125,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         promises.push(AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken));
       }
       
-      await Promise.all(promises).catch((e) => console.warn('partial persistence failure on login', e));
+      await Promise.all(promises).catch((e) => {});
       
       setToken(newToken);
       setUser(newUser);
     } catch (error) {
-      console.warn('로그인 처리 중 오류:', error);
       throw error;
     }
   }, []);
@@ -139,7 +137,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateProfile = useCallback(async (partial: Partial<User>) => {
     setUser((prev) => {
       const next = { ...prev, ...partial } as User;
-      AsyncStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(next)).catch((e) => console.warn('failed to persist updated profile', e));
+      AsyncStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(next)).catch((e) => {});
       return next;
     });
   }, []);
@@ -154,14 +152,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       ]);
       
       if (kakaoLogoutResult.status === 'rejected') {
-        console.warn('로그아웃 중 일부 오류:', kakaoLogoutResult.reason);
+        // 로그아웃 중 일부 오류
       }
       
       setToken(null);
       setUser(null);
       
     } catch (error) {
-      console.error('로그아웃 처리 오류:', error);
       setToken(null);
       setUser(null);
     }

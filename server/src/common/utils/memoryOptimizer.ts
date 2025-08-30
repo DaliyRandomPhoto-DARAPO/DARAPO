@@ -26,14 +26,12 @@ export class MemoryOptimizer {
     if (DISABLE_MEMOPT) return;               // 완전 비활성
     if (this.monitoringInterval) return;      // 이미 모니터링 중
     this.monitoringInterval = setInterval(() => this.checkMemoryUsage(), 30000);
-    if (!DISABLE_MEMOPT_LOGS) console.log('[MemoryOptimizer] Memory monitoring started');
   }
 
   stopMonitoring(): void {
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
       this.monitoringInterval = undefined;
-      if (!DISABLE_MEMOPT_LOGS) console.log('[MemoryOptimizer] Memory monitoring stopped');
     }
   }
 
@@ -42,8 +40,7 @@ export class MemoryOptimizer {
     if (now - this.lastLogAt < LOG_COOLDOWN_MS) return; // 스로틀
     this.lastLogAt = now;
     if (DISABLE_MEMOPT_LOGS) return;         // 로그 끄기
-    const fn = level === 'warn' ? console.warn : level === 'debug' ? console.debug : console.log;
-    meta ? fn(msg, meta) : fn(msg);
+    // 로그 출력
   }
 
   private checkMemoryUsage(): void {
@@ -118,7 +115,7 @@ export const memoryOptimizationMiddleware = (req: any, res: any, next: any) => {
     const endTime = process.hrtime.bigint();
     const processingTime = Number(endTime - startTime) / 1e6;
     if (processingTime > SLOW_MS) {
-      console.warn(`[MemoryOptimizer] Slow request: ${req.method} ${req.url} - ${processingTime.toFixed(2)}ms`);
+      // 느린 요청 로깅
     }
   });
   next();

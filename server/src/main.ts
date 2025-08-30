@@ -11,24 +11,47 @@ import { RequestTimingInterceptor } from './common/interceptors/request-timing.i
 import { SSMConfigService } from './config/ssm.config';
 import { setupSecurity, setupMonitoring } from './common/middleware/security.middleware';
 import { MemoryOptimizer, memoryOptimizationMiddleware } from './common/utils/memoryOptimizer';
+import { WinstonModule } from 'nest-winston';
+import * as winston from 'winston';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
-  // SSM에서 환경 변수 로드
+  try {
+  // SSM에서 환경 변수 로드 (실패 시 .env 폴백)
   const ssmConfig = new SSMConfigService();
-  const ssmParams = await ssmConfig.getParameters([
-    '/darapo/JWT_SECRET',
-    '/darapo/MONGODB_URI',
-    '/darapo/KAKAO_REST_API_KEY',
-    '/darapo/KAKAO_CLIENT_SECRET',
-    // 필요한 파라미터들 추가
-  ]);
+  try {
+    const ssmParams = await ssmConfig.getParameters([
+      '/darapo/JWT_SECRET',
+      '/darapo/MONGODB_URI',
+      '/darapo/KAKAO_REST_API_KEY',
+      '/darapo/KAKAO_CLIENT_SECRET',
+      // 필요한 파라미터들 추가
+    ]);
 
-  // 환경 변수 설정
-  Object.entries(ssmParams).forEach(([key, value]) => {
-    process.env[key] = value;
+    // 환경 변수 설정
+    Object.entries(ssmParams).forEach(([key, value]) => {
+      process.env[key] = value;
+    });
+  } catch (error) {
+    console.warn('SSM 로드 실패, .env 파일 사용:', error.message);
+    // .env 파일이 이미 ConfigModule에 의해 로드됨
+  }
+
+  const app = await NestFactory.create(AppModule, {
+    logger: WinstonModule.createLogger({
+      transports: [
+        new winston.transports.Console({
+          level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.json(),
+          ),
+        }),
+        new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+        new winston.transports.File({ filename: 'logs/combined.log' }),
+      ],
+    }),
   });
-
-  const app = await NestFactory.create(AppModule);
 
   // 글로벌 prefix 설정
   app.setGlobalPrefix('api');
@@ -66,7 +89,7 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
-  app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalFilters(new HttpExceptionFilter(), new AllExceptionsFilter());
   app.useGlobalInterceptors(
     new LoggingInterceptor(),
     new TransformInterceptor(),
@@ -91,5 +114,10 @@ async function bootstrap() {
   // 모든 네트워크 인터페이스에서 수신하도록 설정 (안드로이드 접근 허용)
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');
+  console.log(`Server running on port ${port}`);
+  } catch (error) {
+    console.error('Server startup failed:', error);
+    process.exit(1);
+  }
 }
 void bootstrap();
