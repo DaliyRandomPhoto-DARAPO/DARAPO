@@ -17,24 +17,28 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
   try {
-  // SSM에서 환경 변수 로드 (실패 시 .env 폴백)
-  const ssmConfig = new SSMConfigService();
-  try {
-    const ssmParams = await ssmConfig.getParameters([
-      '/darapo/JWT_SECRET',
-      '/darapo/MONGODB_URI',
-      '/darapo/KAKAO_REST_API_KEY',
-      '/darapo/KAKAO_CLIENT_SECRET',
-      // 필요한 파라미터들 추가
-    ]);
+  // SSM에서 환경 변수 로드 (SSM_ENABLED === 'true'일 때만)
+  if (process.env.SSM_ENABLED === 'true') {
+    const ssmConfig = new SSMConfigService();
+    try {
+      const ssmParams = await ssmConfig.getParameters([
+        '/darapo/JWT_SECRET',
+        '/darapo/MONGODB_URI',
+        '/darapo/KAKAO_REST_API_KEY',
+        '/darapo/KAKAO_CLIENT_SECRET',
+        // 필요한 파라미터들 추가
+      ]);
 
-    // 환경 변수 설정
-    Object.entries(ssmParams).forEach(([key, value]) => {
-      process.env[key] = value;
-    });
-  } catch (error) {
-    console.warn('SSM 로드 실패, .env 파일 사용:', error.message);
-    // .env 파일이 이미 ConfigModule에 의해 로드됨
+      // 환경 변수 설정
+      Object.entries(ssmParams).forEach(([key, value]) => {
+        process.env[key] = value;
+      });
+    } catch (error) {
+      console.warn('SSM 로드 실패, .env 파일 사용:', (error as any)?.message ?? error);
+      // .env 파일이 이미 ConfigModule에 의해 로드됨
+    }
+  } else {
+    // 명시적으로 SSM 비활성화되어 있으므로 .env/프로세스 환경 변수만 사용
   }
 
   const app = await NestFactory.create(AppModule, {
