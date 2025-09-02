@@ -9,6 +9,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
+import { CacheService } from './cache.service';
 
 @Injectable()
 export class S3Service {
@@ -17,7 +18,10 @@ export class S3Service {
   private region: string;
   private signedUrlTtl: number;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly cache: CacheService,
+  ) {
     this.region = this.config.get<string>('AWS_REGION') as string;
     this.bucket = this.config.get<string>('AWS_S3_BUCKET') as string;
     this.s3 = new S3Client({ region: this.region });
@@ -54,6 +58,23 @@ export class S3Service {
     return getSignedUrl(this.s3, cmd, {
       expiresIn: expiresInSec ?? this.signedUrlTtl,
     });
+  }
+
+  async getSignedUrlCached(key: string, expiresInSec?: number) {
+    const ttl = Math.min(expiresInSec ?? this.signedUrlTtl, this.signedUrlTtl);
+    const cacheKey = `s3:signed:${this.bucket}:${key}:${ttl}`;
+    try {
+      const cached = await this.cache.get<string>(cacheKey);
+      if (cached) return cached;
+    } catch {}
+
+    const url = await this.getSignedUrl(key, ttl);
+    try {
+      // 실제 만료보다 약간 짧게 캐시(안전 마진 30초)
+      const cacheTtl = Math.max(30, ttl - 30);
+      await this.cache.set(cacheKey, url, cacheTtl);
+    } catch {}
+    return url;
   }
 
   buildObjectKey(parts: {

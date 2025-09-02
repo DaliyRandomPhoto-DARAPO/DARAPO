@@ -82,7 +82,8 @@ export class PhotoService {
   async findByUserId(userId: string) {
     return this.photoModel
       .find({ userId: toObjectId(userId) })
-      .populate('missionId', 'title description date')
+      .select('objectKey comment isPublic isShared fileSize mimeType width height missionId createdAt')
+      .populate('missionId', 'title date')
       .sort({ createdAt: -1 })
       .lean()
       .exec();
@@ -91,7 +92,8 @@ export class PhotoService {
   async findRecentByUserId(userId: string, limit: number = 3) {
     return this.photoModel
       .find({ userId: toObjectId(userId) })
-      .populate('missionId', 'title description date')
+      .select('objectKey comment isPublic isShared fileSize mimeType width height missionId createdAt')
+      .populate('missionId', 'title date')
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean()
@@ -101,8 +103,9 @@ export class PhotoService {
   async findByMissionId(missionId: string) {
     return this.photoModel
       .find({ missionId: toObjectId(missionId), isPublic: true })
+      .select('objectKey comment isPublic isShared fileSize mimeType width height userId missionId createdAt')
       .populate('userId', 'nickname profileImage')
-      .populate('missionId', 'title description date')
+      .populate('missionId', 'title date')
       .sort({ createdAt: -1 })
       .lean()
       .exec();
@@ -111,8 +114,9 @@ export class PhotoService {
   async findById(photoId: string) {
     return this.photoModel
       .findById(toObjectId(photoId))
+      .select('objectKey comment isPublic isShared fileSize mimeType width height userId missionId createdAt')
       .populate('userId', 'nickname profileImage')
-      .populate('missionId', 'title description date')
+      .populate('missionId', 'title date')
       .lean()
       .exec();
   }
@@ -145,8 +149,9 @@ export class PhotoService {
   async findPublicPhotos(limit: number = 20, skip: number = 0) {
     return this.photoModel
       .find({ isPublic: true })
+      .select('objectKey comment isPublic isShared fileSize mimeType width height userId missionId createdAt')
       .populate('userId', 'nickname profileImage')
-      .populate('missionId', 'title description date')
+      .populate('missionId', 'title date')
       .sort({ createdAt: -1 })
       .limit(limit)
       .skip(skip)

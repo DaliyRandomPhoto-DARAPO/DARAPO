@@ -57,7 +57,7 @@ export class PhotoController {
       
       if (base.objectKey) {
         try {
-          imageUrl = await this.s3.getSignedUrl(base.objectKey);
+          imageUrl = await this.s3.getSignedUrlCached(base.objectKey);
         } catch (e) {
           // S3 서명 실패 시 로그만 남기고 계속
           this.logger.warn(
@@ -79,7 +79,7 @@ export class PhotoController {
           try {
             base.userId = {
               ...base.userId,
-              profileImage: await this.s3.getSignedUrl(pi),
+              profileImage: await this.s3.getSignedUrlCached(pi),
             };
           } catch (e) {
             this.logger.warn(

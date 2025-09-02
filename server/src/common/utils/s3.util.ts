@@ -9,6 +9,10 @@ export async function resolveMaybeSignedUrl(s3: S3Service, v?: string | null) {
   if (!v) return null;
   if (isExternalUrl(v) || v.startsWith('/')) return v;
   try {
+    // 캐시 우선 사용
+    if ('getSignedUrlCached' in s3 && typeof (s3 as any).getSignedUrlCached === 'function') {
+      return await (s3 as any).getSignedUrlCached(v);
+    }
     return await s3.getSignedUrl(v);
   } catch {
     return null;
