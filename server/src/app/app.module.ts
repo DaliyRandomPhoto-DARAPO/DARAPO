@@ -32,6 +32,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     ]),
     // Valkey (Redis 호환) 캐시 설정
     CacheModule.registerAsync({
+      isGlobal: true,
       inject: [ConfigService],
       useFactory: async (cs: ConfigService) => ({
         // cache-manager-redis-store (node-redis v4) 사용

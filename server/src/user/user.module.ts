@@ -14,7 +14,7 @@ import { CommonModule } from '../common/common.module';
     CommonModule, // CacheService 사용을 위해 추가
   ],
   controllers: [UserController],
-  providers: [UserService, S3Service],
+  providers: [UserService],
   exports: [UserService],
 })
 export class UserModule {}

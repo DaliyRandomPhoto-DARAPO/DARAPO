@@ -7,6 +7,7 @@ export function validateEnv(config: Record<string, any>) {
 
   // App
   requireIf('JWT_SECRET');
+  requireIf('JWT_EXPIRES_IN');
   requireIf('PORT', false); // 기본값 3000 사용 가능
 
   // DB - MongoDB Atlas
