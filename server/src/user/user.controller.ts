@@ -29,6 +29,7 @@ import { S3Service } from '../common/s3.service';
 import { resolveMaybeSignedUrl } from '../common/utils/s3.util';
 import { PhotoService } from '../photo/photo.service';
 import sharp from 'sharp';
+import { v4 as uuidv4 } from 'uuid';
 import { CacheInterceptor } from '@nestjs/cache-manager';
 
 @ApiTags('user')
@@ -95,22 +96,50 @@ export class UserController {
     @Request() req: any,
   ) {
     if (!file) throw new Error('파일이 업로드되지 않았습니다.');
-    const processed = await sharp(file.buffer)
-      .rotate()
-      .withMetadata({ exif: undefined })
-      .toBuffer();
-    const ext = (file.originalname.split('.').pop() || 'jpg').toLowerCase();
-    const key = this.s3.buildProfileObjectKey({
-      userId: req.user.sub,
-      originalName: file.originalname,
-      ext,
-    });
+    if (!file.mimetype || !file.mimetype.startsWith('image/')) {
+      throw new Error('이미지 파일만 업로드 가능합니다.');
+    }
+
+    // 리사이즈/재인코딩으로 용량 및 해상도 제한(서버 부하/전송시간 감소)
+    let output: Buffer;
+    const ext = 'jpg';
+    const contentType = 'image/jpeg';
+    try {
+      output = await sharp(file.buffer)
+        .rotate()
+        .resize({ width: 512, height: 512, fit: 'cover', withoutEnlargement: true })
+        .jpeg({ quality: 82, progressive: true, chromaSubsampling: '4:2:0' })
+        .toBuffer();
+    } catch (e) {
+      // 처리 실패 시 원본으로 폴백(최대 10MB)
+      output = file.buffer;
+    }
+
+    // 버전 키로 업로드(캐시 가능), 이전 키는 삭제하여 누수 방지
+    const version = uuidv4();
+    const key = `users/${req.user.sub}/profile-${version}.${ext}`;
+
+    // 기존 프로필 키 조회(베스트 에포트 삭제)
+    let prevKey: string | undefined;
+    try {
+      const me = await this.userService.findById(req.user.sub);
+      const pi = (me as any)?.profileImage as string | undefined;
+      if (pi && !/^https?:\/\//.test(pi) && !pi.startsWith('/')) {
+        prevKey = pi;
+      }
+    } catch {}
+
     await this.s3.uploadObject({
       key,
-      body: processed,
-      contentType: file.mimetype,
-      cacheControl: 'no-store',
+      body: output,
+      contentType,
+      // 프로필 이미지는 버전 키를 쓰므로 캐시 가능
+      cacheControl: 'public, max-age=31536000, immutable',
     });
+
+    if (prevKey && prevKey !== key) {
+      this.s3.deleteObject(prevKey).catch(() => {});
+    }
 
     const updated: any = await this.userService.updateProfile(req.user.sub, {
       profileImage: key,
