@@ -37,10 +37,22 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
         // cache-manager-redis-store (node-redis v4) 사용
         store: (await redisStore({
           socket: {
-            host: cs.get<string>('VALKEY_HOST') || 'localhost',
-            port: cs.get<number>('VALKEY_PORT') || 6379,
+            host:
+              cs.get<string>('VALKEY_HOST') ||
+              cs.get<string>('REDIS_HOST') ||
+              'localhost',
+            port:
+              cs.get<number>('VALKEY_PORT') ||
+              (cs.get<string>('REDIS_PORT')
+                ? parseInt(cs.get<string>('REDIS_PORT') as string, 10)
+                : undefined) ||
+              6379,
           },
-          password: cs.get<string>('VALKEY_PASSWORD') || undefined,
+          password:
+            cs.get<string>('VALKEY_PASSWORD') ||
+            cs.get<string>('REDIS_PASSWORD') ||
+            cs.get<string>('REDIS_AUTH') ||
+            undefined,
         })) as any,
         ttl: 300,
       }),
@@ -51,9 +63,21 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
       inject: [ConfigService],
       useFactory: (cs: ConfigService) => ({
         redis: {
-          host: cs.get<string>('VALKEY_HOST') || 'localhost',
-          port: cs.get<number>('VALKEY_PORT') || 6379,
-          password: cs.get<string>('VALKEY_PASSWORD') || undefined,
+          host:
+            cs.get<string>('VALKEY_HOST') ||
+            cs.get<string>('REDIS_HOST') ||
+            'localhost',
+          port:
+            cs.get<number>('VALKEY_PORT') ||
+            (cs.get<string>('REDIS_PORT')
+              ? parseInt(cs.get<string>('REDIS_PORT') as string, 10)
+              : undefined) ||
+            6379,
+          password:
+            cs.get<string>('VALKEY_PASSWORD') ||
+            cs.get<string>('REDIS_PASSWORD') ||
+            cs.get<string>('REDIS_AUTH') ||
+            undefined,
         },
       }),
     }),
