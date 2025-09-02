@@ -123,7 +123,21 @@ export class PhotoController {
       }
 
       // 이미지 정규화(회전, 포맷) 및 메타 추출
-      const norm = await normalizeImage(file.buffer);
+      let norm: { buffer: Buffer; width?: number; height?: number; ext?: string };
+      try {
+        norm = await normalizeImage(file.buffer);
+      } catch (e) {
+        // sharp 등 오류 시 원본으로 폴백
+        this.logger.warn(
+          `normalizeImage failed, using original buffer: ${e instanceof Error ? e.message : String(e)}`,
+        );
+        norm = {
+          buffer: file.buffer,
+          width: undefined,
+          height: undefined,
+          ext: undefined,
+        };
+      }
       const processed = norm.buffer;
       const ext =
         norm.ext || (file.originalname.split('.').pop() || 'jpg').toLowerCase();
@@ -178,7 +192,7 @@ export class PhotoController {
   } catch (error) {
       this.logger.error(
         'uploadPhoto error',
-        error instanceof Error ? error.stack : String(error),
+    error instanceof Error ? `${error.message}\n${error.stack}` : String(error),
       );
       if (error instanceof BadRequestException) {
         throw error;
