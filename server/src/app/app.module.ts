@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { CacheModule } from '@nestjs/cache-manager';
+import { redisStore } from 'cache-manager-redis-store';
 import { BullModule } from '@nestjs/bull';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -32,16 +33,16 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     // Valkey (Redis 호환) 캐시 설정
     CacheModule.registerAsync({
       inject: [ConfigService],
-      useFactory: (cs: ConfigService) => ({
-        store: 'redis', // Valkey는 Redis 프로토콜 호환
-        host: cs.get<string>('VALKEY_HOST') || 'localhost',
-        port: cs.get<number>('VALKEY_PORT') || 6379,
-        password: cs.get<string>('VALKEY_PASSWORD') || undefined,
-        ttl: 300, // 5분 기본 TTL
-        // Valkey 최적화 설정
-        retryDelay: 5000,
-        enableReadyCheck: false,
-        maxRetriesPerRequest: 3,
+      useFactory: async (cs: ConfigService) => ({
+        // cache-manager-redis-store (node-redis v4) 사용
+        store: (await redisStore({
+          socket: {
+            host: cs.get<string>('VALKEY_HOST') || 'localhost',
+            port: cs.get<number>('VALKEY_PORT') || 6379,
+          },
+          password: cs.get<string>('VALKEY_PASSWORD') || undefined,
+        })) as any,
+        ttl: 300,
       }),
     }),
     

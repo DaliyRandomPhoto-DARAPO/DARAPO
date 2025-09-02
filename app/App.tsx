@@ -1,9 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import { StyleSheet, Text, View, ActivityIndicator, BackHandler, Platform, Alert, Linking, Modal, Pressable } from 'react-native';
-import * as semver from 'semver';
+import { StyleSheet, Text, View, ActivityIndicator, BackHandler, Platform } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
-import Constants from 'expo-constants';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Toast from 'react-native-toast-message';
@@ -152,7 +150,7 @@ function AppNavigator() {
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
-  const [forceUpdateData, setForceUpdateData] = useState<{ updateUrl?: string; message?: string } | null>(null);
+  // 강제 업데이트 로직 제거됨 (백엔드 app-version 엔드포인트 삭제)
 
   // React Query 클라이언트 생성 - 최적화된 설정
   const queryClient = new QueryClient({
@@ -183,52 +181,6 @@ export default function App() {
     const timer = setTimeout(() => {
       SplashScreen.hideAsync();
     }, 3000);
-
-  // 앱 버전 체크 및 업데이트 안내 (semver 라이브러리 사용)
-    const checkVersion = async () => {
-      try {
-        const response = await fetch('https://api.darapo.site/app-version');
-        const data = await response.json();
-        const latestVersion: string | undefined = data.latestVersion;
-        const minRequiredVersion: string | undefined = data.minRequiredVersion;
-        const forceUpdate: boolean = !!data.forceUpdate;
-        const updateUrl: string | undefined = data.updateUrl;
-        const currentVersion = Constants.manifest?.version || '';
-
-        // 강제 업데이트 우선 처리
-        if (minRequiredVersion && semver.lt(currentVersion, minRequiredVersion)) {
-          // 현재 버전 < 최소 요구 버전 -> 강제 업데이트
-          setForceUpdateData({
-            updateUrl: updateUrl || '',
-            message: `앱의 지원이 종료된 버전입니다. 최신 버전으로 업데이트해주세요. (요구 버전: ${minRequiredVersion})`,
-          });
-          return;
-        }
-
-        // 선택적 업데이트
-        if (latestVersion && semver.lt(currentVersion, latestVersion)) {
-          Alert.alert(
-            '업데이트 안내',
-            '앱의 최신 버전이 있습니다. 업데이트를 진행해주세요.',
-            [
-              {
-                text: '업데이트',
-                onPress: () => Linking.openURL(updateUrl ||
-                  (Platform.OS === 'ios'
-                    ? 'https://apps.apple.com/app/id앱아이디'
-                    : 'https://play.google.com/store/apps/details?id=com.darapo.drapoapp')
-                ),
-              },
-              { text: '다음에', style: 'cancel' },
-            ],
-            { cancelable: true }
-          );
-        }
-      } catch (e) {
-        // 오류 무시
-      }
-    };
-    checkVersion();
     return () => clearTimeout(timer);
   }, []);
 
@@ -238,24 +190,6 @@ export default function App() {
         <SafeAreaProvider>
           <AuthProvider>
             <AppNavigator />
-            {/* 강제 업데이트 모달 */}
-            <Modal visible={!!forceUpdateData} transparent={false} animationType="slide">
-              <View style={styles.modalContainer}>
-                <View style={styles.modalCard}>
-                  <Text style={styles.modalTitle}>앱 업데이트 필요</Text>
-                  <Text style={styles.modalMessage}>{forceUpdateData?.message ?? '업데이트가 필요합니다.'}</Text>
-                  <Text style={styles.modalSubMessage}>최신 버전으로 업데이트하지 않으면 앱의 일부 기능이 작동하지 않을 수 있습니다.</Text>
-                  <Pressable
-                    style={styles.updateButton}
-                    onPress={() => {
-                      if (forceUpdateData?.updateUrl) Linking.openURL(forceUpdateData.updateUrl);
-                    }}
-                  >
-                    <Text style={styles.updateButtonText}>지금 업데이트</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </Modal>
             <Toast />
             <StatusBar style="auto" />
           </AuthProvider>
@@ -276,50 +210,5 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: '#666',
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 20,
-  },
-  modalCard: {
-    width: '100%',
-    padding: 24,
-    borderRadius: 12,
-    backgroundColor: '#f9f9f9',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
-  modalMessage: {
-    fontSize: 16,
-    color: '#444',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  modalSubMessage: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  updateButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  updateButtonText: {
-    color: '#fff',
-    fontWeight: '600',
   },
 });

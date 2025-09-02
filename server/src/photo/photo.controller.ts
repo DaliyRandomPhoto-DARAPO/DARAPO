@@ -182,8 +182,13 @@ export class PhotoController {
   async getMyPhotos(@Request() req: any) {
     try {
       this.logger.debug(`Getting photos for user: ${req.user.sub}`);
+      // JWT payload 검증: ObjectId 형식 확인
+      const userId: string | undefined = req.user?.sub;
+      if (!userId) {
+        throw new BadRequestException('인증 정보가 없습니다.');
+      }
       
-      const list = await this.photoService.findByUserId(req.user.sub);
+      const list = await this.photoService.findByUserId(userId);
       this.logger.debug(`Found ${list.length} photos for user`);
       
       if (!list || list.length === 0) {

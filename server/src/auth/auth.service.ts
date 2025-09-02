@@ -171,6 +171,13 @@ export class AuthService {
         kakaoId: user.kakaoId,
         nickname: user.nickname,
       });
+      // 기존 토큰 저장 값을 갱신하여 가드의 매칭에 성공하도록 함
+      const existing = await this.cacheService.getUserTokens(user._id!.toString());
+      await this.cacheService.storeUserToken(user._id!.toString(), {
+        accessToken: newAccess,
+        refreshToken: existing?.refreshToken ?? refreshToken,
+        expiresAt: existing?.expiresAt ?? Date.now() + (14 * 24 * 60 * 60 * 1000),
+      });
       return { accessToken: newAccess };
     } catch {
       throw new UnauthorizedException('refresh failed');
