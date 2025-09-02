@@ -136,16 +136,19 @@ export class AuthService {
       { expiresIn: '14d' },
     );
 
-    // 기존 토큰들을 먼저 무효화
-    await this.cacheService.revokeUserTokens(userId);
-
-    // 새 토큰만 저장
-    const tokenData = {
-      accessToken,
-      refreshToken,
-      expiresAt: Date.now() + (14 * 24 * 60 * 60 * 1000), // 14일 후 만료
-    };
-    await this.cacheService.storeUserToken(userId, tokenData);
+    // Stateless 모드에서는 Redis 저장/블랙리스트를 건너뜁니다.
+    const stateless = String(this.configService.get('AUTH_STATELESS') || '') === 'true';
+    if (!stateless) {
+      // 기존 토큰들을 먼저 무효화
+      await this.cacheService.revokeUserTokens(userId);
+      // 새 토큰만 저장
+      const tokenData = {
+        accessToken,
+        refreshToken,
+        expiresAt: Date.now() + (14 * 24 * 60 * 60 * 1000), // 14일 후 만료
+      };
+      await this.cacheService.storeUserToken(userId, tokenData);
+    }
 
     return {
       accessToken,
@@ -156,10 +159,13 @@ export class AuthService {
 
   async refreshAccessToken(refreshToken: string) {
     try {
-      // 리프레시 토큰이 블랙리스트에 있는지 확인
-      const isBlacklisted = await this.cacheService.isTokenBlacklisted(refreshToken);
-      if (isBlacklisted) {
-        throw new UnauthorizedException('토큰이 블랙리스트에 있습니다.');
+      const stateless = String(this.configService.get('AUTH_STATELESS') || '') === 'true';
+      if (!stateless) {
+        // 리프레시 토큰이 블랙리스트에 있는지 확인
+        const isBlacklisted = await this.cacheService.isTokenBlacklisted(refreshToken);
+        if (isBlacklisted) {
+          throw new UnauthorizedException('토큰이 블랙리스트에 있습니다.');
+        }
       }
 
       const payload: any = this.jwtService.verify(refreshToken);
@@ -171,13 +177,15 @@ export class AuthService {
         kakaoId: user.kakaoId,
         nickname: user.nickname,
       });
-      // 기존 토큰 저장 값을 갱신하여 가드의 매칭에 성공하도록 함
-      const existing = await this.cacheService.getUserTokens(user._id!.toString());
-      await this.cacheService.storeUserToken(user._id!.toString(), {
-        accessToken: newAccess,
-        refreshToken: existing?.refreshToken ?? refreshToken,
-        expiresAt: existing?.expiresAt ?? Date.now() + (14 * 24 * 60 * 60 * 1000),
-      });
+      if (!stateless) {
+        // 기존 토큰 저장 값을 갱신하여 가드의 매칭에 성공하도록 함
+        const existing = await this.cacheService.getUserTokens(user._id!.toString());
+        await this.cacheService.storeUserToken(user._id!.toString(), {
+          accessToken: newAccess,
+          refreshToken: existing?.refreshToken ?? refreshToken,
+          expiresAt: existing?.expiresAt ?? Date.now() + (14 * 24 * 60 * 60 * 1000),
+        });
+      }
       return { accessToken: newAccess };
     } catch {
       throw new UnauthorizedException('refresh failed');
@@ -192,9 +200,12 @@ export class AuthService {
 
   async logout(userId: string): Promise<void> {
     try {
-      // 사용자의 모든 토큰을 블랙리스트에 추가
-      await this.cacheService.revokeUserTokens(userId);
-      this.logger.log(`사용자 ${userId}의 모든 토큰이 블랙리스트에 추가되었습니다.`);
+      const stateless = String(this.configService.get('AUTH_STATELESS') || '') === 'true';
+      if (!stateless) {
+        // 사용자의 모든 토큰을 블랙리스트에 추가
+        await this.cacheService.revokeUserTokens(userId);
+        this.logger.log(`사용자 ${userId}의 모든 토큰이 블랙리스트에 추가되었습니다.`);
+      }
     } catch (error) {
       logError(this.logger, '로그아웃 처리 실패', error);
       throw error;
@@ -202,13 +213,16 @@ export class AuthService {
   }
 
   async deleteAccount(userId: string): Promise<void> {
-    // 계정 삭제 전 토큰 블랙리스트 처리
-    try {
-      await this.cacheService.revokeUserTokens(userId);
-      this.logger.log(`사용자 ${userId}의 모든 토큰이 블랙리스트에 추가되었습니다.`);
-    } catch (error) {
-      logError(this.logger, '토큰 블랙리스트 처리 실패', error);
-      // 토큰 처리 실패해도 계정 삭제 진행
+    const stateless = String(this.configService.get('AUTH_STATELESS') || '') === 'true';
+    if (!stateless) {
+      // 계정 삭제 전 토큰 블랙리스트 처리
+      try {
+        await this.cacheService.revokeUserTokens(userId);
+        this.logger.log(`사용자 ${userId}의 모든 토큰이 블랙리스트에 추가되었습니다.`);
+      } catch (error) {
+        logError(this.logger, '토큰 블랙리스트 처리 실패', error);
+        // 토큰 처리 실패해도 계정 삭제 진행
+      }
     }
 
     // 계정 삭제 처리
