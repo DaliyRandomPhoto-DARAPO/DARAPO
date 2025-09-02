@@ -7,7 +7,7 @@ import { S3Service } from '../common/s3.service';
 
 export interface ImageProcessData {
   key: string;
-  buffer: Buffer;
+  bufferBase64: string;
   contentType: string;
   width?: number;
   height?: number;
@@ -20,13 +20,14 @@ export class ImageProcessor {
 
   @Process()
   async process(job: Job<ImageProcessData>): Promise<any> {
-    const { key, buffer, contentType } = job.data;
+    const { key, bufferBase64, contentType } = job.data;
 
     try {
       Logger.log(`이미지 처리 시작: ${key}`, 'ImageProcessor');
 
       // 이미지 최적화
-      const processed = await sharp(buffer)
+      const inputBuffer = Buffer.from(bufferBase64, 'base64');
+      const processed = await sharp(inputBuffer)
         .rotate()
         .withMetadata({ exif: undefined })
         .jpeg({ quality: 85, progressive: true })
@@ -43,7 +44,11 @@ export class ImageProcessor {
       Logger.log(`이미지 처리 완료: ${key}`, 'ImageProcessor');
       return { key, size: processed.length };
     } catch (error) {
-      Logger.error(`이미지 처리 실패: ${key}`, error.stack, 'ImageProcessor');
+      Logger.error(
+        `이미지 처리 실패: ${key}`,
+        (error as any)?.stack || String(error),
+        'ImageProcessor',
+      );
       throw error;
     }
   }

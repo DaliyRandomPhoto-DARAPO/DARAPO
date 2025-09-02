@@ -6,8 +6,6 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { BullModule } from '@nestjs/bull';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AppVersionController } from '../app-version/app-version.controller';
-import { AppVersionService } from '../app-version/app-version.service';
 import { AuthModule } from '../auth/auth.module';
 import { MissionModule } from '../mission/mission.module';
 import { PhotoModule } from '../photo/photo.module';
@@ -79,7 +77,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     UserModule,
     HealthModule,
   ],
-  controllers: [AppController, AppVersionController],
-  providers: [AppService, AppVersionService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
+  controllers: [AppController],
+  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}
