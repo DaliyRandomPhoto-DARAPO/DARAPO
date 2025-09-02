@@ -139,7 +139,12 @@ export const authAPI = {
   },
 
   refreshToken: async () => {
-    const response = await apiClient.post('/api/auth/refresh');
+    // 쿠키를 쓰지 않는 환경이므로 반드시 바디로 refreshToken을 전달
+    let refreshToken: string | null = null;
+    try {
+      refreshToken = await AsyncStorage.getItem('refresh_token');
+    } catch {}
+    const response = await apiClient.post('/api/auth/refresh', refreshToken ? { refreshToken } : undefined);
     return response.data;
   },
 
@@ -152,7 +157,13 @@ export const authAPI = {
 
 export const missionAPI = {
   getTodayMission: async (): Promise<Mission | undefined> => {
-    const response = await apiClient.get('/api/mission/today');
+    const response = await apiClient.get('/api/mission/today', {
+      headers: {
+        // 캐시 이슈로 304가 빈 데이터처럼 보이는 것을 방지
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
+      },
+    });
     return response.data as Mission | undefined;
   },
 };

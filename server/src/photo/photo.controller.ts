@@ -31,6 +31,7 @@ import { PhotoService } from './photo.service';
 import { Photo } from './schemas/photo.schema';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ParseObjectIdPipe } from '../common/pipes/parse-objectid.pipe';
+import { isValidObjectId } from '../common/utils/objectid.util';
 import { UploadPhotoDto } from './dto/upload-photo.dto';
 import { S3Service } from '../common/s3.service';
 import { normalizeImage } from '../common/utils/image.util';
@@ -133,13 +134,25 @@ export class PhotoController {
       });
 
       // 큐에 이미지 처리 작업 추가 (비동기)
-      await this.imageQueue.add({
-        key,
-        bufferBase64: processed.toString('base64'),
-        contentType: file.mimetype,
-        width: norm.width,
-        height: norm.height,
-      });
+      try {
+        await this.imageQueue.add({
+          key,
+          bufferBase64: processed.toString('base64'),
+          contentType: file.mimetype,
+          width: norm.width,
+          height: norm.height,
+        });
+      } catch (e) {
+        // 큐 추가 실패 시(예: Redis 연결 문제) 동기 업로드로 폴백하여 사용자 경험 보장
+        this.logger.warn(
+          `image queue add failed, falling back to direct S3 upload: ${e instanceof Error ? e.message : String(e)}`,
+        );
+        await this.s3.uploadObject({
+          key,
+          body: processed,
+          contentType: file.mimetype,
+        });
+      }
 
       const width = norm.width;
       const height = norm.height;
@@ -162,7 +175,7 @@ export class PhotoController {
         },
         replaced,
       };
-    } catch (error) {
+  } catch (error) {
       this.logger.error(
         'uploadPhoto error',
         error instanceof Error ? error.stack : String(error),
@@ -186,6 +199,9 @@ export class PhotoController {
       const userId: string | undefined = req.user?.sub;
       if (!userId) {
         throw new BadRequestException('인증 정보가 없습니다.');
+      }
+      if (!isValidObjectId(userId)) {
+        throw new BadRequestException('유효하지 않은 사용자 ID입니다.');
       }
       
       const list = await this.photoService.findByUserId(userId);
@@ -211,13 +227,15 @@ export class PhotoController {
         }
       }
       
-      return result;
+  return result;
     } catch (error) {
       this.logger.error(
         'getMyPhotos error',
         error instanceof Error ? error.stack : String(error),
       );
-      throw new InternalServerErrorException('사진 목록을 가져오는 중 오류가 발생했습니다.');
+  if (error instanceof BadRequestException) throw error;
+  // 조회 오류 시에도 빈 배열로 응답하여 앱 크래시/UX 저하 방지
+  return [];
     }
   }
 
@@ -231,10 +249,17 @@ export class PhotoController {
     @Query('limit') limit: string = '3',
   ) {
     try {
+      const userId: string | undefined = req.user?.sub;
+      if (!userId) {
+        throw new BadRequestException('인증 정보가 없습니다.');
+      }
+      if (!isValidObjectId(userId)) {
+        throw new BadRequestException('유효하지 않은 사용자 ID입니다.');
+      }
       const parsedLimit = Math.min(Math.max(1, parseInt(limit) || 3), 10); // 1-10 사이로 제한
       
       const list = await this.photoService.findRecentByUserId(
-        req.user.sub,
+        userId,
         parsedLimit,
       );
       
@@ -242,7 +267,7 @@ export class PhotoController {
         return [];
       }
 
-      return await Promise.all(
+  return await Promise.all(
         list.map(async (p: any) => {
           try {
             return await this.withSignedImageUrl(p);
@@ -260,7 +285,9 @@ export class PhotoController {
         'getMyRecentPhotos error',
         error instanceof Error ? error.stack : String(error),
       );
-      throw new InternalServerErrorException('최근 사진을 가져오는 중 오류가 발생했습니다.');
+  if (error instanceof BadRequestException) throw error;
+  // 조회 오류 시에도 빈 배열로 응답하여 앱 크래시/UX 저하 방지
+  return [];
     }
   }
 

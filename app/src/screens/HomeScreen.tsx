@@ -66,10 +66,14 @@ const HomeScreen = memo(() => {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [mission, myPhotos] = await Promise.all([
+      // 미션/사진은 독립적으로 받아서 한쪽 실패가 다른 쪽을 막지 않도록 함
+      const [missionRes, photosRes] = await Promise.allSettled([
         missionAPI.getTodayMission(),
         photoAPI.getMyPhotos(),
       ]);
+
+      const mission: any = missionRes.status === 'fulfilled' ? missionRes.value : undefined;
+      const myPhotos: any[] = photosRes.status === 'fulfilled' ? (photosRes.value || []) : [];
 
       const norm = normalizeMission(mission);
       setTodayMission(norm?.title || '오늘의 미션');
@@ -95,7 +99,7 @@ const HomeScreen = memo(() => {
       setStreak(cnt);
 
       // 최근 사진은 별도로 처리하여 실패해도 앱이 동작하도록
-      let myRecents = [];
+      let myRecents: any[] = [];
       try {
         myRecents = await photoAPI.getMyRecentPhotos(RECENT_LIMIT);
       } catch (recentError) {
