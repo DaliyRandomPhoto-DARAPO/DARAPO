@@ -49,7 +49,7 @@ jobs:
           target: "/home/ec2-user/DARAPO/"
           overwrite: true
 
-      # 빌드 및 재시작
+      # 빌드 및 재시작 (dependency 충돌 해결)
       - name: Build and restart
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -74,25 +74,45 @@ jobs:
               echo "✅ .env 복원 완료"
             fi
             
-            # 의존성 설치 (실패 시 중단)
-            echo "📦 Installing dependencies..."
-            npm ci || { echo "❌ npm ci failed"; exit 1; }
+            # 의존성 충돌 해결: package-lock.json 재생성
+            echo "🔧 Resolving dependency conflicts..."
+            if [ -f package-lock.json ]; then
+              rm package-lock.json
+              echo "Removed existing package-lock.json"
+            fi
             
-            # 빌드 (npm ci 성공 후)
+            if [ -d node_modules ]; then
+              rm -rf node_modules
+              echo "Removed existing node_modules"
+            fi
+            
+            # 새로운 의존성 설치
+            echo "📦 Installing dependencies with npm install..."
+            npm install || { echo "❌ npm install failed"; exit 1; }
+            
+            # 빌드
             echo "🔨 Building application..."
             npm run build || { echo "❌ Build failed"; exit 1; }
             
             # PM2 재시작 (경로 보장)
-            echo "🔄 Reloading PM2..."
-            npx pm2 reload ecosystem.config.js || pm2 reload ecosystem.config.js || { echo "❌ PM2 reload failed"; exit 1; }
+            echo "🔄 Restarting PM2..."
+            
+            # 현재 실행 중인 앱이 있는지 확인
+            if pm2 list | grep -q "darapo-server"; then
+              echo "Reloading existing PM2 process..."
+              pm2 reload ecosystem.config.js || { echo "❌ PM2 reload failed"; exit 1; }
+            else
+              echo "Starting new PM2 process..."
+              pm2 start ecosystem.config.js || { echo "❌ PM2 start failed"; exit 1; }
+            fi
             
             # 헬스체크
             echo "🔍 Health check..."
-            sleep 10
-            if curl -f http://localhost:3000/api > /dev/null 2>&1; then
+            sleep 15
+            if curl -f http://localhost:3000/api/health/liveness > /dev/null 2>&1; then
               echo "✅ 배포 성공!"
             else
               echo "⚠️ 헬스체크 실패"
-              npx pm2 logs --lines 10 || pm2 logs --lines 10
+              pm2 logs --lines 10
               exit 1
             fi
