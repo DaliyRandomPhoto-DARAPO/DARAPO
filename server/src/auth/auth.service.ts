@@ -137,17 +137,18 @@ export class AuthService {
     );
 
     // Stateless 모드에서는 Redis 저장/블랙리스트를 건너뜁니다.
-    const stateless = String(this.configService.get('AUTH_STATELESS') || '') === 'true';
+    const mode = String(this.configService.get('AUTH_STATELESS') ?? '').toLowerCase();
+    const stateless = mode !== 'false';
     if (!stateless) {
       // 기존 토큰들을 먼저 무효화
-      await this.cacheService.revokeUserTokens(userId);
+      try { await this.cacheService.revokeUserTokens(userId); } catch {}
       // 새 토큰만 저장
       const tokenData = {
         accessToken,
         refreshToken,
         expiresAt: Date.now() + (14 * 24 * 60 * 60 * 1000), // 14일 후 만료
       };
-      await this.cacheService.storeUserToken(userId, tokenData);
+      try { await this.cacheService.storeUserToken(userId, tokenData); } catch {}
     }
 
     return {
@@ -159,10 +160,12 @@ export class AuthService {
 
   async refreshAccessToken(refreshToken: string) {
     try {
-      const stateless = String(this.configService.get('AUTH_STATELESS') || '') === 'true';
+      const mode = String(this.configService.get('AUTH_STATELESS') ?? '').toLowerCase();
+      const stateless = mode !== 'false';
       if (!stateless) {
         // 리프레시 토큰이 블랙리스트에 있는지 확인
-        const isBlacklisted = await this.cacheService.isTokenBlacklisted(refreshToken);
+        let isBlacklisted = false;
+        try { isBlacklisted = await this.cacheService.isTokenBlacklisted(refreshToken); } catch { isBlacklisted = false; }
         if (isBlacklisted) {
           throw new UnauthorizedException('토큰이 블랙리스트에 있습니다.');
         }
@@ -179,12 +182,14 @@ export class AuthService {
       });
       if (!stateless) {
         // 기존 토큰 저장 값을 갱신하여 가드의 매칭에 성공하도록 함
-        const existing = await this.cacheService.getUserTokens(user._id!.toString());
-        await this.cacheService.storeUserToken(user._id!.toString(), {
-          accessToken: newAccess,
-          refreshToken: existing?.refreshToken ?? refreshToken,
-          expiresAt: existing?.expiresAt ?? Date.now() + (14 * 24 * 60 * 60 * 1000),
-        });
+        try {
+          const existing = await this.cacheService.getUserTokens(user._id!.toString());
+          await this.cacheService.storeUserToken(user._id!.toString(), {
+            accessToken: newAccess,
+            refreshToken: existing?.refreshToken ?? refreshToken,
+            expiresAt: existing?.expiresAt ?? Date.now() + (14 * 24 * 60 * 60 * 1000),
+          });
+        } catch {}
       }
       return { accessToken: newAccess };
     } catch {
@@ -213,8 +218,9 @@ export class AuthService {
   }
 
   async deleteAccount(userId: string): Promise<void> {
-    const stateless = String(this.configService.get('AUTH_STATELESS') || '') === 'true';
-    if (!stateless) {
+  const mode = String(this.configService.get('AUTH_STATELESS') ?? '').toLowerCase();
+  const stateless = mode !== 'false';
+  if (!stateless) {
       // 계정 삭제 전 토큰 블랙리스트 처리
       try {
         await this.cacheService.revokeUserTokens(userId);

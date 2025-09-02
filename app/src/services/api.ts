@@ -41,6 +41,41 @@ export const setAuthFailureHandler = (fn: (() => void) | null) => {
   onAuthFailure = fn;
 };
 
+// 리프레시 단일화(single-flight) 상태
+let refreshInFlight: Promise<string> | null = null;
+let lastRefreshAt = 0;
+
+const doRefresh = async (): Promise<string> => {
+  // 쿠키를 쓰지 않는 환경이므로 반드시 바디로 refreshToken을 전달
+  let refreshToken: string | null = null;
+  try {
+    refreshToken = await AsyncStorage.getItem('refresh_token');
+  } catch {}
+  const resp = await apiClient.post('/api/auth/refresh', refreshToken ? { refreshToken } : undefined, {
+    // refresh 자체가 401이면 재귀 방지를 위해 별도 플래그
+    headers: { 'x-refresh-request': '1' },
+  });
+  const newToken = resp.data.accessToken as string;
+  await AsyncStorage.setItem('auth_token', newToken);
+  apiClient.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+  lastRefreshAt = Date.now();
+  return newToken;
+};
+
+const getFreshAccessToken = async (): Promise<string> => {
+  if (!refreshInFlight) {
+    refreshInFlight = doRefresh()
+      .catch(async (err) => {
+        // 실패 시 세션 정리 및 전파
+        try { onAuthFailure?.(); } catch {}
+        try { await AsyncStorage.multiRemove(['auth_token', 'user_info', 'refresh_token']); } catch {}
+        throw err;
+      })
+      .finally(() => { refreshInFlight = null; });
+  }
+  return refreshInFlight;
+};
+
 // 공통 에러 처리
 const logError = (operation: string, error: any) => {
   // 에러 로깅
@@ -77,28 +112,32 @@ apiClient.interceptors.response.use(
   async (error: AxiosError | any) => {
     const originalRequest = (error as any)?.config || {};
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // 리프레시 요청 자체에서 401 발생 시 재귀 진입 방지
+    const url: string = originalRequest?.url || '';
+    const isRefreshCall = url.includes('/api/auth/refresh') || originalRequest?.headers?.['x-refresh-request'] === '1';
+
+    if (!isRefreshCall && error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
-        // body로 refreshToken을 전달(쿠키 미사용 환경 대응)
-        const refreshToken: string | null = (await AsyncStorage.getItem('refresh_token')) || null;
-        // 서버는 전역 prefix로 '/api'를 사용하므로 경로를 '/api/auth/refresh'로 요청해야 함
-        const response = await apiClient.post('/api/auth/refresh', refreshToken ? { refreshToken } : undefined);
-        const newToken = response.data.accessToken; // 위에서 언래핑되었으므로 그대로 접근 가능
-        
-        await AsyncStorage.setItem('auth_token', newToken);
-        
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-        originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
-        
+        const newToken = await getFreshAccessToken();
+        // 새 토큰으로 재요청
+        originalRequest.headers = {
+          ...(originalRequest.headers || {}),
+          Authorization: `Bearer ${newToken}`,
+        };
         return apiClient(originalRequest);
-        
       } catch (refreshError) {
-        await AsyncStorage.multiRemove(['auth_token', 'user_info']);
-        await AsyncStorage.removeItem('refresh_token');
-        // 앱 전역에 인증 만료 알림 → AuthContext에서 자동 로그아웃 처리
-        try { onAuthFailure?.(); } catch {}
+        // 상단 getFreshAccessToken에서 세션 정리 및 콜백 호출 처리
+        // 여기서는 에러만 전파
+      }
+    }
+
+    // 리프레시 직후 전파 지연 등으로 드문 401이 섞일 수 있음 → 1회 즉시 재시도
+    if (!isRefreshCall && error.response?.status === 401) {
+      if (Date.now() - lastRefreshAt < 1500 && !originalRequest._secondTry) {
+        originalRequest._secondTry = true;
+        return apiClient(originalRequest);
       }
     }
     // 에러 메시지 포맷 표준화
