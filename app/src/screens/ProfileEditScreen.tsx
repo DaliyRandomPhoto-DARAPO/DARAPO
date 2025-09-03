@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { userAPI, BASE_URL } from '../services/api';
 import * as ImagePicker from 'expo-image-picker';
+import { optimizeProfileImage } from '../utils/imageOptimization';
 
 const colors = { background: '#f8f9fa', surface: '#ffffff', text: '#2c3e50', subText: '#7f8c8d', primary: '#3498db' } as const;
 const spacing = { xl: 24, lg: 16, md: 12, sm: 8 } as const;
@@ -54,7 +55,7 @@ export default function ProfileEditScreen() {
       Alert.alert('권한 필요', '프로필 이미지를 등록하려면 사진 접근 권한이 필요합니다.');
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
+  const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: 'images',
       allowsEditing: true,
       aspect: [1, 1],
@@ -65,17 +66,15 @@ export default function ProfileEditScreen() {
     if (!asset?.uri) return;
     try {
       setSaving(true);
-      const uri = asset.uri;
-      const guessName = (() => {
-        const parts = uri.split(/[\/]/);
+      // 클라이언트에서 먼저 JPEG로 최적화하여 HEIC/WEBP 이슈 회피
+      const optimizedUri = await optimizeProfileImage(asset.uri);
+      const filename = (() => {
+        const parts = optimizedUri.split(/[\/]/);
         const last = parts[parts.length - 1] || 'avatar.jpg';
-        return last.includes('.') ? last : `${last}.jpg`;
+        // 확장자 강제 jpg
+        return last.endsWith('.jpg') || last.endsWith('.jpeg') ? last : `${last.replace(/\.(png|heic|heif|webp)$/i, '')}.jpg`;
       })();
-      const lower = guessName.toLowerCase();
-      let type = 'image/jpeg';
-      if (lower.endsWith('.png')) type = 'image/png';
-      else if (lower.endsWith('.heic')) type = 'image/heic';
-      const resp = await userAPI.uploadAvatar({ uri, name: guessName, type });
+      const resp = await userAPI.uploadAvatar({ uri: optimizedUri, name: filename, type: 'image/jpeg' });
       setProfileImage(resp.imageUrl);
       await updateProfile({ profileImage: resp.imageUrl });
       Alert.alert('업로드 완료', '프로필 이미지가 업데이트되었습니다.');

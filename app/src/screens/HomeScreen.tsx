@@ -140,7 +140,7 @@ const HomeScreen = memo(() => {
   }, [loadData]);
 
   return (
-    <SafeAreaView style={[styles.container, containerInsetsStyle]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, containerInsetsStyle]} edges={['top']}>
       <Header title="오늘의 미션" />
 
       <ScrollView
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
   scrollBody: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    paddingBottom: spacing.xl,
+  paddingBottom: 0,
   },
 
   cardBodyCenter: {

@@ -96,14 +96,14 @@ export class UserController {
     @Request() req: any,
   ) {
     if (!file) throw new Error('파일이 업로드되지 않았습니다.');
-    if (!file.mimetype || !file.mimetype.startsWith('image/')) {
+  if (!file.mimetype || !file.mimetype.startsWith('image/')) {
       throw new Error('이미지 파일만 업로드 가능합니다.');
     }
 
     // 리사이즈/재인코딩으로 용량 및 해상도 제한(서버 부하/전송시간 감소)
     let output: Buffer;
-    const ext = 'jpg';
-    const contentType = 'image/jpeg';
+    let ext = 'jpg';
+    let contentType = 'image/jpeg';
     try {
       output = await sharp(file.buffer)
         .rotate()
@@ -113,11 +113,31 @@ export class UserController {
     } catch (e) {
       // 처리 실패 시 원본으로 폴백(최대 10MB)
       output = file.buffer;
+      // 원본 mime을 최대한 존중하되 jpeg로 강제하지 않음
+      if (typeof file.mimetype === 'string') {
+        if (file.mimetype.includes('png')) {
+          ext = 'png';
+          contentType = 'image/png';
+        } else if (file.mimetype.includes('webp')) {
+          ext = 'webp';
+          contentType = 'image/webp';
+        } else if (file.mimetype.includes('gif')) {
+          ext = 'gif';
+          contentType = 'image/gif';
+        } else if (file.mimetype.includes('heic') || file.mimetype.includes('heif')) {
+          // 일부 S3/브라우저가 heic 미지원이므로 jpeg로 변경 권장
+          ext = 'jpg';
+          contentType = 'image/jpeg';
+        } else {
+          ext = 'jpg';
+          contentType = 'image/jpeg';
+        }
+      }
     }
 
     // 버전 키로 업로드(캐시 가능), 이전 키는 삭제하여 누수 방지
-    const version = uuidv4();
-    const key = `users/${req.user.sub}/profile-${version}.${ext}`;
+  const version = uuidv4();
+  const key = `users/${req.user.sub}/profile-${version}.${ext}`;
 
     // 기존 프로필 키 조회(베스트 에포트 삭제)
     let prevKey: string | undefined;
@@ -129,13 +149,23 @@ export class UserController {
       }
     } catch {}
 
-    await this.s3.uploadObject({
-      key,
-      body: output,
-      contentType,
-      // 프로필 이미지는 버전 키를 쓰므로 캐시 가능
-      cacheControl: 'public, max-age=31536000, immutable',
-    });
+    try {
+      await this.s3.uploadObject({
+        key,
+        body: output,
+        contentType,
+        // 프로필 이미지는 버전 키를 쓰므로 캐시 가능
+        cacheControl: 'public, max-age=31536000, immutable',
+      });
+      Logger.log(`Avatar uploaded to S3: ${key} (${contentType})`, 'UserController');
+    } catch (err: any) {
+      Logger.error(
+        `S3 upload failed for ${key}: ${err?.name || ''} ${err?.message || err}`,
+        err?.stack || String(err),
+        'UserController',
+      );
+      throw new Error('프로필 이미지 업로드 중 오류가 발생했습니다. 관리자에게 문의해주세요.');
+    }
 
     if (prevKey && prevKey !== key) {
       this.s3.deleteObject(prevKey).catch(() => {});

@@ -286,9 +286,8 @@ export const userAPI = {
     const form = new FormData();
     // @ts-ignore - React Native FormData
     form.append('file', file);
-    const response = await apiClient.post('/api/user/me/avatar', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+  // 헤더는 axios가 boundary 포함하여 자동 설정하도록 둡니다.
+  const response = await apiClient.post('/api/user/me/avatar', form);
     return response.data as { imageUrl: string; user: any };
   },
   resetAvatar: async () => {
