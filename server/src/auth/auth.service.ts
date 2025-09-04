@@ -41,9 +41,24 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly cacheService: CacheService,
   ) {
-    this.KAKAO_CLIENT_ID = this.configService.getOrThrow<string>('KAKAO_REST_API_KEY');
-    this.KAKAO_CLIENT_SECRET = this.configService.getOrThrow<string>('KAKAO_CLIENT_SECRET');
-    this.KAKAO_REDIRECT_URI = this.configService.getOrThrow<string>('KAKAO_REDIRECT_URI');
+    this.KAKAO_CLIENT_ID =
+      this.configService.getOrThrow<string>('KAKAO_REST_API_KEY');
+    this.KAKAO_CLIENT_SECRET = this.configService.getOrThrow<string>(
+      'KAKAO_CLIENT_SECRET',
+    );
+    this.KAKAO_REDIRECT_URI =
+      this.configService.getOrThrow<string>('KAKAO_REDIRECT_URI');
+  }
+
+  private toIdString(id: unknown): string {
+    if (
+      id &&
+      typeof id === 'object' &&
+      typeof (id as any).toHexString === 'function'
+    ) {
+      return (id as any).toHexString();
+    }
+    return typeof id === 'string' ? id : String(id);
   }
 
   async getKakaoAuthUrl(): Promise<string> {
@@ -103,7 +118,11 @@ export class AuthService {
     nickname: string;
     email?: string;
     profileImage?: string;
-  }): Promise<{ accessToken: string; refreshToken: string; user: UserDocument }> {
+  }): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: UserDocument;
+  }> {
     let user = await this.userService.findByKakaoId(kakaoUserInfo.kakaoId);
     if (!user) {
       user = await this.userService.create({
@@ -114,16 +133,15 @@ export class AuthService {
         profileImage: kakaoUserInfo.profileImage,
       });
     } else if (!user.name) {
-      user = await this.userService.updateProfile(
-        user._id!.toString(),
-        { name: user.nickname },
-      );
+      user = await this.userService.updateProfile(this.toIdString(user._id), {
+        name: user.nickname,
+      });
     }
     return this.generateJWT(user!);
   }
 
   async generateJWT(user: UserDocument) {
-    const userId = user._id!.toString();
+    const userId = this.toIdString(user._id);
     if (!userId) throw new Error('사용자 ID를 찾을 수 없습니다.');
     const payload = {
       sub: userId,
@@ -137,18 +155,28 @@ export class AuthService {
     );
 
     // Stateless 모드에서는 Redis 저장/블랙리스트를 건너뜁니다.
-    const mode = String(this.configService.get('AUTH_STATELESS') ?? '').toLowerCase();
+    const mode = String(
+      this.configService.get('AUTH_STATELESS') ?? '',
+    ).toLowerCase();
     const stateless = mode !== 'false';
     if (!stateless) {
       // 기존 토큰들을 먼저 무효화
-      try { await this.cacheService.revokeUserTokens(userId); } catch {}
+      try {
+        await this.cacheService.revokeUserTokens(userId);
+      } catch {
+        void 0; // ignore cache revoke errors
+      }
       // 새 토큰만 저장
       const tokenData = {
         accessToken,
         refreshToken,
-        expiresAt: Date.now() + (14 * 24 * 60 * 60 * 1000), // 14일 후 만료
+        expiresAt: Date.now() + 14 * 24 * 60 * 60 * 1000, // 14일 후 만료
       };
-      try { await this.cacheService.storeUserToken(userId, tokenData); } catch {}
+      try {
+        await this.cacheService.storeUserToken(userId, tokenData);
+      } catch {
+        void 0; // ignore cache store errors
+      }
     }
 
     return {
@@ -160,12 +188,19 @@ export class AuthService {
 
   async refreshAccessToken(refreshToken: string) {
     try {
-      const mode = String(this.configService.get('AUTH_STATELESS') ?? '').toLowerCase();
+      const mode = String(
+        this.configService.get('AUTH_STATELESS') ?? '',
+      ).toLowerCase();
       const stateless = mode !== 'false';
       if (!stateless) {
         // 리프레시 토큰이 블랙리스트에 있는지 확인
         let isBlacklisted = false;
-        try { isBlacklisted = await this.cacheService.isTokenBlacklisted(refreshToken); } catch { isBlacklisted = false; }
+        try {
+          isBlacklisted =
+            await this.cacheService.isTokenBlacklisted(refreshToken);
+        } catch {
+          isBlacklisted = false;
+        }
         if (isBlacklisted) {
           throw new UnauthorizedException('토큰이 블랙리스트에 있습니다.');
         }
@@ -176,20 +211,24 @@ export class AuthService {
         throw new UnauthorizedException('invalid refresh token');
       const user = await this.findUserById(payload.sub);
       const newAccess = this.jwtService.sign({
-        sub: user._id!.toString(),
+        sub: this.toIdString(user._id),
         kakaoId: user.kakaoId,
         nickname: user.nickname,
       });
       if (!stateless) {
         // 기존 토큰 저장 값을 갱신하여 가드의 매칭에 성공하도록 함
         try {
-          const existing = await this.cacheService.getUserTokens(user._id!.toString());
-          await this.cacheService.storeUserToken(user._id!.toString(), {
+          const uid = this.toIdString(user._id);
+          const existing = await this.cacheService.getUserTokens(uid);
+          await this.cacheService.storeUserToken(uid, {
             accessToken: newAccess,
             refreshToken: existing?.refreshToken ?? refreshToken,
-            expiresAt: existing?.expiresAt ?? Date.now() + (14 * 24 * 60 * 60 * 1000),
+            expiresAt:
+              existing?.expiresAt ?? Date.now() + 14 * 24 * 60 * 60 * 1000,
           });
-        } catch {}
+        } catch {
+          void 0; // ignore cache get/store errors
+        }
       }
       return { accessToken: newAccess };
     } catch {
@@ -205,11 +244,14 @@ export class AuthService {
 
   async logout(userId: string): Promise<void> {
     try {
-      const stateless = String(this.configService.get('AUTH_STATELESS') || '') === 'true';
+      const stateless =
+        String(this.configService.get('AUTH_STATELESS') || '') === 'true';
       if (!stateless) {
         // 사용자의 모든 토큰을 블랙리스트에 추가
         await this.cacheService.revokeUserTokens(userId);
-        this.logger.log(`사용자 ${userId}의 모든 토큰이 블랙리스트에 추가되었습니다.`);
+        this.logger.log(
+          `사용자 ${userId}의 모든 토큰이 블랙리스트에 추가되었습니다.`,
+        );
       }
     } catch (error) {
       logError(this.logger, '로그아웃 처리 실패', error);
@@ -218,13 +260,17 @@ export class AuthService {
   }
 
   async deleteAccount(userId: string): Promise<void> {
-  const mode = String(this.configService.get('AUTH_STATELESS') ?? '').toLowerCase();
-  const stateless = mode !== 'false';
-  if (!stateless) {
+    const mode = String(
+      this.configService.get('AUTH_STATELESS') ?? '',
+    ).toLowerCase();
+    const stateless = mode !== 'false';
+    if (!stateless) {
       // 계정 삭제 전 토큰 블랙리스트 처리
       try {
         await this.cacheService.revokeUserTokens(userId);
-        this.logger.log(`사용자 ${userId}의 모든 토큰이 블랙리스트에 추가되었습니다.`);
+        this.logger.log(
+          `사용자 ${userId}의 모든 토큰이 블랙리스트에 추가되었습니다.`,
+        );
       } catch (error) {
         logError(this.logger, '토큰 블랙리스트 처리 실패', error);
         // 토큰 처리 실패해도 계정 삭제 진행

@@ -17,7 +17,7 @@ import { CommonModule } from '../common/common.module';
     BullModule.registerQueue({
       name: 'image-processing',
     }),
-  // CacheModule는 AppModule에서 글로벌로 등록됨
+    // CacheModule는 AppModule에서 글로벌로 등록됨
   ],
   providers: [PhotoService, ImageProcessor],
   controllers: [PhotoController],

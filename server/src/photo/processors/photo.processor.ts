@@ -46,7 +46,7 @@ export class ImageProcessor {
     } catch (error) {
       Logger.error(
         `이미지 처리 실패: ${key}`,
-        (error as any)?.stack || String(error),
+        error?.stack || String(error),
         'ImageProcessor',
       );
       throw error;

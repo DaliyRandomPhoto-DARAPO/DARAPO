@@ -15,7 +15,10 @@ describe('MissionService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [MissionService, { provide: getModelToken('Mission'), useValue: mockMissionModel }],
+      providers: [
+        MissionService,
+        { provide: getModelToken('Mission'), useValue: mockMissionModel },
+      ],
     }).compile();
 
     service = module.get<MissionService>(MissionService);

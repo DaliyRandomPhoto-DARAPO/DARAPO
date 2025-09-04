@@ -17,7 +17,10 @@ export function getKSTDateForQuery(date: Date): Date {
   return new Date(kstMidnight.getTime() - 9 * 60 * 60000);
 }
 
-export function getKSTStartAndEndOfDay(date?: Date): { start: Date; end: Date } {
+export function getKSTStartAndEndOfDay(date?: Date): {
+  start: Date;
+  end: Date;
+} {
   const targetDate = date || new Date();
   const kstMidnight = getKSTMidnight(targetDate);
   const start = new Date(kstMidnight.getTime() - 9 * 60 * 60000);

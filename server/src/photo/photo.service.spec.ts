@@ -11,7 +11,11 @@ const mockPhotoModel = {
   findByIdAndDelete: jest.fn(),
   create: jest.fn(),
 };
-const mockS3Service = { uploadObject: jest.fn(), deleteObject: jest.fn(), getSignedUrl: jest.fn() } as any;
+const mockS3Service = {
+  uploadObject: jest.fn(),
+  deleteObject: jest.fn(),
+  getSignedUrl: jest.fn(),
+} as any;
 
 describe('PhotoService', () => {
   let service: PhotoService;

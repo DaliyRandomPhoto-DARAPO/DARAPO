@@ -7,9 +7,9 @@ import { CommonModule } from '../common/common.module';
 
 @Module({
   imports: [
-  CommonModule,
+    CommonModule,
     MongooseModule.forFeature([{ name: Mission.name, schema: MissionSchema }]),
-  // CacheModule는 AppModule에서 글로벌로 등록됨
+    // CacheModule는 AppModule에서 글로벌로 등록됨
   ],
   controllers: [MissionController],
   providers: [MissionService],

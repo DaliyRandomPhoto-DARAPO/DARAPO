@@ -3,7 +3,11 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Mission, MissionDocument } from './schemas/mission.schema';
-import { getKSTStartAndEndOfDay, getKSTMidnight, getKSTDateForQuery } from '../common/utils/date.util';
+import {
+  getKSTStartAndEndOfDay,
+  getKSTMidnight,
+  getKSTDateForQuery,
+} from '../common/utils/date.util';
 
 @Injectable()
 export class MissionService {
@@ -33,7 +37,11 @@ export class MissionService {
     // Normalize incoming data: ensure subtitle and description exist where possible
     const data = { ...missionData } as Partial<Mission>;
     // If subtitle missing but title contains a separator, try to extract
-    if ((!data.subtitle || data.subtitle === null) && typeof data.title === 'string' && data.title.includes(' - ')) {
+    if (
+      (!data.subtitle || data.subtitle === null) &&
+      typeof data.title === 'string' &&
+      data.title.includes(' - ')
+    ) {
       const parts = data.title.split(' - ');
       // assume legacy format: "Title - Subtitle"
       data.subtitle = parts.slice(1).join(' - ').trim();
@@ -85,14 +93,19 @@ export class MissionService {
     const kstMidnight = getKSTMidnight(now);
     const missionDate = getKSTDateForQuery(kstMidnight);
 
-    const sevenDaysBefore = new Date(missionDate.getTime() - 7 * 24 * 60 * 60000);
+    const sevenDaysBefore = new Date(
+      missionDate.getTime() - 7 * 24 * 60 * 60000,
+    );
     const recentMissions = await this.missionModel
-      .find({ date: { $gte: sevenDaysBefore, $lt: missionDate }, isActive: true })
+      .find({
+        date: { $gte: sevenDaysBefore, $lt: missionDate },
+        isActive: true,
+      })
       .exec();
 
     const recentTitles = new Set(recentMissions.map((m) => m.title));
 
-  let chosen: { title: string; subtitle?: string } | null = null;
+    let chosen: { title: string; subtitle?: string } | null = null;
     for (let i = 0; i < 6; i++) {
       const candidate = pickRandom(missionPool);
       if (!recentTitles.has(candidate.title) || i === 5) {
@@ -107,8 +120,7 @@ export class MissionService {
 
     let displayTitle = chosen.title;
     if (chosen.subtitle) displayTitle = `${chosen.title} - ${chosen.subtitle}`;
-  let description = `${chosen.title}를 주제로 사진을 찍어보세요!`;
-
+    const description = `${chosen.title}를 주제로 사진을 찍어보세요!`;
 
     return this.createMission({
       title: displayTitle,

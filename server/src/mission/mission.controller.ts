@@ -1,5 +1,13 @@
 // 미션 관련 API 엔드포인트 정의 (오늘의 미션 조회, 목록, 생성 등)
-import { Controller, Get, Post, Body, Param, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { MissionService } from './mission.service';
 import { Mission } from './schemas/mission.schema';
@@ -48,7 +56,7 @@ export class MissionController {
       date: new Date(missionData.date),
       isActive: missionData.isActive ?? true,
       imageUrl: missionData.imageUrl,
-  subtitle: missionData.subtitle,
+      subtitle: missionData.subtitle,
     };
     return this.missionService.createMission(payload);
   }

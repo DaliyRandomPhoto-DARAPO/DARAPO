@@ -20,7 +20,11 @@ export class CacheService {
   }
 
   // 사용자 세션 관리
-  async setUserSession(userId: string, sessionData: any, ttl = 3600): Promise<void> {
+  async setUserSession(
+    userId: string,
+    sessionData: any,
+    ttl = 3600,
+  ): Promise<void> {
     await this.set(`user:session:${userId}`, sessionData, ttl);
   }
 
@@ -33,7 +37,11 @@ export class CacheService {
   }
 
   // 미션 캐시
-  async cacheMission(missionId: string, missionData: any, ttl = 300): Promise<void> {
+  async cacheMission(
+    missionId: string,
+    missionData: any,
+    ttl = 300,
+  ): Promise<void> {
     await this.set(`mission:${missionId}`, missionData, ttl);
   }
 
@@ -64,11 +72,14 @@ export class CacheService {
   }
 
   // 사용자별 토큰 저장 및 관리
-  async storeUserToken(userId: string, tokenData: {
-    accessToken: string;
-    refreshToken: string;
-    expiresAt: number;
-  }): Promise<void> {
+  async storeUserToken(
+    userId: string,
+    tokenData: {
+      accessToken: string;
+      refreshToken: string;
+      expiresAt: number;
+    },
+  ): Promise<void> {
     await this.set(`user:tokens:${userId}`, tokenData, 14 * 24 * 60 * 60); // 14일
   }
 

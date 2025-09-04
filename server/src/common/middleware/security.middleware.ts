@@ -9,25 +9,30 @@ export const setupSecurity = (app: INestApplication): void => {
   const isProd = process.env.NODE_ENV === 'production';
 
   // Helmet 보안 헤더 강화
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'", ...(isProd ? [] : ["http://localhost:*", "ws://localhost:*"])],
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+          connectSrc: [
+            "'self'",
+            ...(isProd ? [] : ['http://localhost:*', 'ws://localhost:*']),
+          ],
+        },
       },
-    },
-    hsts: {
-      maxAge: 31536000,
-      includeSubDomains: true,
-      preload: true,
-    },
-    noSniff: true,
-    xssFilter: true,
-    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-  }));
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+      },
+      noSniff: true,
+      xssFilter: true,
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    }),
+  );
 
   // Rate Limiting 강화
   app.use(
@@ -74,16 +79,18 @@ export const setupMonitoring = (app: INestApplication): void => {
 
       // 프로덕션에서는 구조화된 로깅
       if (process.env.NODE_ENV === 'production') {
-        console.log(JSON.stringify({
-          timestamp: new Date().toISOString(),
-          level: statusCode >= 400 ? 'error' : 'info',
-          method,
-          url,
-          statusCode,
-          duration: `${duration}ms`,
-          ip: ip || req.connection.remoteAddress,
-          userAgent: req.get('User-Agent'),
-        }));
+        console.log(
+          JSON.stringify({
+            timestamp: new Date().toISOString(),
+            level: statusCode >= 400 ? 'error' : 'info',
+            method,
+            url,
+            statusCode,
+            duration: `${duration}ms`,
+            ip: ip || req.connection.remoteAddress,
+            userAgent: req.get('User-Agent'),
+          }),
+        );
       }
     });
 

@@ -25,9 +25,9 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     }),
     ThrottlerModule.forRoot([
       {
-  // ttl: 제한 기간 (밀리초 단위), limit: 해당 기간 내 허용 요청 수
-  ttl: 60000, // 밀리초
-  limit: 120,
+        // ttl: 제한 기간 (밀리초 단위), limit: 해당 기간 내 허용 요청 수
+        ttl: 60000, // 밀리초
+        limit: 120,
       },
     ]),
     // Valkey (Redis 호환) 캐시 설정
@@ -58,7 +58,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
         ttl: 300,
       }),
     }),
-    
+
     // Bull 큐도 Valkey 사용
     BullModule.forRootAsync({
       inject: [ConfigService],

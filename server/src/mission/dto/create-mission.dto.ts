@@ -33,9 +33,7 @@ export class CreateMissionDto {
   @IsOptional()
   @IsArray()
   // tags removed
-
   @IsOptional()
   @IsString()
   subtitle?: string;
-
 }

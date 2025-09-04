@@ -1,5 +1,9 @@
 // JWT 기반 인증 가드
-import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  ExecutionContext,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { CacheService } from '../../common/cache.service';
 import { ConfigService } from '@nestjs/config';
@@ -13,9 +17,11 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     private readonly configService: ConfigService,
   ) {
     super();
-  const mode = String(this.configService.get('AUTH_STATELESS') ?? '').toLowerCase();
-  // 기본값: stateless ('' 또는 undefined 포함) → 'false'로 명시해야만 상태저장 모드
-  this.stateless = mode !== 'false';
+    const mode = String(
+      this.configService.get('AUTH_STATELESS') ?? '',
+    ).toLowerCase();
+    // 기본값: stateless ('' 또는 undefined 포함) → 'false'로 명시해야만 상태저장 모드
+    this.stateless = mode !== 'false';
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -53,7 +59,11 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         try {
           const storedTokens = await this.cacheService.getUserTokens(userId);
           // 저장 토큰이 없거나 일치하지 않더라도 가용성 위해 통과
-          if (storedTokens && storedTokens.accessToken && storedTokens.accessToken !== token) {
+          if (
+            storedTokens &&
+            storedTokens.accessToken &&
+            storedTokens.accessToken !== token
+          ) {
             throw new UnauthorizedException('유효하지 않은 토큰입니다.');
           }
         } catch {

@@ -66,14 +66,18 @@ export class S3Service {
     try {
       const cached = await this.cache.get<string>(cacheKey);
       if (cached) return cached;
-    } catch {}
+    } catch {
+      void 0; // cache read failure is non-fatal
+    }
 
     const url = await this.getSignedUrl(key, ttl);
     try {
       // 실제 만료보다 약간 짧게 캐시(안전 마진 30초)
       const cacheTtl = Math.max(30, ttl - 30);
       await this.cache.set(cacheKey, url, cacheTtl);
-    } catch {}
+    } catch {
+      void 0; // cache write failure is non-fatal
+    }
     return url;
   }
 

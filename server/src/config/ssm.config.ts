@@ -23,7 +23,9 @@ export class SSMConfigService {
     }
   }
 
-  private async getParametersFromSSM(paths: string[]): Promise<Record<string, string>> {
+  private async getParametersFromSSM(
+    paths: string[],
+  ): Promise<Record<string, string>> {
     const command = new GetParametersCommand({
       Names: paths,
       WithDecryption: true,
@@ -32,7 +34,7 @@ export class SSMConfigService {
     const response = await this.ssmClient.send(command);
     const parameters: Record<string, string> = {};
 
-    response.Parameters?.forEach(param => {
+    response.Parameters?.forEach((param) => {
       const key = param.Name?.split('/').pop() || '';
       parameters[key] = param.Value || '';
     });
@@ -53,7 +55,7 @@ export class SSMConfigService {
     const envContent = fs.readFileSync(envPath, 'utf-8');
     const envVars: Record<string, string> = {};
 
-    envContent.split('\n').forEach(line => {
+    envContent.split('\n').forEach((line) => {
       const [key, ...valueParts] = line.split('=');
       if (key && valueParts.length > 0) {
         const value = valueParts.join('=').trim();
@@ -63,7 +65,7 @@ export class SSMConfigService {
     });
 
     // 요청된 파라미터들만 추출
-    paths.forEach(path => {
+    paths.forEach((path) => {
       const key = path.split('/').pop() || '';
       if (envVars[key]) {
         parameters[key] = envVars[key];

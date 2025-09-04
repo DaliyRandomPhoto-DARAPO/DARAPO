@@ -1,11 +1,14 @@
 import v8 from 'v8';
 
 const DISABLE_MEMOPT = process.env.DISABLE_MEMORY_OPTIMIZER === 'true';
-const DISABLE_MEMOPT_LOGS = process.env.DISABLE_MEMORY_OPTIMIZER_LOGS === 'true';
+const DISABLE_MEMOPT_LOGS =
+  process.env.DISABLE_MEMORY_OPTIMIZER_LOGS === 'true';
 const LOG_COOLDOWN_MS = Number(process.env.MEMOPT_LOG_COOLDOWN_MS ?? 60000); // 60s
-const RSS_TRIGGER_MB = Number(process.env.MEMOPT_RSS_TRIGGER_MB ?? 300);      // 300MB
-const HEAP_LIMIT_PCT_WARN = Number(process.env.MEMOPT_HEAP_LIMIT_PCT_WARN ?? 70); // %
-const HEAP_LIMIT_PCT_OPT = Number(process.env.MEMOPT_HEAP_LIMIT_PCT_OPT ?? 75);   // %
+const RSS_TRIGGER_MB = Number(process.env.MEMOPT_RSS_TRIGGER_MB ?? 300); // 300MB
+const HEAP_LIMIT_PCT_WARN = Number(
+  process.env.MEMOPT_HEAP_LIMIT_PCT_WARN ?? 70,
+); // %
+const HEAP_LIMIT_PCT_OPT = Number(process.env.MEMOPT_HEAP_LIMIT_PCT_OPT ?? 75); // %
 
 /**
  * 메모리 사용량 모니터링 및 최적화
@@ -23,8 +26,8 @@ export class MemoryOptimizer {
   }
 
   startMonitoring(): void {
-    if (DISABLE_MEMOPT) return;               // 완전 비활성
-    if (this.monitoringInterval) return;      // 이미 모니터링 중
+    if (DISABLE_MEMOPT) return; // 완전 비활성
+    if (this.monitoringInterval) return; // 이미 모니터링 중
     this.monitoringInterval = setInterval(() => this.checkMemoryUsage(), 30000);
   }
 
@@ -35,11 +38,15 @@ export class MemoryOptimizer {
     }
   }
 
-  private maybeLog(level: 'log'|'warn'|'debug', msg: string, meta?: any) {
+  private maybeLog(
+    _level: 'log' | 'warn' | 'debug',
+    _msg: string,
+    _meta?: any,
+  ) {
     const now = Date.now();
     if (now - this.lastLogAt < LOG_COOLDOWN_MS) return; // 스로틀
     this.lastLogAt = now;
-    if (DISABLE_MEMOPT_LOGS) return;         // 로그 끄기
+    if (DISABLE_MEMOPT_LOGS) return; // 로그 끄기
     // 로그 출력
   }
 
@@ -55,13 +62,14 @@ export class MemoryOptimizer {
 
     // 경고 로그 (상한 기준)
     if (heapPctOfLimit > HEAP_LIMIT_PCT_WARN || rssMB > RSS_TRIGGER_MB) {
-      this.maybeLog('warn',
+      this.maybeLog(
+        'warn',
         `[MemoryOptimizer] High memory usage (limit basis): ${heapPctOfLimit.toFixed(2)}%`,
         {
           heapUsed: `${heapUsedMB.toFixed(2)}MB`,
           heapLimit: `${heapLimitMB.toFixed(0)}MB`,
           rss: `${rssMB.toFixed(2)}MB`,
-        }
+        },
       );
     }
 
@@ -71,7 +79,11 @@ export class MemoryOptimizer {
     }
   }
 
-  private optimizeMemory(heapPctOfLimit: number, rssMB: number, heapLimitMB: number): void {
+  private optimizeMemory(
+    heapPctOfLimit: number,
+    rssMB: number,
+    heapLimitMB: number,
+  ): void {
     // 캐시 정리/버퍼 해제 등 “가벼운” 작업만
     this.maybeLog('log', '[MemoryOptimizer] Memory optimization triggered', {
       heapPctOfLimit: `${heapPctOfLimit.toFixed(2)}%`,
@@ -97,7 +109,9 @@ export class MemoryOptimizer {
       heapSizeLimit: s.heap_size_limit,
       totalHeapSize: s.total_heap_size,
       usedHeapSize: s.used_heap_size,
-      heapUsedPercentOfLimit: s.heap_size_limit ? (m.heapUsed / s.heap_size_limit) * 100 : 0,
+      heapUsedPercentOfLimit: s.heap_size_limit
+        ? (m.heapUsed / s.heap_size_limit) * 100
+        : 0,
     };
   }
 }

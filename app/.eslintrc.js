@@ -8,6 +8,11 @@ module.exports = {
     'prettier',
   ],
   parser: '@typescript-eslint/parser',
+  parserOptions: {
+    ecmaVersion: 2022,
+    sourceType: 'module',
+    project: false,
+  },
   plugins: [
     '@typescript-eslint',
     'react',
@@ -28,14 +33,18 @@ module.exports = {
     // 코드 품질 규칙들
     'no-console': 'warn',
     'no-debugger': 'error',
-    'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+  'no-unused-vars': 'off',
+  '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     'prefer-const': 'error',
 
     // 접근성
     'jsx-a11y/accessible-emoji': 'warn',
 
     // prettier 연동
-    'prettier/prettier': 'warn',
+  'prettier/prettier': 'warn',
+  // react-native plugin rules adjustments
+  'react-native/sort-styles': 'off',
+  'react-native/no-color-literals': 'off',
   },
   settings: {
     react: {

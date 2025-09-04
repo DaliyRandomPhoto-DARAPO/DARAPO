@@ -12,7 +12,7 @@ export class HealthController {
   @Get('liveness')
   @ApiOperation({ summary: '애플리케이션 생존 체크' })
   liveness() {
-    return { 
+    return {
       status: 'ok',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
@@ -23,8 +23,9 @@ export class HealthController {
   @Get('readiness')
   @ApiOperation({ summary: '의존성 준비 상태 체크' })
   readiness() {
-    const dbStatus = this.connection.readyState === ConnectionStates.connected ? 'up' : 'down';
-    
+    const dbStatus =
+      this.connection.readyState === ConnectionStates.connected ? 'up' : 'down';
+
     return {
       status: dbStatus === 'up' ? 'ready' : 'not ready',
       database: dbStatus,

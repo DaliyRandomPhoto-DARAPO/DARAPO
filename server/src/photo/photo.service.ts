@@ -82,7 +82,9 @@ export class PhotoService {
   async findByUserId(userId: string) {
     return this.photoModel
       .find({ userId: toObjectId(userId) })
-      .select('objectKey comment isPublic isShared fileSize mimeType width height missionId createdAt')
+      .select(
+        'objectKey comment isPublic isShared fileSize mimeType width height missionId createdAt',
+      )
       .populate('missionId', 'title date')
       .sort({ createdAt: -1 })
       .lean()
@@ -92,7 +94,9 @@ export class PhotoService {
   async findRecentByUserId(userId: string, limit: number = 3) {
     return this.photoModel
       .find({ userId: toObjectId(userId) })
-      .select('objectKey comment isPublic isShared fileSize mimeType width height missionId createdAt')
+      .select(
+        'objectKey comment isPublic isShared fileSize mimeType width height missionId createdAt',
+      )
       .populate('missionId', 'title date')
       .sort({ createdAt: -1 })
       .limit(limit)
@@ -103,7 +107,9 @@ export class PhotoService {
   async findByMissionId(missionId: string) {
     return this.photoModel
       .find({ missionId: toObjectId(missionId), isPublic: true })
-      .select('objectKey comment isPublic isShared fileSize mimeType width height userId missionId createdAt')
+      .select(
+        'objectKey comment isPublic isShared fileSize mimeType width height userId missionId createdAt',
+      )
       .populate('userId', 'nickname profileImage')
       .populate('missionId', 'title date')
       .sort({ createdAt: -1 })
@@ -114,7 +120,9 @@ export class PhotoService {
   async findById(photoId: string) {
     return this.photoModel
       .findById(toObjectId(photoId))
-      .select('objectKey comment isPublic isShared fileSize mimeType width height userId missionId createdAt')
+      .select(
+        'objectKey comment isPublic isShared fileSize mimeType width height userId missionId createdAt',
+      )
       .populate('userId', 'nickname profileImage')
       .populate('missionId', 'title date')
       .lean()
@@ -141,15 +149,15 @@ export class PhotoService {
     if (doc?.objectKey) {
       this.s3.deleteObject(doc.objectKey).catch(() => {});
     }
-    return this.photoModel
-      .findByIdAndDelete(toObjectId(photoId))
-      .exec();
+    return this.photoModel.findByIdAndDelete(toObjectId(photoId)).exec();
   }
 
   async findPublicPhotos(limit: number = 20, skip: number = 0) {
     return this.photoModel
       .find({ isPublic: true })
-      .select('objectKey comment isPublic isShared fileSize mimeType width height userId missionId createdAt')
+      .select(
+        'objectKey comment isPublic isShared fileSize mimeType width height userId missionId createdAt',
+      )
       .populate('userId', 'nickname profileImage')
       .populate('missionId', 'title date')
       .sort({ createdAt: -1 })
@@ -161,11 +169,7 @@ export class PhotoService {
 
   async markAsShared(photoId: string) {
     return this.photoModel
-      .findByIdAndUpdate(
-        toObjectId(photoId),
-        { isShared: true },
-        { new: true },
-      )
+      .findByIdAndUpdate(toObjectId(photoId), { isShared: true }, { new: true })
       .exec();
   }
 }

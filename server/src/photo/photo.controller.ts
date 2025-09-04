@@ -47,14 +47,33 @@ export class PhotoController {
   constructor(
     private readonly photoService: PhotoService,
     private readonly s3: S3Service,
-    @InjectQueue('image-processing') private readonly imageQueue: Queue<ImageProcessData>,
+    @InjectQueue('image-processing')
+    private readonly imageQueue: Queue<ImageProcessData>,
   ) {}
+
+  private idForLog(id: any): string {
+    try {
+      if (
+        id &&
+        typeof id === 'object' &&
+        typeof id.toHexString === 'function'
+      ) {
+        return id.toHexString();
+      }
+      if (id && typeof id.toString === 'function') {
+        return id.toString();
+      }
+      return String(id);
+    } catch {
+      return '[unknown-id]';
+    }
+  }
 
   private async withSignedImageUrl(p: any) {
     try {
       const base = { ...p }; // lean object copy
       let imageUrl: string | null = base.imageUrl ?? null;
-      
+
       if (base.objectKey) {
         try {
           imageUrl = await this.s3.getSignedUrlCached(base.objectKey);
@@ -90,7 +109,7 @@ export class PhotoController {
           }
         }
       }
-      
+
       return { ...base, imageUrl };
     } catch (error) {
       this.logger.error(
@@ -123,7 +142,12 @@ export class PhotoController {
       }
 
       // 이미지 정규화(회전, 포맷) 및 메타 추출
-      let norm: { buffer: Buffer; width?: number; height?: number; ext?: string };
+      let norm: {
+        buffer: Buffer;
+        width?: number;
+        height?: number;
+        ext?: string;
+      };
       try {
         norm = await normalizeImage(file.buffer);
       } catch (e) {
@@ -171,15 +195,16 @@ export class PhotoController {
       const width = norm.width;
       const height = norm.height;
 
-      const { photo, replaced } = await this.photoService.upsertUserMissionPhoto({
-        ...photoData,
-        userId: req.user.sub,
-        objectKey: key,
-        fileSize: processed.length,
-        mimeType: file.mimetype,
-        width,
-        height,
-      });
+      const { photo, replaced } =
+        await this.photoService.upsertUserMissionPhoto({
+          ...photoData,
+          userId: req.user.sub,
+          objectKey: key,
+          fileSize: processed.length,
+          mimeType: file.mimetype,
+          width,
+          height,
+        });
 
       const signedUrl = await resolveMaybeSignedUrl(this.s3, key);
       return {
@@ -189,15 +214,19 @@ export class PhotoController {
         },
         replaced,
       };
-  } catch (error) {
+    } catch (error) {
       this.logger.error(
         'uploadPhoto error',
-    error instanceof Error ? `${error.message}\n${error.stack}` : String(error),
+        error instanceof Error
+          ? `${error.message}\n${error.stack}`
+          : String(error),
       );
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new InternalServerErrorException('사진 업로드 중 오류가 발생했습니다.');
+      throw new InternalServerErrorException(
+        '사진 업로드 중 오류가 발생했습니다.',
+      );
     }
   }
 
@@ -217,39 +246,39 @@ export class PhotoController {
       if (!isValidObjectId(userId)) {
         throw new BadRequestException('유효하지 않은 사용자 ID입니다.');
       }
-      
+
       const list = await this.photoService.findByUserId(userId);
       this.logger.debug(`Found ${list.length} photos for user`);
-      
+
       if (!list || list.length === 0) {
         return [];
       }
 
       // Promise.all 대신 순차 처리로 에러 추적 개선
-  const result: any[] = [];
+      const result: any[] = [];
       for (const photo of list) {
         try {
           const processedPhoto = await this.withSignedImageUrl(photo);
           result.push(processedPhoto);
         } catch (error) {
           this.logger.error(
-            `Error processing photo ${photo._id}`,
+            `Error processing photo ${this.idForLog(photo._id)}`,
             error instanceof Error ? error.stack : String(error),
           );
           // 개별 사진 처리 실패 시 null 이미지로 추가
           result.push({ ...photo, imageUrl: null });
         }
       }
-      
-  return result;
+
+      return result;
     } catch (error) {
       this.logger.error(
         'getMyPhotos error',
         error instanceof Error ? error.stack : String(error),
       );
-  if (error instanceof BadRequestException) throw error;
-  // 조회 오류 시에도 빈 배열로 응답하여 앱 크래시/UX 저하 방지
-  return [];
+      if (error instanceof BadRequestException) throw error;
+      // 조회 오류 시에도 빈 배열로 응답하여 앱 크래시/UX 저하 방지
+      return [];
     }
   }
 
@@ -271,37 +300,37 @@ export class PhotoController {
         throw new BadRequestException('유효하지 않은 사용자 ID입니다.');
       }
       const parsedLimit = Math.min(Math.max(1, parseInt(limit) || 3), 10); // 1-10 사이로 제한
-      
+
       const list = await this.photoService.findRecentByUserId(
         userId,
         parsedLimit,
       );
-      
+
       if (!list || list.length === 0) {
         return [];
       }
 
-  return await Promise.all(
+      return await Promise.all(
         list.map(async (p: any) => {
           try {
             return await this.withSignedImageUrl(p);
           } catch (error) {
             this.logger.error(
-              `Error processing recent photo ${p._id}`,
+              `Error processing recent photo ${this.idForLog(p._id)}`,
               error instanceof Error ? error.stack : String(error),
             );
             return { ...p, imageUrl: null };
           }
-        })
+        }),
       );
     } catch (error) {
       this.logger.error(
         'getMyRecentPhotos error',
         error instanceof Error ? error.stack : String(error),
       );
-  if (error instanceof BadRequestException) throw error;
-  // 조회 오류 시에도 빈 배열로 응답하여 앱 크래시/UX 저하 방지
-  return [];
+      if (error instanceof BadRequestException) throw error;
+      // 조회 오류 시에도 빈 배열로 응답하여 앱 크래시/UX 저하 방지
+      return [];
     }
   }
 
@@ -316,9 +345,12 @@ export class PhotoController {
     try {
       const parsedLimit = Math.min(Math.max(1, parseInt(limit) || 20), 50);
       const parsedSkip = Math.max(0, parseInt(skip) || 0);
-      
-      const list = await this.photoService.findPublicPhotos(parsedLimit, parsedSkip);
-      
+
+      const list = await this.photoService.findPublicPhotos(
+        parsedLimit,
+        parsedSkip,
+      );
+
       if (!list || list.length === 0) {
         return [];
       }
@@ -329,19 +361,21 @@ export class PhotoController {
             return await this.withSignedImageUrl(p);
           } catch (error) {
             this.logger.error(
-              `Error processing public photo ${p._id}`,
+              `Error processing public photo ${this.idForLog(p._id)}`,
               error instanceof Error ? error.stack : String(error),
             );
             return { ...p, imageUrl: null };
           }
-        })
+        }),
       );
     } catch (error) {
       this.logger.error(
         'getPublicPhotos error',
         error instanceof Error ? error.stack : String(error),
       );
-      throw new InternalServerErrorException('공개 사진을 가져오는 중 오류가 발생했습니다.');
+      throw new InternalServerErrorException(
+        '공개 사진을 가져오는 중 오류가 발생했습니다.',
+      );
     }
   }
 
@@ -354,7 +388,7 @@ export class PhotoController {
   ) {
     try {
       const list = await this.photoService.findByMissionId(missionId);
-      
+
       if (!list || list.length === 0) {
         return [];
       }
@@ -365,19 +399,21 @@ export class PhotoController {
             return await this.withSignedImageUrl(p);
           } catch (error) {
             this.logger.error(
-              `Error processing mission photo ${p._id}`,
+              `Error processing mission photo ${this.idForLog(p._id)}`,
               error instanceof Error ? error.stack : String(error),
             );
             return { ...p, imageUrl: null };
           }
-        })
+        }),
       );
     } catch (error) {
       this.logger.error(
         'getPhotosByMission error',
         error instanceof Error ? error.stack : String(error),
       );
-      throw new InternalServerErrorException('미션 사진을 가져오는 중 오류가 발생했습니다.');
+      throw new InternalServerErrorException(
+        '미션 사진을 가져오는 중 오류가 발생했습니다.',
+      );
     }
   }
 
@@ -391,7 +427,7 @@ export class PhotoController {
       if (!p) {
         throw new NotFoundException('사진을 찾을 수 없습니다.');
       }
-      
+
       return await this.withSignedImageUrl(p);
     } catch (error) {
       this.logger.error(
@@ -399,7 +435,9 @@ export class PhotoController {
         error instanceof Error ? error.stack : String(error),
       );
       if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException('사진을 가져오는 중 오류가 발생했습니다.');
+      throw new InternalServerErrorException(
+        '사진을 가져오는 중 오류가 발생했습니다.',
+      );
     }
   }
 
@@ -419,7 +457,9 @@ export class PhotoController {
         'update error',
         error instanceof Error ? error.stack : String(error),
       );
-      throw new InternalServerErrorException('사진 정보 수정 중 오류가 발생했습니다.');
+      throw new InternalServerErrorException(
+        '사진 정보 수정 중 오류가 발생했습니다.',
+      );
     }
   }
 
@@ -436,7 +476,9 @@ export class PhotoController {
         'markAsShared error',
         error instanceof Error ? error.stack : String(error),
       );
-      throw new InternalServerErrorException('사진 공유 처리 중 오류가 발생했습니다.');
+      throw new InternalServerErrorException(
+        '사진 공유 처리 중 오류가 발생했습니다.',
+      );
     }
   }
 
@@ -453,7 +495,9 @@ export class PhotoController {
         'remove error',
         error instanceof Error ? error.stack : String(error),
       );
-      throw new InternalServerErrorException('사진 삭제 중 오류가 발생했습니다.');
+      throw new InternalServerErrorException(
+        '사진 삭제 중 오류가 발생했습니다.',
+      );
     }
   }
 }

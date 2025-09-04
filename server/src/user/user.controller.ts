@@ -30,7 +30,7 @@ import { resolveMaybeSignedUrl } from '../common/utils/s3.util';
 import { PhotoService } from '../photo/photo.service';
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
-import { CacheInterceptor } from '@nestjs/cache-manager';
+// import { CacheInterceptor } from '@nestjs/cache-manager';
 
 @ApiTags('user')
 @Controller('user')
@@ -96,7 +96,7 @@ export class UserController {
     @Request() req: any,
   ) {
     if (!file) throw new Error('파일이 업로드되지 않았습니다.');
-  if (!file.mimetype || !file.mimetype.startsWith('image/')) {
+    if (!file.mimetype || !file.mimetype.startsWith('image/')) {
       throw new Error('이미지 파일만 업로드 가능합니다.');
     }
 
@@ -107,10 +107,15 @@ export class UserController {
     try {
       output = await sharp(file.buffer)
         .rotate()
-        .resize({ width: 512, height: 512, fit: 'cover', withoutEnlargement: true })
+        .resize({
+          width: 512,
+          height: 512,
+          fit: 'cover',
+          withoutEnlargement: true,
+        })
         .jpeg({ quality: 82, progressive: true, chromaSubsampling: '4:2:0' })
         .toBuffer();
-    } catch (e) {
+    } catch {
       // 처리 실패 시 원본으로 폴백(최대 10MB)
       output = file.buffer;
       // 원본 mime을 최대한 존중하되 jpeg로 강제하지 않음
@@ -124,7 +129,10 @@ export class UserController {
         } else if (file.mimetype.includes('gif')) {
           ext = 'gif';
           contentType = 'image/gif';
-        } else if (file.mimetype.includes('heic') || file.mimetype.includes('heif')) {
+        } else if (
+          file.mimetype.includes('heic') ||
+          file.mimetype.includes('heif')
+        ) {
           // 일부 S3/브라우저가 heic 미지원이므로 jpeg로 변경 권장
           ext = 'jpg';
           contentType = 'image/jpeg';
@@ -136,8 +144,8 @@ export class UserController {
     }
 
     // 버전 키로 업로드(캐시 가능), 이전 키는 삭제하여 누수 방지
-  const version = uuidv4();
-  const key = `users/${req.user.sub}/profile-${version}.${ext}`;
+    const version = uuidv4();
+    const key = `users/${req.user.sub}/profile-${version}.${ext}`;
 
     // 기존 프로필 키 조회(베스트 에포트 삭제)
     let prevKey: string | undefined;
@@ -147,7 +155,9 @@ export class UserController {
       if (pi && !/^https?:\/\//.test(pi) && !pi.startsWith('/')) {
         prevKey = pi;
       }
-    } catch {}
+    } catch {
+      void 0;
+    }
 
     try {
       await this.s3.uploadObject({
@@ -157,18 +167,25 @@ export class UserController {
         // 프로필 이미지는 버전 키를 쓰므로 캐시 가능
         cacheControl: 'public, max-age=31536000, immutable',
       });
-      Logger.log(`Avatar uploaded to S3: ${key} (${contentType})`, 'UserController');
+      Logger.log(
+        `Avatar uploaded to S3: ${key} (${contentType})`,
+        'UserController',
+      );
     } catch (err: any) {
       Logger.error(
         `S3 upload failed for ${key}: ${err?.name || ''} ${err?.message || err}`,
         err?.stack || String(err),
         'UserController',
       );
-      throw new Error('프로필 이미지 업로드 중 오류가 발생했습니다. 관리자에게 문의해주세요.');
+      throw new Error(
+        '프로필 이미지 업로드 중 오류가 발생했습니다. 관리자에게 문의해주세요.',
+      );
     }
 
     if (prevKey && prevKey !== key) {
-      this.s3.deleteObject(prevKey).catch(() => {});
+      this.s3.deleteObject(prevKey).catch(() => {
+        void 0; // best-effort delete
+      });
     }
 
     const updated: any = await this.userService.updateProfile(req.user.sub, {
@@ -268,6 +285,7 @@ export class UserController {
       }
     } catch {
       // 프로필 이미지 삭제 실패 무시
+      void 0;
     }
 
     await this.userService.deleteUser(userId);
