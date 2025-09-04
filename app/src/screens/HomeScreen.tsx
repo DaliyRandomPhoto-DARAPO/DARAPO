@@ -140,7 +140,8 @@ const HomeScreen = memo(() => {
   }, [loadData]);
 
   return (
-    <SafeAreaView style={[styles.container, containerInsetsStyle]} edges={['top']}>
+    // Header가 내부에서 top safe-area(insets.top)를 처리하므로 여기서는 top 제외
+    <SafeAreaView style={[styles.container, containerInsetsStyle]} edges={['left', 'right', 'bottom']}>
       <Header title="오늘의 미션" />
 
       <ScrollView
