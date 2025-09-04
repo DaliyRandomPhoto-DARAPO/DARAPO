@@ -12,6 +12,7 @@ export default memo(function MissionInfo({
   center = false,
   showDescription = false,
   hideMeta = false,
+  titleSize,
 }: {
   mission?: Mission | null;
   compact?: boolean;
@@ -19,6 +20,7 @@ export default memo(function MissionInfo({
   center?: boolean;
   showDescription?: boolean;
   hideMeta?: boolean;
+  titleSize?: number;
 }) {
   if (!mission) return null;
   const colors = inverted
@@ -28,7 +30,8 @@ export default memo(function MissionInfo({
   const titleStyle = StyleSheet.flatten([
     styles.title,
     compact && styles.titleCompact,
-    { color: colors.text, textAlign: center ? "center" : "left" },
+    { color: colors.text, textAlign: center ? 'center' : 'left' },
+    typeof titleSize === 'number' ? { fontSize: titleSize } : null,
   ]) as TextStyle;
 
   const subtitleStyle = StyleSheet.flatten([

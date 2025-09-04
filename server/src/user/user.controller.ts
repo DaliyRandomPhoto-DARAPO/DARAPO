@@ -8,7 +8,7 @@ import {
   UseGuards,
   Request,
   UseInterceptors,
-  UploadedFile,
+  UploadedFiles,
   Delete,
   ForbiddenException,
   BadRequestException,
@@ -24,7 +24,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { multerConfig } from '../config/multer.config';
 import { S3Service } from '../common/s3.service';
 import { resolveMaybeSignedUrl } from '../common/utils/s3.util';
@@ -90,14 +90,45 @@ export class UserController {
   @ApiBearerAuth()
   @ApiOperation({ summary: '프로필 이미지 업로드' })
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('file', multerConfig))
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'file', maxCount: 1 },
+        { name: 'avatar', maxCount: 1 },
+        { name: 'image', maxCount: 1 },
+      ],
+      multerConfig,
+    ),
+  )
   @ApiResponse({ status: 201, description: '프로필 이미지 업로드 완료' })
   async uploadAvatar(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles()
+    files:
+      | {
+          file?: Express.Multer.File[];
+          avatar?: Express.Multer.File[];
+          image?: Express.Multer.File[];
+        }
+      | undefined,
     @Request() req: any,
   ) {
+    const file: Express.Multer.File | undefined =
+      (files?.file && files.file[0]) ||
+      (files?.avatar && files.avatar[0]) ||
+      (files?.image && files.image[0]) ||
+      undefined;
     if (!file) {
       const reason = req?._fileFilterReason;
+      try {
+        Logger.warn(
+          `avatar upload missing file. reason=${String(reason)} ct=${String(
+            req?.headers?.['content-type'],
+          )} len=${String(req?.headers?.['content-length'])}`,
+          'UserController',
+        );
+      } catch {
+        // ignore logging failures
+      }
       if (reason === 'invalid-mime') {
         throw new BadRequestException('이미지 파일만 업로드 가능합니다.');
       }

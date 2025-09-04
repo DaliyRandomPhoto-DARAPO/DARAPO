@@ -205,6 +205,7 @@ const HomeScreen = memo(() => {
                   center
                   showDescription
                   hideMeta
+                  titleSize={16}
                 />
               </View>
             )}
