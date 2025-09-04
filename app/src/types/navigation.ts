@@ -10,7 +10,13 @@ export type RootStackParamList = {
   Settings: undefined;
   MyPhotos: undefined;
   ProfileEdit: undefined;
-  PhotoSettings: { photoId: string; isPublic?: boolean; imageUrl?: string; missionTitle?: string; comment?: string };
+  PhotoSettings: {
+    photoId: string;
+    isPublic?: boolean;
+    imageUrl?: string;
+    missionTitle?: string;
+    comment?: string;
+  };
 };
 
 export type TabParamList = {

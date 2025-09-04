@@ -11,6 +11,7 @@ import {
   UploadedFile,
   Delete,
   ForbiddenException,
+  BadRequestException,
   Logger,
 } from '@nestjs/common';
 import {
@@ -95,9 +96,15 @@ export class UserController {
     @UploadedFile() file: Express.Multer.File,
     @Request() req: any,
   ) {
-    if (!file) throw new Error('파일이 업로드되지 않았습니다.');
+    if (!file) {
+      const reason = req?._fileFilterReason;
+      if (reason === 'invalid-mime') {
+        throw new BadRequestException('이미지 파일만 업로드 가능합니다.');
+      }
+      throw new BadRequestException('파일이 업로드되지 않았습니다.');
+    }
     if (!file.mimetype || !file.mimetype.startsWith('image/')) {
-      throw new Error('이미지 파일만 업로드 가능합니다.');
+      throw new BadRequestException('이미지 파일만 업로드 가능합니다.');
     }
 
     // 리사이즈/재인코딩으로 용량 및 해상도 제한(서버 부하/전송시간 감소)

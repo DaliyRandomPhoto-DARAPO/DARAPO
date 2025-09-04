@@ -1,63 +1,62 @@
 module.exports = {
   root: true,
   extends: [
-    'expo',
-    'plugin:react/recommended',
-    'plugin:react-hooks/recommended',
-    'plugin:react-native/all',
-    'prettier',
+    "expo",
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended",
+    "prettier",
   ],
-  parser: '@typescript-eslint/parser',
+  parser: "@typescript-eslint/parser",
   parserOptions: {
     ecmaVersion: 2022,
-    sourceType: 'module',
+    sourceType: "module",
     project: false,
+  warnOnUnsupportedTypeScriptVersion: false,
   },
   plugins: [
-    '@typescript-eslint',
-    'react',
-    'react-hooks',
-    'react-native',
-    'jsx-a11y',
-    'prettier',
+    "@typescript-eslint",
+    "react",
+    "react-hooks",
+    "react-native",
+    "jsx-a11y",
+    "prettier",
   ],
   rules: {
     // React 최적화 규칙들
-    'react-hooks/exhaustive-deps': 'warn',
-    'react-hooks/rules-of-hooks': 'error',
+    "react-hooks/exhaustive-deps": "warn",
+    "react-hooks/rules-of-hooks": "error",
 
     // 성능 관련 규칙들
-    'react/jsx-no-bind': 'warn',
-    'react/jsx-no-constructed-context-values': 'warn',
+    "react/jsx-no-bind": "warn",
+    "react/jsx-no-constructed-context-values": "warn",
+  "react/display-name": "off",
 
     // 코드 품질 규칙들
-    'no-console': 'warn',
-    'no-debugger': 'error',
-  'no-unused-vars': 'off',
-  '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-    'prefer-const': 'error',
+    "no-console": "warn",
+    "no-debugger": "error",
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+    "prefer-const": "error",
 
     // 접근성
-    'jsx-a11y/accessible-emoji': 'warn',
+    "jsx-a11y/accessible-emoji": "warn",
 
     // prettier 연동
-  'prettier/prettier': 'warn',
-  // react-native plugin rules adjustments
-  'react-native/sort-styles': 'off',
-  'react-native/no-color-literals': 'off',
+    "prettier/prettier": "warn",
+    // react-native plugin rules adjustments
+    "react-native/sort-styles": "off",
+    "react-native/no-color-literals": "off",
+    // Some @typescript-eslint rules in expo config v9 expect v7 plugin
+    "@typescript-eslint/no-empty-object-type": "off",
+    "@typescript-eslint/no-redundant-type-constituents": "off",
   },
   settings: {
     react: {
-      version: 'detect',
+      version: "detect",
     },
   },
   env: {
-    'react-native/react-native': true,
+    "react-native/react-native": true,
   },
-  ignorePatterns: [
-    'node_modules/',
-    '.expo/',
-    'dist/',
-    '*.config.js',
-  ],
+  ignorePatterns: ["node_modules/", ".expo/", "dist/", "*.config.js"],
 };

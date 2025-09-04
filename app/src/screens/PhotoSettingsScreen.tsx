@@ -1,20 +1,44 @@
-import React, { useState, useMemo, useCallback, memo, useRef, useEffect } from 'react';
-import { View, StyleSheet, Text, Switch, Alert, Image, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Header from '../ui/Header';
-import Button from '../ui/Button';
-import Card from '../ui/Card';
-import MissionInfo from '../ui/MissionInfo';
-import { normalizeMission } from '../utils/mission';
-import { theme } from '../ui/theme';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types/navigation';
-import { photoAPI, BASE_URL } from '../services/api';
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  memo,
+  useRef,
+  useEffect,
+} from "react";
+import {
+  View,
+  StyleSheet,
+  Text,
+  Switch,
+  Alert,
+  Image,
+  Platform,
+  KeyboardAvoidingView,
+  ScrollView,
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import Header from "../ui/Header";
+import Button from "../ui/Button";
+import Card from "../ui/Card";
+import MissionInfo from "../ui/MissionInfo";
+import { normalizeMission } from "../utils/mission";
+import { theme } from "../ui/theme";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../types/navigation";
+import { photoAPI, BASE_URL } from "../services/api";
 
-type Props = NativeStackScreenProps<RootStackParamList, 'PhotoSettings'>;
+type Props = NativeStackScreenProps<RootStackParamList, "PhotoSettings">;
 
 // ===== Theme/Consts (불변)
-const colors = Object.freeze({ ...theme.colors, primary: '#7C3AED', primaryAlt: '#EC4899' } as const);
+const colors = Object.freeze({
+  ...theme.colors,
+  primary: "#7C3AED",
+  primaryAlt: "#EC4899",
+} as const);
 const { spacing, typography } = theme;
 const CONTENT_MAX_WIDTH = 640 as const;
 const HIT_SLOP_8 = 8 as const;
@@ -23,7 +47,7 @@ const HIT_SLOP_8 = 8 as const;
 const joinUrl = (base: string, path?: string) => {
   if (!path) return undefined;
   if (/^https?:\/\//i.test(path)) return path;
-  return `${base.replace(/\/$/, '')}/${String(path).replace(/^\//, '')}`;
+  return `${base.replace(/\/$/, "")}/${String(path).replace(/^\//, "")}`;
 };
 
 // ===== Subcomponents
@@ -35,7 +59,6 @@ const Preview = memo(function Preview({ uri }: { uri?: string }) {
     </View>
   );
 });
-
 
 const MoodInfo = memo(function MoodInfo({ comment }: { comment?: string }) {
   if (!comment) return null;
@@ -73,7 +96,7 @@ const Controls = memo(function Controls({
         />
       </View>
       <Button
-        title={busy ? '처리 중…' : '삭제'}
+        title={busy ? "처리 중…" : "삭제"}
         onPress={onDelete}
         variant="danger"
         size="md"
@@ -85,7 +108,14 @@ const Controls = memo(function Controls({
 });
 
 const PhotoSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
-  const { photoId, isPublic: initialPublic, imageUrl, missionTitle, mission, comment } = route.params as any;
+  const {
+    photoId,
+    isPublic: initialPublic,
+    imageUrl,
+    missionTitle,
+    mission,
+    comment,
+  } = route.params as any;
   const [isPublic, setIsPublic] = useState<boolean>(!!initialPublic);
   const [busy, setBusy] = useState<boolean>(false);
   const insets = useSafeAreaInsets();
@@ -94,7 +124,9 @@ const PhotoSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
   const mountedRef = useRef(true);
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   // URL 메모
@@ -102,32 +134,37 @@ const PhotoSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
 
   // 낙관적 토글 + 롤백 + 중복클릭 가드
   const toggleInFlight = useRef(false);
-  const handleTogglePublic = useCallback(async (nextValue: boolean) => {
-    if (toggleInFlight.current || busy) return;
-    toggleInFlight.current = true;
-    try {
-      setBusy(true);
-      setIsPublic(nextValue); // optimistic
-      const updated = await photoAPI.updatePhoto(photoId, { isPublic: nextValue });
-      if (mountedRef.current) setIsPublic(!!updated?.isPublic);
-    } catch (e) {
-      if (mountedRef.current) {
-        setIsPublic(prev => !prev); // rollback
-        Alert.alert('오류', '공개 설정 변경 실패');
+  const handleTogglePublic = useCallback(
+    async (nextValue: boolean) => {
+      if (toggleInFlight.current || busy) return;
+      toggleInFlight.current = true;
+      try {
+        setBusy(true);
+        setIsPublic(nextValue); // optimistic
+        const updated = await photoAPI.updatePhoto(photoId, {
+          isPublic: nextValue,
+        });
+        if (mountedRef.current) setIsPublic(!!updated?.isPublic);
+      } catch (e) {
+        if (mountedRef.current) {
+          setIsPublic((prev) => !prev); // rollback
+          Alert.alert("오류", "공개 설정 변경 실패");
+        }
+      } finally {
+        if (mountedRef.current) setBusy(false);
+        toggleInFlight.current = false;
       }
-    } finally {
-      if (mountedRef.current) setBusy(false);
-      toggleInFlight.current = false;
-    }
-  }, [photoId, busy]);
+    },
+    [photoId, busy],
+  );
 
   const handleDelete = useCallback(() => {
     if (busy) return;
-    Alert.alert('삭제', '이 사진을 삭제할까요?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert("삭제", "이 사진을 삭제할까요?", [
+      { text: "취소", style: "cancel" },
       {
-        text: '삭제',
-        style: 'destructive',
+        text: "삭제",
+        style: "destructive",
         onPress: async () => {
           if (busy) return;
           try {
@@ -136,7 +173,7 @@ const PhotoSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
             if (!mountedRef.current) return;
             navigation.goBack();
           } catch (e) {
-            if (mountedRef.current) Alert.alert('오류', '삭제에 실패했습니다.');
+            if (mountedRef.current) Alert.alert("오류", "삭제에 실패했습니다.");
           } finally {
             if (mountedRef.current) setBusy(false);
           }
@@ -145,20 +182,26 @@ const PhotoSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
     ]);
   }, [busy, navigation, photoId]);
 
-  const contentPadBottom = useMemo(() => insets.bottom + spacing.xl, [insets.bottom]);
+  const contentPadBottom = useMemo(
+    () => insets.bottom + spacing.xl,
+    [insets.bottom],
+  );
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={["bottom"]}>
       <Header title="사진 설정" />
       <KeyboardAvoidingView
         style={styles.flex1}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={0}
       >
         <ScrollView
           contentInsetAdjustmentBehavior="automatic"
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: contentPadBottom }]}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: contentPadBottom },
+          ]}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.centered}>
@@ -171,14 +214,14 @@ const PhotoSettingsScreen: React.FC<Props> = ({ route, navigation }) => {
                   <Text style={styles.missionLabel}>오늘의 미션</Text>
                 </View>
                 <View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
                     <MissionInfo
                       mission={
                         mission
                           ? normalizeMission(mission as any)
                           : missionTitle
-                          ? normalizeMission({ title: missionTitle } as any)
-                          : undefined
+                            ? normalizeMission({ title: missionTitle } as any)
+                            : undefined
                       }
                       compact
                     />
@@ -205,57 +248,84 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
 
   scrollContent: {
-    paddingHorizontal: spacing.md,   // lg → md
-    paddingTop: spacing.md,          // lg → md
+    paddingHorizontal: spacing.md, // lg → md
+    paddingTop: spacing.md, // lg → md
   },
-  centered: { alignSelf: 'center', width: '100%', maxWidth: CONTENT_MAX_WIDTH },
+  centered: { alignSelf: "center", width: "100%", maxWidth: CONTENT_MAX_WIDTH },
 
   card: { padding: spacing.md - 4 }, // md보다 살짝 더 타이트
 
   // 이미지
-  imageWrap: { borderRadius: 12, overflow: 'hidden', marginBottom: spacing.md }, // 16→12, lg→md
-  image: { width: '100%', aspectRatio: 1 },
+  imageWrap: { borderRadius: 12, overflow: "hidden", marginBottom: spacing.md }, // 16→12, lg→md
+  image: { width: "100%", aspectRatio: 1 },
 
   // 미션 박스 (컴팩트)
   missionBox: {
-    backgroundColor: '#F5F3FF',
-    borderRadius: 12,            // 16 → 12
-    padding: spacing.sm,         // md → sm
-    marginBottom: spacing.sm,    // md → sm
+    backgroundColor: "#F5F3FF",
+    borderRadius: 12, // 16 → 12
+    padding: spacing.sm, // md → sm
+    marginBottom: spacing.sm, // md → sm
   },
-  missionRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 }, // 4 → 2
-  missionDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginRight: 4 }, // 8 → 6
-  missionLabel: { fontSize: 11, color: colors.primary, fontWeight: '600', lineHeight: 14 }, // 12→11
-  missionText: { fontSize: 14, color: colors.text, fontWeight: '700', lineHeight: 18 },     // 16→14
+  missionRow: { flexDirection: "row", alignItems: "center", marginBottom: 2 }, // 4 → 2
+  missionDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
+    marginRight: 4,
+  }, // 8 → 6
+  missionLabel: {
+    fontSize: 11,
+    color: colors.primary,
+    fontWeight: "600",
+    lineHeight: 14,
+  }, // 12→11
+  missionText: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: "700",
+    lineHeight: 18,
+  }, // 16→14
 
   // 감정 박스 (컴팩트)
   moodBox: {
-    backgroundColor: '#FEF2F2',
-    borderRadius: 12,            
-    padding: spacing.sm,         
-    marginBottom: spacing.md,   
+    backgroundColor: "#FEF2F2",
+    borderRadius: 12,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
   },
-  moodRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 }, // 4 → 2
-  moodDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primaryAlt, marginRight: 4 }, // 8 → 6
-  moodLabel: { fontSize: 11, color: colors.primaryAlt, fontWeight: '600', lineHeight: 14 }, // 12→11
-  moodText: { fontSize: 13, color: '#374151', lineHeight: 17 },                              // 14→13
+  moodRow: { flexDirection: "row", alignItems: "center", marginBottom: 2 }, // 4 → 2
+  moodDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primaryAlt,
+    marginRight: 4,
+  }, // 8 → 6
+  moodLabel: {
+    fontSize: 11,
+    color: colors.primaryAlt,
+    fontWeight: "600",
+    lineHeight: 14,
+  }, // 12→11
+  moodText: { fontSize: 13, color: "#374151", lineHeight: 17 }, // 14→13
 
   // 컨트롤 영역 전반 축소
-  controls: { gap: spacing.sm }, 
+  controls: { gap: spacing.sm },
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md, 
-    paddingVertical: spacing.sm,   
-    borderRadius: 12,              
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#FFFFFF',
+    borderColor: "#FFFFFF",
   },
   label: {
     fontSize: Math.max(14, (Number(typography.body) || 16) - 2),
     color: colors.text,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
 

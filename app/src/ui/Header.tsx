@@ -1,4 +1,4 @@
-import React, { memo, forwardRef, useMemo } from 'react';
+import React, { memo, forwardRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -12,16 +12,16 @@ import {
   type ViewStyle,
   type TextStyle,
   type ViewProps,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const tokens = {
   colors: {
-    bg: '#ffffff',
-    text: '#1f2937',
-    subText: '#6b7280',
-    border: '#e5e7eb',
-    ripple: 'rgba(0,0,0,0.08)',
+    bg: "#ffffff",
+    text: "#1f2937",
+    subText: "#6b7280",
+    border: "#e5e7eb",
+    ripple: "rgba(0,0,0,0.08)",
   },
   spacing: { xs: 6, sm: 8, md: 12, lg: 16, xl: 20 },
   radius: { lg: 20 },
@@ -31,7 +31,7 @@ const tokens = {
 
 const elevation = Platform.select({
   ios: {
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -41,7 +41,10 @@ const elevation = Platform.select({
 }) as object;
 
 // ===== 고정 객체(렌더마다 새로 안 만듦)
-const RIPPLE = Object.freeze({ color: tokens.colors.ripple, borderless: true } as const);
+const RIPPLE = Object.freeze({
+  color: tokens.colors.ripple,
+  borderless: true,
+} as const);
 const HIT_SLOP_10 = 10 as const;
 
 // ===== Props
@@ -117,7 +120,11 @@ const TitleArea = memo(function TitleArea({
   );
 });
 
-const RightArea = memo(function RightArea({ right }: { right?: React.ReactNode }) {
+const RightArea = memo(function RightArea({
+  right,
+}: {
+  right?: React.ReactNode;
+}) {
   // gap 호환 위해 children 사이 간격 수동 처리 권장하지만,
   // 여기서는 최신 RN 전제하에 유지. 필요한 경우 마진으로 바꿔.
   return <View style={styles.right}>{right}</View>;
@@ -146,7 +153,9 @@ const BaseHeader = forwardRef<View, HeaderProps>((props, ref) => {
 
   // 재계산 줄이기
   const topPad = useMemo(() => {
-    return safeTop ? Math.max(tokens.spacing.md, (insets.top || 0) + tokens.spacing.xs) : tokens.spacing.lg;
+    return safeTop
+      ? Math.max(tokens.spacing.md, (insets.top || 0) + tokens.spacing.xs)
+      : tokens.spacing.lg;
   }, [insets.top, safeTop]);
 
   const containerStyle = useMemo(
@@ -157,7 +166,7 @@ const BaseHeader = forwardRef<View, HeaderProps>((props, ref) => {
       { paddingTop: topPad },
       style,
     ],
-    [elevated, showDivider, topPad, style]
+    [elevated, showDivider, topPad, style],
   );
 
   const rowStyle = useMemo(() => [styles.row, contentStyle], [contentStyle]);
@@ -182,7 +191,7 @@ const BaseHeader = forwardRef<View, HeaderProps>((props, ref) => {
   );
 });
 
-BaseHeader.displayName = 'Header';
+BaseHeader.displayName = "Header";
 
 // props 얕은 비교(스타일/노드는 ref 동일성만 체크)
 function areEqual(prev: HeaderProps, next: HeaderProps) {
@@ -244,17 +253,17 @@ const styles = StyleSheet.create({
   row: {
     paddingHorizontal: tokens.spacing.lg,
     paddingBottom: tokens.spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   logoBtn: {
     width: tokens.sizes.action,
     height: tokens.sizes.action,
     borderRadius: tokens.sizes.action / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: tokens.spacing.md,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   logoPlaceholder: {
     width: tokens.sizes.action,
@@ -267,14 +276,14 @@ const styles = StyleSheet.create({
   },
   center: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   centerTitle: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   title: {
     fontSize: tokens.fonts.title,
-    fontWeight: '800',
+    fontWeight: "800",
     color: tokens.colors.text,
   },
   subtitle: {
@@ -284,17 +293,17 @@ const styles = StyleSheet.create({
   },
   right: {
     marginLeft: tokens.spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: tokens.spacing.sm as unknown as number,
   },
   actionBtn: {
     width: tokens.sizes.action,
     height: tokens.sizes.action,
     borderRadius: tokens.sizes.action / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
   },
   actionInner: {
     padding: 6,

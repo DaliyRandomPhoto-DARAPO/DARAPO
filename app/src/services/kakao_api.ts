@@ -1,8 +1,8 @@
-import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
-import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authAPI } from './api';
+import * as WebBrowser from "expo-web-browser";
+import * as Linking from "expo-linking";
+import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { authAPI } from "./api";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -40,17 +40,20 @@ class BackendKakaoAuthService {
   startDeepLinkHandling(): Promise<LoginResult> {
     return new Promise((resolve) => {
       this.resolveLogin = resolve;
-      
+
       // 딥링크 리스너 등록
       if (this.linkingSubscription) {
         this.linkingSubscription.remove();
       }
-      
-      this.linkingSubscription = Linking.addEventListener('url', this.handleDeepLink);
-      
+
+      this.linkingSubscription = Linking.addEventListener(
+        "url",
+        this.handleDeepLink,
+      );
+
       // 앱이 닫혀있다가 딥링크로 시작된 경우 처리
       Linking.getInitialURL().then((url) => {
-        if (url && url.includes('auth/callback')) {
+        if (url && url.includes("auth/callback")) {
           this.handleDeepLink({ url });
         }
       });
@@ -80,7 +83,10 @@ class BackendKakaoAuthService {
       }
     } catch (urlError) {
       if (this.resolveLogin) {
-        this.resolveLogin({ success: false, error: 'URL 처리에 실패했습니다.' });
+        this.resolveLogin({
+          success: false,
+          error: "URL 처리에 실패했습니다.",
+        });
         this.resolveLogin = null;
       }
     }
@@ -89,28 +95,34 @@ class BackendKakaoAuthService {
   private parseCallbackUrl(url: string): LoginResult {
     const urlObj = new URL(url);
     const params = new URLSearchParams(urlObj.search);
-    const success = params.get('success');
-    const error = params.get('error');
-    const token = params.get('token');
-    const refresh = params.get('refresh');
-    const userString = params.get('user');
+    const success = params.get("success");
+    const error = params.get("error");
+    const token = params.get("token");
+    const refresh = params.get("refresh");
+    const userString = params.get("user");
 
     if (error) {
       return { success: false, error: decodeURIComponent(error) };
     }
-    if (success === 'true' && token) {
+    if (success === "true" && token) {
       try {
-        const user = userString ? JSON.parse(decodeURIComponent(userString)) : undefined;
+        const user = userString
+          ? JSON.parse(decodeURIComponent(userString))
+          : undefined;
         if (refresh) {
           const value = decodeURIComponent(refresh);
-          AsyncStorage.setItem('refresh_token', value).catch(() => {});
+          AsyncStorage.setItem("refresh_token", value).catch(() => {});
         }
-        return { success: true, accessToken: decodeURIComponent(token), user } as LoginResult;
+        return {
+          success: true,
+          accessToken: decodeURIComponent(token),
+          user,
+        } as LoginResult;
       } catch {
-        return { success: false, error: '사용자 정보 처리에 실패했습니다.' };
+        return { success: false, error: "사용자 정보 처리에 실패했습니다." };
       }
     }
-    return { success: false, error: '알 수 없는 오류가 발생했습니다.' };
+    return { success: false, error: "알 수 없는 오류가 발생했습니다." };
   }
 
   /**
@@ -119,14 +131,18 @@ class BackendKakaoAuthService {
   async login(): Promise<LoginResult> {
     try {
       // Expo/앱으로 복귀할 리디렉트 URL 구성
-      const returnUrl = Linking.createURL('auth/callback');
-      const urlResponse: AuthUrlResponse = await authAPI.getKakaoAuthUrlWithReturn(returnUrl);
+      const returnUrl = Linking.createURL("auth/callback");
+      const urlResponse: AuthUrlResponse =
+        await authAPI.getKakaoAuthUrlWithReturn(returnUrl);
 
       // 1) 우선 딥링크 리스너를 등록(이벤트 놓치지 않기 위해)
       const waitForDeepLink = this.startDeepLinkHandling();
-      
+
       // 2) 인증 세션 열기: 브라우저 자동 닫힘 및 앱 복귀 보장
-      const callbackUrl = await this.openAuthSession(urlResponse.authUrl, returnUrl);
+      const callbackUrl = await this.openAuthSession(
+        urlResponse.authUrl,
+        returnUrl,
+      );
 
       // 3) openAuthSessionAsync가 url을 반환한 경우 즉시 파싱하여 반환
       if (callbackUrl) {
@@ -139,7 +155,6 @@ class BackendKakaoAuthService {
       // 4) 일부 환경에서는 이벤트로만 전달될 수 있으므로 리스너 결과 대기
       const result = await waitForDeepLink;
       return result;
-      
     } catch (error: any) {
       throw this.formatError(error);
     }
@@ -148,16 +163,19 @@ class BackendKakaoAuthService {
   /**
    * 시스템 브라우저 열기 (딥링크를 통한 자동 복귀)
    */
-  private async openAuthSession(authUrl: string, returnUrl: string): Promise<string | null> {
-    if (Platform.OS === 'web') {
+  private async openAuthSession(
+    authUrl: string,
+    returnUrl: string,
+  ): Promise<string | null> {
+    if (Platform.OS === "web") {
       window.location.href = authUrl;
       return null;
     }
     // openAuthSessionAsync는 iOS/Android에서 SFAuthenticationSession/Custom Tabs를 사용해 복귀를 보장
     const result = await WebBrowser.openAuthSessionAsync(authUrl, returnUrl);
     // 사용자가 취소한 경우 등은 이후 딥링크로 오지 않으니 에러 처리
-    if (result.type === 'cancel') {
-      throw new Error('사용자가 로그인을 취소했습니다.');
+    if (result.type === "cancel") {
+      throw new Error("사용자가 로그인을 취소했습니다.");
     }
     // 성공 시 콜백 URL을 반환(일부 플랫폼에서는 여기서만 url을 제공)
     if ((result as any).url) {
@@ -195,7 +213,10 @@ class BackendKakaoAuthService {
    * 에러 포맷팅
    */
   private formatError(error: any): Error {
-    const message = error.response?.data?.message || error.message || '알 수 없는 오류가 발생했습니다.';
+    const message =
+      error.response?.data?.message ||
+      error.message ||
+      "알 수 없는 오류가 발생했습니다.";
     return new Error(message);
   }
 }

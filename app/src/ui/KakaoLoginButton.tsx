@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo, useState } from 'react';
+import React, { memo, useCallback, useMemo, useState } from "react";
 import {
   TouchableOpacity,
   View,
@@ -8,8 +8,11 @@ import {
   Image,
   type ViewStyle,
   type GestureResponderEvent,
-} from 'react-native';
-import KakaoLogin, { getProfile as kakaoGetProfile, type KakaoOAuthToken } from '@react-native-seoul/kakao-login';
+} from "react-native";
+import KakaoLogin, {
+  getProfile as kakaoGetProfile,
+  type KakaoOAuthToken,
+} from "@react-native-seoul/kakao-login";
 
 type Props = {
   title?: string;
@@ -32,14 +35,14 @@ type Props = {
   disableNative?: boolean;
 };
 
-const KAKAO_YELLOW = '#FEE500';
-const KAKAO_BLACK = '#000000';
+const KAKAO_YELLOW = "#FEE500";
+const KAKAO_BLACK = "#000000";
 
 // 기본 아이콘 경로 (없으면 말풍선 대신 'K' 글자로 fallback)
-const DEFAULT_ICON = require('../../assets/kakao_symbol.png');
+const DEFAULT_ICON = require("../../assets/kakao_symbol.png");
 
 const KakaoLoginButton: React.FC<Props> = ({
-  title = '카카오로 로그인',
+  title = "카카오로 로그인",
   style,
   fullWidth = true,
   disabled,
@@ -61,8 +64,8 @@ const KakaoLoginButton: React.FC<Props> = ({
       onPress?.(e);
       if (disabled || isBusy) return;
 
-  // 명시적으로 내부 native 흐름을 비활성화한 경우 즉시 반환
-  if (disableNative) {
+      // 명시적으로 내부 native 흐름을 비활성화한 경우 즉시 반환
+      if (disableNative) {
         return;
       }
 
@@ -85,16 +88,19 @@ const KakaoLoginButton: React.FC<Props> = ({
         setInnerLoading(false);
       }
     },
-    [disabled, isBusy, onPress, onSuccess, onError]
+    [disabled, isBusy, onPress, onSuccess, onError],
   );
 
   const containerStyle = useMemo<ViewStyle[]>(
     () => [
       styles.button,
-      { alignSelf: fullWidth ? 'stretch' : 'auto', opacity: disabled ? 0.65 : 1 },
+      {
+        alignSelf: fullWidth ? "stretch" : "auto",
+        opacity: disabled ? 0.65 : 1,
+      },
       style as any,
     ],
-    [fullWidth, disabled, style]
+    [fullWidth, disabled, style],
   );
 
   return (
@@ -114,9 +120,15 @@ const KakaoLoginButton: React.FC<Props> = ({
       ) : (
         <View style={styles.row}>
           {iconSource ? (
-            <Image source={iconSource} style={styles.symbolImg} resizeMode="contain" />
+            <Image
+              source={iconSource}
+              style={styles.symbolImg}
+              resizeMode="contain"
+            />
           ) : (
-            <View style={styles.symbolFallback}><Text style={styles.symbolText}>K</Text></View>
+            <View style={styles.symbolFallback}>
+              <Text style={styles.symbolText}>K</Text>
+            </View>
           )}
           <Text style={styles.title} numberOfLines={1} allowFontScaling>
             {title}
@@ -133,20 +145,25 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     minHeight: 52,
     paddingHorizontal: 16,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "center" },
   symbolImg: {
     width: 24,
     height: 24,
     marginRight: 8,
   },
   symbolFallback: {
-    width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.12)',
-    alignItems: 'center', justifyContent: 'center', marginRight: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(0,0,0,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
   },
-  symbolText: { color: KAKAO_BLACK, fontWeight: '800' },
-  title: { color: KAKAO_BLACK, fontSize: 17, fontWeight: '700' },
+  symbolText: { color: KAKAO_BLACK, fontWeight: "800" },
+  title: { color: KAKAO_BLACK, fontSize: 17, fontWeight: "700" },
 });
 
 export default memo(KakaoLoginButton);

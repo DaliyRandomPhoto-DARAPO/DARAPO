@@ -1,5 +1,5 @@
 // src/ui/Button.tsx
-import React, { memo, useMemo, useRef, useCallback } from 'react';
+import React, { memo, useMemo, useRef, useCallback } from "react";
 import {
   TouchableOpacity,
   Text,
@@ -12,24 +12,24 @@ import {
   type ViewStyle,
   type TextStyle,
   GestureResponderEvent,
-} from 'react-native';
+} from "react-native";
 
 // Local design tokens (light only)
 const palette = {
-  text: '#2c3e50',
-  primary: '#3498db',
-  danger: '#e74c3c',
-  border: '#e9ecef',
-  secondaryBg: '#EEF6FF',
-  secondaryBorder: '#D6E9FF',
+  text: "#2c3e50",
+  primary: "#3498db",
+  danger: "#e74c3c",
+  border: "#e9ecef",
+  secondaryBg: "#EEF6FF",
+  secondaryBorder: "#D6E9FF",
 } as const;
 
 const spacing = { xs: 6, sm: 8, md: 12, lg: 16, xl: 24 } as const;
 const radii = { sm: 8, md: 12, lg: 20, pill: 999 } as const;
 const typography = { title: 28, h1: 24, h2: 20, body: 16, small: 14 } as const;
 
-type Variant = 'primary' | 'secondary' | 'danger' | 'outline' | 'ghost';
-type Size = 'sm' | 'md' | 'lg';
+type Variant = "primary" | "secondary" | "danger" | "outline" | "ghost";
+type Size = "sm" | "md" | "lg";
 
 export type ButtonProps = TouchableOpacityProps & {
   title: string;
@@ -47,15 +47,36 @@ export type ButtonProps = TouchableOpacityProps & {
   allowFontScaling?: boolean;
 };
 
-const SIZE_MAP: Record<Size, { padV: number; padH: number; font: number; minH: number; gap: number }> = {
-  sm: { padV: spacing.sm, padH: spacing.md, font: typography.small, minH: 40, gap: 6 },
-  md: { padV: spacing.md, padH: spacing.lg, font: typography.body, minH: 48, gap: 8 },
-  lg: { padV: spacing.lg, padH: spacing.xl, font: typography.h2, minH: 56, gap: 10 },
+const SIZE_MAP: Record<
+  Size,
+  { padV: number; padH: number; font: number; minH: number; gap: number }
+> = {
+  sm: {
+    padV: spacing.sm,
+    padH: spacing.md,
+    font: typography.small,
+    minH: 40,
+    gap: 6,
+  },
+  md: {
+    padV: spacing.md,
+    padH: spacing.lg,
+    font: typography.body,
+    minH: 48,
+    gap: 8,
+  },
+  lg: {
+    padV: spacing.lg,
+    padH: spacing.xl,
+    font: typography.h2,
+    minH: 56,
+    gap: 10,
+  },
 };
 
 const ELEVATED = Platform.select({
   ios: {
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -67,8 +88,8 @@ const ELEVATED = Platform.select({
 const ButtonComponent: React.FC<ButtonProps> = ({
   title,
   onPress,
-  variant = 'primary',
-  size = 'md',
+  variant = "primary",
+  size = "md",
   disabled,
   style,
   containerStyle,
@@ -88,37 +109,35 @@ const ButtonComponent: React.FC<ButtonProps> = ({
   const sz = SIZE_MAP[size];
 
   const { bg, border, fg, spinner } = useMemo(() => {
-    const isOutline = variant === 'outline';
-    const isSecondary = variant === 'secondary';
-    const isGhost = variant === 'ghost';
+    const isOutline = variant === "outline";
+    const isSecondary = variant === "secondary";
+    const isGhost = variant === "ghost";
 
-    const bg =
-      isGhost
-        ? 'transparent'
-        : isOutline
-        ? 'transparent'
+    const bg = isGhost
+      ? "transparent"
+      : isOutline
+        ? "transparent"
         : isSecondary
-        ? palette.secondaryBg
-        : variant === 'danger'
-        ? palette.danger
-        : palette.primary;
+          ? palette.secondaryBg
+          : variant === "danger"
+            ? palette.danger
+            : palette.primary;
 
-    const border =
-      isOutline
-        ? palette.border
-        : isSecondary
+    const border = isOutline
+      ? palette.border
+      : isSecondary
         ? palette.secondaryBorder
-        : 'transparent';
+        : "transparent";
 
     const fg =
       textColor ??
       (isOutline || isGhost
         ? palette.text
         : isSecondary
-        ? palette.primary
-        : '#fff');
+          ? palette.primary
+          : "#fff");
 
-    const spinner = isOutline || isGhost ? palette.primary : '#fff';
+    const spinner = isOutline || isGhost ? palette.primary : "#fff";
 
     return { bg, border, fg, spinner };
   }, [variant, textColor]);
@@ -135,7 +154,7 @@ const ButtonComponent: React.FC<ButtonProps> = ({
       lastPressRef.current = now;
       onPress(e);
     },
-    [onPress, isDisabled, debounceMs]
+    [onPress, isDisabled, debounceMs],
   );
 
   const containerStyles: StyleProp<ViewStyle> = useMemo(
@@ -147,23 +166,30 @@ const ButtonComponent: React.FC<ButtonProps> = ({
         paddingVertical: sz.padV,
         paddingHorizontal: sz.padH,
         minHeight: sz.minH,
-        alignSelf: fullWidth ? 'stretch' : 'auto',
+        alignSelf: fullWidth ? "stretch" : "auto",
         opacity: isDisabled ? 0.6 : 1,
       },
-      (variant === 'primary' || variant === 'danger') ? styles.elevated : null,
+      variant === "primary" || variant === "danger" ? styles.elevated : null,
       style,
       containerStyle,
     ],
-    [bg, border, sz.padV, sz.padH, sz.minH, fullWidth, isDisabled, variant, style, containerStyle]
+    [
+      bg,
+      border,
+      sz.padV,
+      sz.padH,
+      sz.minH,
+      fullWidth,
+      isDisabled,
+      variant,
+      style,
+      containerStyle,
+    ],
   );
 
   const textStyles: StyleProp<TextStyle> = useMemo(
-    () => [
-      styles.title,
-      { color: fg, fontSize: sz.font },
-      textStyle,
-    ],
-    [fg, sz.font, textStyle]
+    () => [styles.title, { color: fg, fontSize: sz.font }, textStyle],
+    [fg, sz.font, textStyle],
   );
 
   return (
@@ -201,24 +227,24 @@ const styles = StyleSheet.create({
   button: {
     borderRadius: radii.pill,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   elevated: {
     ...ELEVATED,
   },
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   title: {
-    fontWeight: '700',
+    fontWeight: "700",
     includeFontPadding: false, // Android baseline 정렬
   },
   iconBox: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
 

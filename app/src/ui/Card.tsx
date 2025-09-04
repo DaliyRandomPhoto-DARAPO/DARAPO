@@ -1,15 +1,22 @@
-import React, { forwardRef, memo } from 'react';
-import { View, StyleSheet, Platform, type ViewProps, type StyleProp, type ViewStyle } from 'react-native';
+import React, { forwardRef, memo } from "react";
+import {
+  View,
+  StyleSheet,
+  Platform,
+  type ViewProps,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 
 const tokens = {
-  surface: '#ffffff',
+  surface: "#ffffff",
   padding: 16,
   radius: 20,
 } as const;
 
 const elevation = Platform.select({
   ios: {
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 12,
@@ -23,15 +30,17 @@ export type CardProps = ViewProps & {
   children?: React.ReactNode;
 };
 
-const BaseCard = forwardRef<View, CardProps>(({ style, children, ...rest }, ref) => {
-  return (
-    <View ref={ref} style={[styles.card, style]} {...rest}>
-      {children}
-    </View>
-  );
-});
+const BaseCard = forwardRef<View, CardProps>(
+  ({ style, children, ...rest }, ref) => {
+    return (
+      <View ref={ref} style={[styles.card, style]} {...rest}>
+        {children}
+      </View>
+    );
+  },
+);
 
-BaseCard.displayName = 'Card';
+BaseCard.displayName = "Card";
 
 export const Card = memo(BaseCard);
 

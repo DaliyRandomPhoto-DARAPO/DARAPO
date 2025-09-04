@@ -1,20 +1,30 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../contexts/AuthContext';
-import Header from '../ui/Header';
-import { Image } from 'react-native';
-import { BASE_URL, photoAPI } from '../services/api';
-import Card from '../ui/Card';
-import { theme } from '../ui/theme';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../contexts/AuthContext";
+import Header from "../ui/Header";
+import { Image } from "react-native";
+import { BASE_URL, photoAPI } from "../services/api";
+import Card from "../ui/Card";
+import { theme } from "../ui/theme";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../types/navigation";
+import { useIsFocused } from "@react-navigation/native";
 
 // Use shared theme for consistency
-const colors = { ...theme.colors, primary: '#7C3AED', primaryAlt: '#EC4899' } as const;
+const colors = {
+  ...theme.colors,
+  primary: "#7C3AED",
+  primaryAlt: "#EC4899",
+} as const;
 const { spacing, typography, radii } = theme;
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types/navigation';
-import { useIsFocused } from '@react-navigation/native';
 
 const ProfileScreen = () => {
   const { user } = useAuth();
@@ -37,8 +47,8 @@ const ProfileScreen = () => {
         if (!d) return `d:unknown`;
         d.setHours(0, 0, 0, 0);
         const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
         return `d:${y}-${m}-${day}`;
       };
       const uniq = new Set<string>();
@@ -60,65 +70,95 @@ const ProfileScreen = () => {
 
   // 로그아웃/탈퇴 로직은 설정 화면으로 이동
 
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   return (
-  <SafeAreaView style={styles.container} edges={[]}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <Header title="프로필" />
-      
-      <ScrollView style={styles.content} contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }}>
+
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.lg,
+          paddingBottom: spacing.lg,
+        }}
+      >
         <Card style={styles.profileSection}>
           <View style={styles.avatarContainer}>
             {user?.profileImage ? (
               <Image
-                source={{ uri: user.profileImage.startsWith('http') ? user.profileImage : `${BASE_URL}${user.profileImage}` }}
-                style={{ width: '100%', height: '100%', borderRadius: 50 }}
+                source={{
+                  uri: user.profileImage.startsWith("http")
+                    ? user.profileImage
+                    : `${BASE_URL}${user.profileImage}`,
+                }}
+                style={{ width: "100%", height: "100%", borderRadius: 50 }}
               />
             ) : (
               <Text style={styles.avatarText}>
-                {user?.nickname?.charAt(0)?.toUpperCase() || '?'}
+                {user?.nickname?.charAt(0)?.toUpperCase() || "?"}
               </Text>
             )}
           </View>
-          <Text style={styles.nickname}>{user?.nickname || '사용자'}</Text>
+          <Text style={styles.nickname}>{user?.nickname || "사용자"}</Text>
         </Card>
 
         <Card style={styles.statsSection}>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{loadingStats ? '-' : completedCount}</Text>
+            <Text style={styles.statNumber}>
+              {loadingStats ? "-" : completedCount}
+            </Text>
             <Text style={styles.statLabel}>완료한 미션</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{loadingStats ? '-' : uploadedCount}</Text>
+            <Text style={styles.statNumber}>
+              {loadingStats ? "-" : uploadedCount}
+            </Text>
             <Text style={styles.statLabel}>업로드한 사진</Text>
           </View>
         </Card>
 
         <Card style={styles.menuSection}>
-          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ProfileEdit')}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate("ProfileEdit")}
+          >
             <Text style={styles.menuText}>프로필 수정</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('MyPhotos')}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate("MyPhotos")}
+          >
             <Text style={styles.menuText}>내 사진 보기</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Settings')}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate("Settings")}
+          >
             <Text style={styles.menuText}>설정</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Terms')}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate("Terms")}
+          >
             <Text style={styles.menuText}>이용약관</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Privacy')}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate("Privacy")}
+          >
             <Text style={styles.menuText}>개인정보처리방침</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
         </Card>
 
-  {/* 프로필 화면에서는 로그아웃/탈퇴 버튼을 노출하지 않습니다. 설정 화면에서만 사용 */}
+        {/* 프로필 화면에서는 로그아웃/탈퇴 버튼을 노출하지 않습니다. 설정 화면에서만 사용 */}
       </ScrollView>
     </SafeAreaView>
   );
@@ -130,28 +170,28 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileSection: {
-  alignItems: 'center',
-  paddingVertical: spacing.xl,
-  marginBottom: spacing.md,
-  marginTop: spacing.md,
+    alignItems: "center",
+    paddingVertical: spacing.xl,
+    marginBottom: spacing.md,
+    marginTop: spacing.md,
   },
   avatarContainer: {
     width: 100,
     height: 100,
     borderRadius: 50,
     backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: spacing.md,
   },
   avatarText: {
     fontSize: 36,
-    fontWeight: 'bold',
-    color: '#ffffff',
+    fontWeight: "bold",
+    color: "#ffffff",
   },
   nickname: {
     fontSize: typography.h1,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: colors.text,
     marginBottom: spacing.sm,
   },
@@ -159,10 +199,14 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     color: colors.subText,
   },
-  statsSection: { flexDirection: 'row', paddingVertical: spacing.lg, marginBottom: spacing.md },
+  statsSection: {
+    flexDirection: "row",
+    paddingVertical: spacing.lg,
+    marginBottom: spacing.md,
+  },
   statItem: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   statDivider: {
     width: 1,
@@ -170,7 +214,7 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: colors.text,
     marginBottom: 4,
   },
@@ -180,13 +224,13 @@ const styles = StyleSheet.create({
   },
   menuSection: { marginBottom: spacing.lg },
   menuItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#f8f9fa',
+    borderBottomColor: "#f8f9fa",
   },
   menuText: {
     fontSize: typography.body,
@@ -194,7 +238,7 @@ const styles = StyleSheet.create({
   },
   menuArrow: {
     fontSize: 20,
-    color: '#bdc3c7',
+    color: "#bdc3c7",
   },
   // 로그아웃 버튼 스타일 제거됨
 });

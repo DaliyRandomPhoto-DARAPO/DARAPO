@@ -1,4 +1,4 @@
-import { manipulateAsync, SaveFormat, FlipType } from 'expo-image-manipulator';
+import { manipulateAsync, SaveFormat, FlipType } from "expo-image-manipulator";
 
 export interface ImageOptimizationOptions {
   maxWidth?: number;
@@ -24,7 +24,7 @@ export const DEFAULT_IMAGE_OPTIONS: ImageOptimizationOptions = {
  */
 export const optimizeImage = async (
   uri: string,
-  options: Partial<ImageOptimizationOptions> = {}
+  options: Partial<ImageOptimizationOptions> = {},
 ): Promise<string> => {
   const config = { ...DEFAULT_IMAGE_OPTIONS, ...options };
 
@@ -50,19 +50,15 @@ export const optimizeImage = async (
   }
 
   try {
-    const result = await manipulateAsync(
-      uri,
-      actions,
-      {
-        compress: config.quality || 0.8,
-        format: config.format || SaveFormat.JPEG,
-        base64: false,
-      }
-    );
+    const result = await manipulateAsync(uri, actions, {
+      compress: config.quality || 0.8,
+      format: config.format || SaveFormat.JPEG,
+      base64: false,
+    });
 
     return result.uri;
   } catch (error) {
-    console.warn('Image optimization failed:', error);
+    console.warn("Image optimization failed:", error);
     return uri; // 실패 시 원본 반환
   }
 };
@@ -111,13 +107,9 @@ export const optimizeFeedImage = async (uri: string): Promise<string> => {
  */
 export const getImageInfo = async (uri: string) => {
   try {
-    const result = await manipulateAsync(
-      uri,
-      [],
-      {
-        base64: false,
-      }
-    );
+    const result = await manipulateAsync(uri, [], {
+      base64: false,
+    });
 
     return {
       width: result.width,
@@ -125,7 +117,7 @@ export const getImageInfo = async (uri: string) => {
       uri: result.uri,
     };
   } catch (error) {
-    console.warn('Failed to get image info:', error);
+    console.warn("Failed to get image info:", error);
     return null;
   }
 };
