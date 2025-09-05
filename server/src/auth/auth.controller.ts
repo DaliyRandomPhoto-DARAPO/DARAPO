@@ -81,74 +81,14 @@ export class AuthController {
       };
       const base = getRedirectBase();
 
-      const renderDeepLinkHtml = (targetUrl: string, title = '로그인 처리 중...') => {
-        // 간단한 HTML 브릿지: 일부 인앱 브라우저가 302로 커스텀 스킴을 막는 문제를 우회
-        // 1) location.href로 시도
-        // 2) iframe 백업 시도
-        // 3) Android intent:// 백업 시도
-        // 4) 수동 클릭 링크 제공
-        const safe = JSON.stringify(targetUrl);
-        // Android intent fallback 구성 (darapo 스킴 가정). state로 들어온 exp:// 등은 그대로 사용.
-        const isDarapo = targetUrl.startsWith('darapo://');
-        const intent = isDarapo
-          ? 'intent://' + targetUrl.replace('darapo://', '') + '#Intent;scheme=darapo;package=com.darapo.drapoapp;end'
-          : '';
-        const intentJs = intent
-          ? `try { if (/Android/i.test(navigator.userAgent)) { window.location.href = ${JSON.stringify(
-              intent,
-            )}; } } catch (e) {}`
-          : '';
-        const manualLink = `<a href="${targetUrl.replace(/"/g, '&quot;')}">앱으로 돌아가기</a>`;
-        return `<!doctype html>
-<html lang="ko">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${title}</title>
-    <style>
-      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, 'Helvetica Neue', Arial, sans-serif; padding: 24px; line-height: 1.5; }
-      .box { max-width: 560px; margin: 12vh auto; text-align: center; }
-      .btn { display: inline-block; padding: 12px 16px; border-radius: 8px; background: #111; color: #fff; text-decoration: none; }
-      .hint { color: #666; margin-top: 12px; font-size: 14px; }
-      @media (prefers-color-scheme: dark) { body { background:#000; color:#fff; } .btn { background:#fee500; color:#000; } .hint{ color:#aaa; } }
-    </style>
-  </head>
-  <body>
-    <div class="box">
-      <h1>${title}</h1>
-      <p>자동으로 앱으로 돌아갑니다. 잠시만 기다려 주세요.</p>
-      <p>${manualLink}</p>
-      <p class="hint">자동으로 이동하지 않으면 버튼을 눌러 주세요.</p>
-    </div>
-    <script>
-      (function(){
-        var target = ${safe};
-        try { window.location.href = target; } catch (e) {}
-        setTimeout(function(){
-          try {
-            var iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = target;
-            document.body.appendChild(iframe);
-          } catch (e) {}
-        }, 150);
-        setTimeout(function(){ ${intentJs} }, 400);
-      })();
-    </script>
-  </body>
-</html>`;
-      };
-
       if (query.error) {
         const errorUrl = `${base}${base.includes('?') ? '&' : '?'}error=${encodeURIComponent(query.error)}`;
-        res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        return res.status(200).send(renderDeepLinkHtml(errorUrl, '로그인 실패'));
+        return res.redirect(errorUrl);
       }
 
       if (!query.code) {
         const errorUrl = `${base}${base.includes('?') ? '&' : '?'}error=${encodeURIComponent('인증 코드를 받지 못했습니다.')}`;
-        res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        return res.status(200).send(renderDeepLinkHtml(errorUrl, '로그인 실패'));
+        return res.redirect(errorUrl);
       }
 
       const kakaoUserInfo = await this.authService.handleKakaoCallback(
@@ -159,19 +99,12 @@ export class AuthController {
 
       const successUrl = `${base}${base.includes('?') ? '&' : '?'}success=true&token=${encodeURIComponent(authResult.accessToken)}&refresh=${encodeURIComponent(authResult.refreshToken)}&user=${encodeURIComponent(JSON.stringify(authResult.user))}`;
 
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      return res.status(200).send(renderDeepLinkHtml(successUrl));
+      return res.redirect(successUrl);
     } catch (error) {
       logError(this.logger, 'OAuth 처리 실패', error, 'AuthController');
       const base = 'darapo://auth/callback';
       const errorUrl = `${base}${base.includes('?') ? '&' : '?'}error=${encodeURIComponent('로그인 처리 중 오류가 발생했습니다.')}`;
-      const html = `<!doctype html><html><head><meta charset="utf-8"><title>로그인 오류</title></head><body>
-        <p>로그인 처리 중 오류가 발생했습니다.</p>
-        <a href="${errorUrl}">앱으로 돌아가기</a>
-        <script>try{location.href='${errorUrl}';}catch(e){}</script>
-      </body></html>`;
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      return res.status(200).send(html);
+      return res.redirect(errorUrl);
     }
   }
 

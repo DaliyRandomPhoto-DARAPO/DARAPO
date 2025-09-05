@@ -86,9 +86,6 @@ const LoginScreen: React.FC = React.memo(() => {
       // 혹시 남아있을 딥링크 핸들링 정리
       try {
         backendKakaoAuthService.stopDeepLinkHandling?.();
-      } catch {}
-      try {
-        backendKakaoAuthService.stopDeepLinkHandling?.();
       } catch (err) {
         console.warn("stopDeepLinkHandling error", err);
       }
@@ -162,7 +159,7 @@ const LoginScreen: React.FC = React.memo(() => {
         const errMsg = result?.error || LOGIN_MESSAGES.DEFAULT_ERROR;
         Alert.alert(LOGIN_MESSAGES.LOGIN_FAILED_TITLE, errMsg);
       }
-    } catch (error: unknown) {
+  } catch (error: unknown) {
       const message =
         typeof error === "string"
           ? error
@@ -178,9 +175,7 @@ const LoginScreen: React.FC = React.memo(() => {
       }
     } finally {
       safeSetLoading(false);
-      try {
-        backendKakaoAuthService.stopDeepLinkHandling?.();
-      } catch (err) {}
+  try { backendKakaoAuthService.stopDeepLinkHandling?.(); } catch {}
     }
   }, [loading, login, navigation]);
 

@@ -170,9 +170,11 @@ export default function ProfileEditScreen() {
           {profileImage ? (
             <Image
               source={{
-                uri: profileImage.startsWith("http")
+                uri: /^https?:\/\//.test(profileImage)
                   ? profileImage
-                  : `${BASE_URL}${profileImage}`,
+                  : profileImage.startsWith("/")
+                    ? `${BASE_URL}${profileImage}`
+                    : `${BASE_URL}/${profileImage.replace(/^\//, "")}`,
               }}
               style={styles.avatar}
             />

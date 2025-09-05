@@ -29,6 +29,7 @@ interface AuthUrlResponse {
 class BackendKakaoAuthService {
   private resolveLogin: ((result: LoginResult) => void) | null = null;
   private linkingSubscription: any = null;
+  private deepLinkTimeout: any = null;
 
   constructor() {
     // 컴포넌트별로 딥링크 처리를 분리하기 위해 생성자에서는 리스너 등록하지 않음
@@ -37,7 +38,7 @@ class BackendKakaoAuthService {
   /**
    * 딥링크 처리를 시작하고 로그인 완료를 대기 (login() 내부에서 선등록)
    */
-  startDeepLinkHandling(): Promise<LoginResult> {
+  startDeepLinkHandling(timeoutMs = 120000): Promise<LoginResult> {
     return new Promise((resolve) => {
       this.resolveLogin = resolve;
 
@@ -57,6 +58,19 @@ class BackendKakaoAuthService {
           this.handleDeepLink({ url });
         }
       });
+
+      // 타임아웃 설정: 일정 시간 내 콜백이 오지 않으면 실패 처리하여 로딩 해제
+      if (this.deepLinkTimeout) clearTimeout(this.deepLinkTimeout);
+      this.deepLinkTimeout = setTimeout(() => {
+        if (this.resolveLogin) {
+          this.resolveLogin({
+            success: false,
+            error: "로그인이 취소되었거나 시간이 초과되었습니다.",
+          });
+          this.resolveLogin = null;
+          this.stopDeepLinkHandling();
+        }
+      }, Math.max(10000, timeoutMs));
     });
   }
 
@@ -67,6 +81,10 @@ class BackendKakaoAuthService {
     if (this.linkingSubscription) {
       this.linkingSubscription.remove();
       this.linkingSubscription = null;
+    }
+    if (this.deepLinkTimeout) {
+      clearTimeout(this.deepLinkTimeout);
+      this.deepLinkTimeout = null;
     }
     this.resolveLogin = null;
   }
@@ -173,8 +191,8 @@ class BackendKakaoAuthService {
     }
     // openAuthSessionAsync는 iOS/Android에서 SFAuthenticationSession/Custom Tabs를 사용해 복귀를 보장
     const result = await WebBrowser.openAuthSessionAsync(authUrl, returnUrl);
-    // 사용자가 취소한 경우 등은 이후 딥링크로 오지 않으니 에러 처리
-    if (result.type === "cancel") {
+    // 사용자가 취소(dismiss 포함)한 경우는 이후 딥링크로도 오지 않을 수 있으니 즉시 에러 처리
+    if (result.type === "cancel" || (result as any).type === "dismiss") {
       throw new Error("사용자가 로그인을 취소했습니다.");
     }
     // 성공 시 콜백 URL을 반환(일부 플랫폼에서는 여기서만 url을 제공)

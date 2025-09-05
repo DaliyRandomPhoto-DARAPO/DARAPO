@@ -79,6 +79,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // 1) 토큰 + 유저 정보가 모두 있으면 즉시 복원
       if (storedToken && storedUser) {
         setToken(storedToken);
+        try {
+          (apiClient as any).defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
+        } catch {}
         setUser(JSON.parse(storedUser));
         return;
       }
@@ -88,6 +91,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
           const me = await authAPI.getCurrentUser();
           setToken(storedToken);
+          try {
+            (apiClient as any).defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
+          } catch {}
           setUser(me);
           try {
             await AsyncStorage.setItem(
@@ -114,6 +120,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             await AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, newToken);
           } catch (err) {}
           setToken(newToken);
+          try {
+            (apiClient as any).defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
+          } catch {}
 
           const me = await authAPI.getCurrentUser();
           setUser(me);
@@ -144,10 +153,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = useCallback(
     async (newToken: string, newUser: User, refreshToken?: string) => {
       try {
+        // 1) 토큰 저장 + 메모리 헤더 즉시 반영
         const promises = [
           AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, newToken),
-          AsyncStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(newUser)),
         ];
+
+        // axios 기본 헤더 즉시 설정(초기 화면에서 보호 API 호출 시 누락 방지)
+        try {
+          (apiClient as any).defaults.headers.common[
+            "Authorization"
+          ] = `Bearer ${newToken}`;
+        } catch {}
 
         if (refreshToken) {
           promises.push(
@@ -158,7 +174,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await Promise.all(promises).catch((e) => {});
 
         setToken(newToken);
-        setUser(newUser);
+
+        // 2) 서버에서 표준화된 사용자 정보로 갱신(프로필 이미지 서명 URL 등)
+        let finalUser: User = newUser;
+        try {
+          const me = await authAPI.getCurrentUser();
+          finalUser = me as User;
+        } catch {
+          // 네트워크 실패 시 콜백의 user로 유지
+        }
+
+        setUser(finalUser);
+        try {
+          await AsyncStorage.setItem(
+            STORAGE_KEYS.USER_INFO,
+            JSON.stringify(finalUser),
+          );
+        } catch {}
       } catch (error) {
         throw error;
       }
@@ -191,9 +223,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setToken(null);
       setUser(null);
+      try {
+        delete (apiClient as any).defaults.headers.common["Authorization"];
+      } catch {}
     } catch (error) {
       setToken(null);
       setUser(null);
+      try {
+        delete (apiClient as any).defaults.headers.common["Authorization"];
+      } catch {}
     }
   }, []);
 

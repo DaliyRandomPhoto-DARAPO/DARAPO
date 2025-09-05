@@ -89,9 +89,12 @@ const ProfileScreen = () => {
             {user?.profileImage ? (
               <Image
                 source={{
-                  uri: user.profileImage.startsWith("http")
-                    ? user.profileImage
-                    : `${BASE_URL}${user.profileImage}`,
+                  uri:
+                    /^https?:\/\//.test(user.profileImage)
+                      ? user.profileImage
+                      : user.profileImage.startsWith("/")
+                        ? `${BASE_URL}${user.profileImage}`
+                        : `${BASE_URL}/${user.profileImage.replace(/^\//, "")}`,
                 }}
                 style={{ width: "100%", height: "100%", borderRadius: 50 }}
               />
