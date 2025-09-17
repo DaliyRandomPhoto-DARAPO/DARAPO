@@ -88,6 +88,17 @@ export default {
       ],
     ],
 
+    updates: {
+      enabled: true,
+      checkAutomatically: 'ON_LOAD',
+      fallbackToCacheTimeout: 0,
+      url: `https://u.expo.dev/${process.env.EAS_PROJECT_ID || 'your-project-id'}`,
+    },
+
+    runtimeVersion: {
+      policy: 'appVersion'
+    },
+
     extra: {
       // 프론트에서는 API 베이스 URL만 필요(실제 요청은 /api 접미사 자동 부착)
       apiUrl: RAW_API_URL,

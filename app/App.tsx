@@ -26,6 +26,7 @@ import { AuthProvider, useAuth } from "./src/contexts/AuthContext";
 
 // Components
 import { ErrorBoundary } from "./src/components/ErrorBoundary";
+import { UpdateChecker } from "./src/components/UpdateChecker";
 
 // Services (none used here)
 
@@ -258,6 +259,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
           <AuthProvider>
+            <UpdateChecker />
             <AppNavigator />
             <Toast />
             <StatusBar style="auto" />

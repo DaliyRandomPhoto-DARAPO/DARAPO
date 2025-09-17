@@ -8,6 +8,7 @@ import { BASE_URL } from "../services/api";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types/navigation";
+import * as Updates from 'expo-updates';
 
 // Local tokens
 const colors = {
@@ -74,6 +75,45 @@ const SettingsScreen = () => {
     );
   };
 
+  const handleUpdateCheck = async () => {
+    if (__DEV__) {
+      Alert.alert('개발 모드', '개발 모드에서는 업데이트를 사용할 수 없습니다.');
+      return;
+    }
+
+    try {
+      const update = await Updates.checkForUpdateAsync();
+      
+      if (update.isAvailable) {
+        Alert.alert(
+          '새로운 업데이트',
+          '앱의 새로운 버전이 있습니다. 지금 업데이트하시겠습니까?',
+          [
+            {
+              text: '나중에',
+              style: 'cancel',
+            },
+            {
+              text: '업데이트',
+              onPress: async () => {
+                try {
+                  await Updates.fetchUpdateAsync();
+                  await Updates.reloadAsync();
+                } catch (error) {
+                  Alert.alert('업데이트 실패', '업데이트 중 오류가 발생했습니다.');
+                }
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert('최신 버전', '이미 최신 버전을 사용하고 있습니다.');
+      }
+    } catch (error) {
+      Alert.alert('확인 실패', '업데이트 확인 중 오류가 발생했습니다.');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
       <Header title="설정" />
@@ -98,6 +138,13 @@ const SettingsScreen = () => {
           onPress={() => navigation.navigate("Privacy")}
         >
           <Text style={styles.link}>개인정보처리방침</Text>
+          <Text style={styles.arrow}>›</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.row}
+          onPress={handleUpdateCheck}
+        >
+          <Text style={styles.link}>업데이트 확인</Text>
           <Text style={styles.arrow}>›</Text>
         </TouchableOpacity>
       </View>
