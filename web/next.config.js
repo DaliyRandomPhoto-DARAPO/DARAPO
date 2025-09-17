@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
-    optimizeCss: true,
+    // optimizeCss 제거 - critters 모듈 오류 방지
   },
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',

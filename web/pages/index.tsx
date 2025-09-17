@@ -11,8 +11,13 @@ export default function Home() {
       <Head>
         <title>DARAPO — 매일 하나, 랜덤 사진 미션</title>
         <meta name="description" content="오늘의 미션으로 사진 한 장, 가볍게 기록하고 원할 때만 공유하세요. 카카오 로그인 지원." />
-        <meta property="og:title" content="DARAPO" />
-        <meta property="og:description" content="매일 하나, 랜덤 사진 미션" />
+        <meta name="keywords" content="DARAPO, 사진 앱, 미션, 랜덤, 카카오, 일기, 기록" />
+        <meta property="og:title" content="DARAPO — 매일 하나, 랜덤 사진 미션" />
+        <meta property="og:description" content="오늘의 미션으로 사진 한 장, 가볍게 기록하고 원할 때만 공유하세요" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://darapo.app" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://darapo.app" />
       </Head>
 
       <Header />

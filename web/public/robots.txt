@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# 사이트맵 위치
+Sitemap: https://darapo.site/sitemap.xml
+
+# Google Play Console 관련 페이지 우선 크롤링
+Allow: /privacy
+Allow: /terms

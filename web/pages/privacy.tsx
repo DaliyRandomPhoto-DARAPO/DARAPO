@@ -1,16 +1,65 @@
 import Head from 'next/head'
+import Link from 'next/link'
 
 export default function Privacy() {
   return (
-    <div>
+    <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
       <Head>
         <title>개인정보처리방침 | DARAPO</title>
-        <meta name="description" content="DARAPO 개인정보처리방침" />
+        <meta name="description" content="DARAPO 개인정보처리방침 - 매일 하나, 랜덤 사진 미션 앱의 개인정보 보호 정책" />
+        <meta name="keywords" content="DARAPO, 개인정보처리방침, 사진 앱, 카카오 로그인" />
+        <meta property="og:title" content="개인정보처리방침 | DARAPO" />
+        <meta property="og:description" content="DARAPO의 개인정보 보호 정책을 확인하세요" />
+        <meta property="og:type" content="website" />
+        <meta name="robots" content="index, follow" />
       </Head>
 
-      <main style={{ maxWidth: 860, margin: '0 auto', padding: 24 }}>
-        <h1>개인정보처리방침</h1>
-        <p style={{ color: '#666' }}>최종 업데이트: 2025-08-13</p>
+      {/* 네비게이션 헤더 */}
+      <header style={{ 
+        borderBottom: '1px solid #eee', 
+        padding: '16px 24px',
+        backgroundColor: '#fff',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100
+      }}>
+        <nav style={{ maxWidth: 960, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 24 }}>
+          <Link href="/" style={{ 
+            fontSize: 20, 
+            fontWeight: 'bold', 
+            textDecoration: 'none', 
+            color: '#333' 
+          }}>
+            DARAPO
+          </Link>
+          <div style={{ display: 'flex', gap: 16, marginLeft: 'auto' }}>
+            <Link href="/privacy" style={{ textDecoration: 'none', color: '#007bff', fontWeight: 'bold' }}>
+              개인정보처리방침
+            </Link>
+            <Link href="/terms" style={{ textDecoration: 'none', color: '#666' }}>
+              이용약관
+            </Link>
+          </div>
+        </nav>
+      </header>
+
+      <main style={{ 
+        maxWidth: 860, 
+        margin: '0 auto', 
+        padding: 24,
+        lineHeight: 1.6,
+        color: '#333'
+      }}>
+        <h1 style={{ 
+          fontSize: 32, 
+          marginBottom: 8, 
+          color: '#222' 
+        }}>개인정보처리방침</h1>
+        <p style={{ 
+          color: '#666', 
+          marginBottom: 32,
+          fontSize: 14
+        }}>최종 업데이트: 2025-08-13</p>
 
         <p>
           darapo – Daily Random Photo(이하 “서비스”)는 이용자의 개인정보를 중요하게 생각하며 아래와 같이 처리합니다. 본 페이지는 Google Play 심사 및 이용자 안내를 위한 공개 페이지로, 서비스 제공에 필요한 최소한의 정보만을 수집·처리합니다.
@@ -65,9 +114,57 @@ export default function Privacy() {
           <li><strong>대체 요청 경로</strong>: 앱 사용이 불가능한 경우 <a href="mailto:hhee200456@gmail.com">hhee200456@gmail.com</a> 으로 계정 삭제를 요청할 수 있습니다. 본인 확인 후 처리합니다.</li>
         </ul>
 
-        <footer style={{ marginTop: 40, color: '#777' }}>
-          <p>본 페이지는 서비스 업데이트에 따라 변경될 수 있으며, 주요 변경 시 본 페이지를 통해 고지합니다.</p>
-          <p>URL: /privacy</p>
+        <style jsx>{`
+          h2 {
+            color: #222;
+            margin-top: 32px;
+            margin-bottom: 16px;
+            font-size: 20px;
+            font-weight: 600;
+          }
+          
+          ul, ol {
+            margin: 16px 0;
+            padding-left: 20px;
+          }
+          
+          li {
+            margin: 8px 0;
+          }
+          
+          a {
+            color: #007bff;
+            text-decoration: none;
+          }
+          
+          a:hover {
+            text-decoration: underline;
+          }
+          
+          strong {
+            font-weight: 600;
+            color: #222;
+          }
+          
+          #delete-account {
+            padding-top: 16px;
+            border-top: 2px solid #eee;
+          }
+        `}</style>
+
+        <footer style={{ 
+          marginTop: 60, 
+          padding: 24,
+          backgroundColor: '#f8f9fa',
+          borderRadius: 8,
+          textAlign: 'center' as const
+        }}>
+          <p style={{ margin: 0, color: '#666', fontSize: 14 }}>
+            본 페이지는 서비스 업데이트에 따라 변경될 수 있으며, 주요 변경 시 본 페이지를 통해 고지합니다.
+          </p>
+          <p style={{ margin: '8px 0 0 0', color: '#999', fontSize: 12 }}>
+            © 2025 DARAPO. All rights reserved.
+          </p>
         </footer>
       </main>
     </div>
