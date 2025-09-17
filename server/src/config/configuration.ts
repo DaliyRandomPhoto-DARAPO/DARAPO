@@ -8,8 +8,8 @@ export const appConfig = registerAs('app', () => ({
     (() => {
       throw new Error('JWT_SECRET is required');
     })(),
-  corsOrigins:
-    process.env.NODE_ENV === 'production' ? ['https://darapo.app'] : true,
+  // API only server - no web frontend CORS needed
+  corsOrigins: process.env.NODE_ENV === 'production' ? false : true,
 }));
 
 export const databaseConfig = registerAs('database', () => ({
