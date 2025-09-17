@@ -129,7 +129,7 @@ async function bootstrap() {
     // Quietly handle favicon requests to avoid noisy 404s
     expressApp.get(
       '/favicon.ico',
-      (_req: express.Request, res: express.Response) => {
+      (_req: any, res: any) => {
         res.status(204).end();
       },
     );

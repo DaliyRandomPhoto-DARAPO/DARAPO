@@ -92,3 +92,17 @@ android/
 # 임시 파일
 .tmp/
 .temp/
+
+# 최적화 및 분석 파일
+*.tsbuildinfo
+.eslintcache
+webpack-stats.json
+bundle-analyzer-report.html
+
+# IDE 설정 (개인 설정)
+.vscode/settings.json
+.idea/
+
+# 패키지 매니저 캐시
+.yarn/cache
+.pnpm-store
